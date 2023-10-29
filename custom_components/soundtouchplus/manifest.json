@@ -1,7 +1,7 @@
 {
   "domain": "soundtouchplus",
   "name": "Bose SoundTouch Plus",
-  "version": "1.2.0",
+  "version": "1.0.0",
   "codeowners": ["@thlucas"],
   "config_flow": true,
   "documentation": "https://www.home-assistant.io/integrations/soundtouch",
