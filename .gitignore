@@ -28,3 +28,6 @@ config/*
 /.github/workflows/lint.yml
 /.github/workflows/release.yml
 /.github/workflows/validate.yml
+/.github/workflows/lint.yml
+/.github/workflows/release.yml
+/.github/workflows/validate.yml
