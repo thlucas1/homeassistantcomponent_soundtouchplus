@@ -4,8 +4,6 @@
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]](LICENSE)
 
-![Project Maintenance][maintenance-shield]
-
 _Home Assistant Integration to integrate with [soundtouchplus][soundtouchplus]._
 
 **This integration will set up the following platforms.**
@@ -35,9 +33,8 @@ If you want to contribute to this please read the [Contribution guidelines](CONT
 ***
 
 [soundtouchplus]: https://github.com/thlucas1/homeassistantcomponent_soundtouchplus
-[commits-shield]: https://img.shields.io/github/commit-activity/y/ludeeus/integration_blueprint.svg?style=for-the-badge
-[commits]: https://github.com/ludeeus/integration_blueprint/commits/main
-[license-shield]: https://img.shields.io/github/license/ludeeus/integration_blueprint.svg?style=for-the-badge
-[maintenance-shield]: https://img.shields.io/badge/maintainer-Joakim%20Sørensen%20%40ludeeus-blue.svg?style=for-the-badge
-[releases-shield]: https://img.shields.io/github/release/ludeeus/integration_blueprint.svg?style=for-the-badge
-[releases]: https://github.com/ludeeus/integration_blueprint/releases
+[commits-shield]: https://img.shields.io/github/commit-activity/y/thlucas1/homeassistantcomponent_soundtouchplus.svg?style=for-the-badge
+[commits]: https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/commits/main
+[license-shield]: https://img.shields.io/github/license/thlucas1/homeassistantcomponent_soundtouchplus.svg?style=for-the-badge
+[releases-shield]: https://img.shields.io/github/release/thlucas1/homeassistantcomponent_soundtouchplus.svg?style=for-the-badge
+[releases]: https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/releases
