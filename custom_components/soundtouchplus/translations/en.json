@@ -1,0 +1,124 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "description": "This integration is for Bose SoundTouch Speaker models that support the SoundTouch Webservices API; these include the ST10, ST300, etc.",
+        "data": {
+          "host": "IP Address",
+          "port": "Port"
+        },
+        "data_description": {
+          "host": "Ip address or DNS alias of the device",
+          "port": "Bose WebSocket API Port of the device (default is 8090)"
+        }
+      },
+      "discovery_confirm": {
+        "description": "Do you want to add the following Bose SoundTouch device to Home Assistant?<br /><br />\"{name}\" at IP address {host}",
+        "title": "Discovered SoundTouch Plus"
+      },
+      "ws_port": {
+        "description": "The WebSocket port. In order to connect over WebSocket, the SoundTouch device must have the 'IsWebSocketApiProxyCapable' defined in its 'capabilities' properties. If IsWebSocketApiProxyCapable is not enabled, then remove the port and leave empty.",
+        "data": {
+          "ws_port": "Port"
+        },
+        "data_description": {
+          "ws_port": "Bose WebSocket API Port of the device (default is 8080)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "Device is already configured.  Modify the existing device, or verify the entered IP Address is correct.",
+      "cannot_connect": "Failed to connect",
+      "unknown": "Unexpected error",
+      "no_deviceid": "SoundTouch device instance does not have a unique DeviceId. This is most likely due to old SoundTouch firmware. You can configure the integration manually or upgrade your firmware to a more recent version."
+    }
+  },
+  "device_automation": {},
+  "services": {
+    "play_handoff": {
+      "name": "Play Handoff Settings",
+      "description": "Handoff playing source from one SoundTouch device to another.",
+      "fields": {
+        "entity_id_from": {
+          "name": "From Entity ID",
+          "description": "Entity ID of the SoundTouch device that is currently playing."
+        },
+        "entity_id_to": {
+          "name": "To Entity ID",
+          "description": "Entity ID of the SoundTouch device that needs to play what the 'from' device is currently playing."
+        },
+        "restore_volume": {
+          "name": "Restore Volume?",
+          "description": "True to handoff the FROM device volume level to the TO device; False (default) to leave the TO device volume level as-is."
+        },
+        "snapshot_only": {
+          "name": "Snapshot Only?",
+          "description": "True to only handoff the snapshot and not trigger the restore and power off; False (default) to handoff the snapshot, restore it, and power off the FROM device."
+        }
+      }
+    },
+    "preset_list": {
+      "name": "Get Preset List",
+      "description": "Retrieves the list of presets defined to the device.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouch device whose preset list will be retrieved."
+        }
+      }
+    },
+    "recent_list": {
+      "name": "Get Recent List",
+      "description": "Retrieves the list of recently played items defined to the device.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouch device whose recently played list will be retrieved."
+        }
+      }
+    },
+    "remote_keypress": {
+      "name": "Remote Keypress",
+      "description": "Simulates the press and release of a key on the SoundTouch device remote control.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouch device to be controlled."
+        },
+        "key_id": {
+          "name": "Key Identifier",
+          "description": "SoundTouch remote control key identifier."
+        }
+      }
+    },
+    "snapshot_restore": {
+      "name": "Snapshot Restore",
+      "description": "Restore SoundTouch device settings from a snapshot.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouch device whose settings will be restored from a snapshot."
+        },
+        "restore_volume": {
+          "name": "Restore Volume?",
+          "description": "Indicates if the volume also needs to be restored (True, default) or not (False)."
+        }
+      }
+    },
+    "snapshot_store": {
+      "name": "Snapshot Store",
+      "description": "Store SoundTouch device settings to a snapshot.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouch device whose settings will be stored to a snapshot."
+        }
+      }
+    }  
+  }
+}

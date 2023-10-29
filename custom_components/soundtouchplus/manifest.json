@@ -1,0 +1,18 @@
+{
+  "domain": "soundtouchplus",
+  "name": "Bose SoundTouch Plus",
+  "version": "1.2.0",
+  "codeowners": ["@thlucas"],
+  "config_flow": true,
+  "documentation": "https://www.home-assistant.io/integrations/soundtouch",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "loggers": ["bosesoundtouchapi"],
+  "requirements": [
+    "websocket-client>=1.6.4",
+    "urllib3",
+    "smartinspectPython>=3.0.26",
+    "bosesoundtouchapi>=1.0.2"
+  ],
+  "zeroconf": ["_soundtouch._tcp.local."]
+}

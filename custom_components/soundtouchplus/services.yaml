@@ -1,0 +1,220 @@
+play_handoff:
+  name: Play Handoff
+  description: Handoff playing source from one SoundTouch device to another.
+  fields:
+    entity_id_from:
+      name: From Entity ID
+      description: Entity ID of the SoundTouch device that is currently playing.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    entity_id_to:
+      name: To Entity ID
+      description: Entity ID of the SoundTouch device that needs to play what the 'from' device is currently playing.
+      example: "media_player.soundtouch_bedroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    restore_volume:
+      name: Restore Volume?
+      description: True to handoff the FROM device volume level to the TO device; False (default) to leave the TO device volume level as-is.
+      example: "true"
+      required: true
+      selector:
+        boolean:
+    snapshot_only:
+      name: Snapshot Only?
+      description: True to only handoff the snapshot and not trigger the restore and power off; False (default) to handoff the snapshot, restore it, and power off the FROM device.
+      example: "true"
+      required: true
+      selector:
+        boolean:
+
+play_tts:
+  name: Play TTS Message
+  description: Play Text-To-Speech notification on a SoundTouch device.  Note that this is limited to ST10,20,30 devices, as Bose ST300 does not support notifications (AFAIK).
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouch device to play the message.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    message:
+      name: Message Text
+      description: The message that will be converted from text to speech and played on the device.
+      example: "Hello World"
+      required: true
+      selector:
+        text:
+    artist:
+      name: Artist Status Text
+      description: The message text that will appear in the NowPlaying Artist node; if omitted, default is "TTS Notification".
+      example: "TTS Notification"
+      required: false
+      selector:
+        text:
+    album:
+      name: Album Status Text
+      description: The message text that will appear in the NowPlaying Album node; if omitted, default is "Google TTS".
+      example: "Google TTS"
+      required: false
+      selector:
+        text:
+    track:
+      name: Track Status Text
+      description: The message text that will appear in the NowPlaying Track node; if omitted, default is the message value.
+      example: "Hello World"
+      required: false
+      selector:
+        text:
+    tts_url:
+      name: TTS Service Url
+      description: The Text-To-Speech url used to translate the message.  The value should contain a "{saytext}" format parameter, that will be used to insert the encoded message text.
+      example: "http://translate.google.com/translate_tts?ie=UTF-8&tl=EN&client=tw-ob&q={saytext}"
+      required: false
+      selector:
+        text:
+    volume_level:
+      name: Volume Level
+      description: The temporary volume level that will be used when the message is played.  Specify a value of zero to play at the current volume.  Default is zero.
+      example: 50
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 5
+          unit_of_measurement: "%"
+          mode: slider
+    app_key:
+      name: Bose App Key
+      description: Bose Developer API application key; if omitted, defaults to a pre-defined App Developer Key.
+      example: "abcdefghijklmnopqrstuvwxyz"
+      required: false
+      selector:
+        text:
+
+preset_list:
+  name: Get Preset List
+  description: Retrieves the list of presets defined to the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouch device whose preset list will be retrieved.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+
+recent_list:
+  name: Get Recent List
+  description: Retrieves the list of recently played items defined to the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouch device whose recently played list will be retrieved.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+
+remote_keypress:
+  name: Remote Keypress
+  description: Simulates the press and release of a key on the SoundTouch device remote control.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouch device to be controlled.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    key_id:
+      name: Key ID
+      description: SoundTouch remote control key identifier. 
+        Note that some keys on the SoundTouch remote control are not sent to the SoundTouch device, 
+        and therefore are not supported by this service.
+      example: "AUX_INPUT"
+      required: true
+      selector:
+        select:
+          mode: dropdown
+          sort: true
+          options:
+            - PLAY
+            - PAUSE
+            - PLAY_PAUSE
+            - STOP
+            - PREV_TRACK
+            - NEXT_TRACK
+            - THUMBS_UP
+            - THUMBS_DOWN
+            - BOOKMARK
+            - POWER
+            - MUTE
+            - VOLUME_UP
+            - VOLUME_DOWN
+            - PRESET_1
+            - PRESET_2
+            - PRESET_3
+            - PRESET_4
+            - PRESET_5
+            - PRESET_6
+            - AUX_INPUT
+            - SHUFFLE_OFF
+            - SHUFFLE_ON
+            - REPEAT_OFF
+            - REPEAT_ONE
+            - REPEAT_ALL
+            - ADD_FAVORITE
+            - REMOVE_FAVORITE
+
+snapshot_restore:
+  name: Snapshot Restore
+  description: Restore SoundTouch device settings from a snapshot.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouch device whose settings will be restored from a snapshot.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    restore_volume:
+      name: Restore Volume?
+      description: Indicates if the volume also needs to be restored (True, default) or not (False).
+      example: "false"
+      required: true
+      selector:
+        boolean:
+
+snapshot_store:
+  name: Snapshot Store
+  description: Store SoundTouch device settings to a snapshot.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouch device whose settings will be stored to a snapshot.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
