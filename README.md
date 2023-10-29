@@ -35,17 +35,17 @@ The following Home Assistant media_player Platform services are supplied by this
 The SELECT_SOURCE supports selecting a Source as well as a SourceAccount value.  This is required functionality for specific Bose SoundTouch devices that require it (e.g. ST300).
 For example, to watch TV using the ST300 you must select source="PRODUCT" and sourceAccount="TV".  Your service call would look like this:
 
-[code]
+``` yaml
 service: media_player.select_source
 data:
   source: PRODUCT:TV
 target:
   entity_id: media_player.soundtouch_10
-[/code]
+```
 
 PLAY_MEDIA also supports playing of both HTTP and HTTPS url's.  If the URL contains ID3 metadata tags, then the Album, Artist, and Song Title are automatically extracted and appear in the NowPlaying status.  Your service call would look like this:
 
-[code]
+``` yaml
 service: media_player.play_media
 data:
   media_content_type: music
@@ -53,9 +53,9 @@ data:
     https://freetestdata.com/wp-content/uploads/2021/09/Free_Test_Data_1MB_MP3.mp3
 target:
   entity_id: media_player.soundtouch_10
-[/code]
+```
 
-[code]
+``` yaml
 service: media_player.play_media
 data:
   media_content_type: music
@@ -63,7 +63,7 @@ data:
     http://www.hyperion-records.co.uk/audiotest/14%20Clementi%20Piano%20Sonata%20in%20D%20major,%20Op%2025%20No%206%20-%20Movement%202%20Un%20poco%20andante.MP3
 target:
   entity_id: media_player.soundtouch_10
-[/code]
+```
 
 The following custom services are also supplied by this integration.
 - Play Handoff: Handoff playing source from one SoundTouch device to another.
