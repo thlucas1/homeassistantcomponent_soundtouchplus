@@ -5,6 +5,7 @@
 [![License][license-shield]](LICENSE)
 
 _Home Assistant Integration to integrate with [soundtouchplus][soundtouchplus]._
+Extended support for the Bose SoundTouch line of speaker products for use in Home Assistant.
 
 **This integration will set up the following platforms.**
 
