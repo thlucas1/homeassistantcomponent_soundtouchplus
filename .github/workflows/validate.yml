@@ -3,10 +3,10 @@ name: "Validate"
 on:
   push:
     branches:
-      - "master"
+      - "main"
   pull_request:
     branches:
-      - "master"
+      - "main"
   schedule:
     - cron:  "0 0 * * *"
   workflow_dispatch:
@@ -17,10 +17,10 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
         - name: "Checkout the repository"
-          uses: "actions/checkout@master"
+          uses: "actions/checkout@main"
 
         - name: "Run HACS validation"
-          uses: "hacs/action@master"
+          uses: "hacs/action@main"
           with:
             category: "integration"
             # Remove this 'ignore' key when you have added brand images for your integration to https://github.com/home-assistant/brands
@@ -31,7 +31,7 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
         - name: "Checkout the repository"
-          uses: "actions/checkout@master"
+          uses: "actions/checkout@main"
 
         - name: "Run HASSFest validation"
           uses: home-assistant/actions/hassfest@master
