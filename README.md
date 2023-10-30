@@ -74,15 +74,24 @@ The following custom services are also supplied by this integration.
 - Snapshot Restore: Restore SoundTouch device settings from a snapshot.
 - Snapshot Store: Store SoundTouch device settings to a snapshot.
 
-## Installation
+## HACS Installation Instructions
+- go to HACS main menu.
+- click on the 3-dot “overflow menu” in the upper right, and select “custom repositories” item.
+- copy / paste `https://github.com/thlucas1/homeassistantcomponent_soundtouchplus` in the Repository textbox and select `Integration` for the category entry.
+- click on “Add” to add the custom repository.
+- you can then click on the SoundTouchPlus repository entry (you may need to filter your list first to find the new entry).
+- click on “download” to start the download. It will install the soundtouchplus integration to your config/custom_components directory.
+- restart HA to start using the component.
 
-1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
-1. If you do not have a `custom_components` directory (folder) there, you need to create it.
-1. In the `custom_components` directory (folder) create a new folder called `soundtouchplus`.
-1. Download _all_ the files from the `custom_components/soundtouchplus/` directory (folder) in this repository.
-1. Place the files you downloaded in the new directory (folder) you created.
-1. Restart Home Assistant
-1. In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "Bose SoundTouchPlus"
+## Manual Installation
+
+- Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
+- If you do not have a `custom_components` directory (folder) there, you need to create it.
+- In the `custom_components` directory (folder) create a new folder called `soundtouchplus`.
+- Download _all_ the files from the `custom_components/soundtouchplus/` directory (folder) in this repository.
+- Place the files you downloaded in the new directory (folder) you created.
+- Restart Home Assistant.
+- In the HA UI go to "Configuration" -> "Integrations" click "+" and search for "Bose SoundTouchPlus"
 
 ## Configuration is done in the UI
 
