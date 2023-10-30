@@ -69,6 +69,7 @@ target:
 The following custom services are also supplied by this integration.
 - Play Handoff: Handoff playing source from one SoundTouch device to another.
 - Play TTS Message: Play Text-To-Speech notification on a SoundTouch device.  Note that this is limited to ST10,20,30 devices, as Bose ST300 does not support notifications (AFAIK).
+- Play URL: Play media content URL on a SoundTouch device.  Note that this is limited to ST10,20,30 devices, as Bose ST300 does not support notifications (AFAIK).
 - Get Preset List: Retrieves the list of presets defined to the device.
 - Get Recent List: Retrieves the list of recently played items defined to the device.
 - Remote Keypress: Simulates the press and release of a key on the SoundTouch device remote control.

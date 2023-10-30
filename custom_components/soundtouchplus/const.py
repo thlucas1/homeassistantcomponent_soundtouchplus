@@ -15,6 +15,7 @@ DEFAULT_WS_PORT = 8080
 # custom service names.
 SERVICE_PLAY_HANDOFF = "play_handoff"
 SERVICE_PLAY_TTS = "play_tts"
+SERVICE_PLAY_URL = "play_url"
 SERVICE_PRESETLIST = "preset_list"
 SERVICE_RECENTLIST = "recent_list"
 SERVICE_REMOTE_KEYPRESS = "remote_keypress"

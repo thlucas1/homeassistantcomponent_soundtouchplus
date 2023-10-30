@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.3 ] - 2023/10/30
+
+  *  Added "play_url" service support that allows better support for playing URL media content.
+
 ###### [ 1.0.2 ] - 2023/10/30
 
   *  Removed some HTML formatting from strings.json to be HASSFest validation compliant.

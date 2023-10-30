@@ -843,16 +843,55 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             appKey (str):
                 Bose Developer API application key.
         """
-        parms:dict = {}
-        parms['message'] = message
-        parms['artist'] = artist
-        parms['album'] = album
-        parms['track'] = track
-        parms['ttsUrl'] = ttsUrl
-        parms['volumeLevel'] = volumeLevel
-        parms['appKey'] = appKey
-        _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("play_tts", self.name, self.entity_id), parms)
+        if _logsi.IsOn(SILevel.Verbose):
+            parms:dict = {}
+            parms['message'] = message
+            parms['artist'] = artist
+            parms['album'] = album
+            parms['track'] = track
+            parms['ttsUrl'] = ttsUrl
+            parms['volumeLevel'] = volumeLevel
+            parms['appKey'] = appKey
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("play_tts", self.name, self.entity_id), parms)
+
         self._client.PlayNotificationTTS(message, ttsUrl, artist, album, track, volumeLevel, appKey)
+
+
+    def play_url(self, url:str, artist:str, album:str, track:str, volumeLevel:int, appKey:str, getMetadataFromUrlFile:bool):
+        """
+        Play media content from a URL on a SoundTouch device.
+        
+        Args:
+            url (str):
+                The URL media content to play on the device.
+            artist (str):
+                The text that will appear in the NowPlaying Artist node; if omitted, default is "Unknown Artist".
+            album (str):
+                The text that will appear in the NowPlaying Album node; if omitted, default is "Unknown Album".
+            track (str):
+                The text that will appear in the NowPlaying Track node; if omitted, default is "Unknown Track".
+            volumeLevel (int):
+                The temporary volume level that will be used when the media is played.  
+                Specify a value of zero to play at the current volume.  
+                Default is zero.
+            appKey (str):
+                Bose Developer API application key.
+            getMetadataFromUrlFile (bool):
+                The Text-To-Speech url used to translate the message.  The value should contain a "{saytext}" format parameter, 
+                that will be used to insert the encoded message text.
+        """
+        if _logsi.IsOn(SILevel.Verbose):
+            parms:dict = {}
+            parms['url'] = url
+            parms['artist'] = artist
+            parms['album'] = album
+            parms['track'] = track
+            parms['volumeLevel'] = volumeLevel
+            parms['appKey'] = appKey
+            parms['getMetadataFromUrlFile'] = getMetadataFromUrlFile
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("play_url", self.name, self.entity_id), parms)
+
+        self._client.PlayUrl(url, artist, album, track, volumeLevel, appKey, getMetadataFromUrlFile)
 
 
     def preset_list(self) -> PresetList:

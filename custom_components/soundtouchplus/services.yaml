@@ -103,6 +103,74 @@ play_tts:
       selector:
         text:
 
+play_url:
+  name: Play URL Media
+  description: Play media content from a URL on a SoundTouch device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouch device to play the media.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    url:
+      name: URL
+      description: The url to play; value must start with http or https.
+      example: "https://freetestdata.com/wp-content/uploads/2021/09/Free_Test_Data_1MB_MP3.mp3"
+      required: true
+      selector:
+        text:
+    artist:
+      name: Artist Status Text
+      description: The message text that will appear in the NowPlaying Artist node; if omitted, default is "Unknown Artist".
+      example: "FreeTestData.com"
+      required: false
+      selector:
+        text:
+    album:
+      name: Album Status Text
+      description: The message text that will appear in the NowPlaying Album node; if omitted, default is "Unknown Album".
+      example: "MP3 Test Data"
+      required: false
+      selector:
+        text:
+    track:
+      name: Track Status Text
+      description: The message text that will appear in the NowPlaying Track node; if omitted, default is "Unknown Track".
+      example: "Free_Test_Data_1MB_MP3"
+      required: false
+      selector:
+        text:
+    volume_level:
+      name: Volume Level
+      description: The temporary volume level that will be used when the media is played.  Specify a value of zero to play at the current volume.  Default is zero.
+      example: 50
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 5
+          unit_of_measurement: "%"
+          mode: slider
+    app_key:
+      name: Bose App Key
+      description: Bose Developer API application key; if omitted, defaults to a pre-defined App Developer Key.
+      example: "abcdefghijklmnopqrstuvwxyz"
+      required: false
+      selector:
+        text:
+    get_metadata_from_url_file:
+      name: Get Metadata From URL?
+      description: If true, the artist, album, and song title metadata details will be retrieved from the ID3 header of the url content (if available); otherwise, False to use the artist, album, and song title arguments specified.
+      example: "false"
+      required: false
+      selector:
+        boolean:
+
 preset_list:
   name: Get Preset List
   description: Retrieves the list of presets defined to the device.

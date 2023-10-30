@@ -23,6 +23,7 @@ from .const import (
     DOMAIN,
     SERVICE_PLAY_HANDOFF,
     SERVICE_PLAY_TTS,
+    SERVICE_PLAY_URL,
     SERVICE_PRESETLIST,
     SERVICE_RECENTLIST,
     SERVICE_REMOTE_KEYPRESS,
@@ -89,9 +90,21 @@ SERVICE_PLAY_TTS_SCHEMA = vol.Schema(
         vol.Optional("album"): cv.string,
         vol.Optional("track"): cv.string,
         vol.Optional("tts_url"): cv.string,
-        vol.Optional("artist"): cv.string,
         vol.Optional("volume_level", default=0): vol.All(vol.Range(min=0,max=100)),
         vol.Optional("app_key"): cv.string
+    }
+)
+
+SERVICE_PLAY_URL_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("url"): cv.string,
+        vol.Optional("artist"): cv.string,
+        vol.Optional("album"): cv.string,
+        vol.Optional("track"): cv.string,
+        vol.Optional("volume_level", default=0): vol.All(vol.Range(min=0,max=100)),
+        vol.Optional("app_key"): cv.string,
+        vol.Required("get_metadata_from_url_file", default=False): cv.boolean
     }
 )
 
@@ -200,6 +213,16 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                 volume_level = service.data.get("volume_level")
                 app_key = service.data.get("app_key")
                 await hass.async_add_executor_job(player.play_tts, message, artist, album, track, tts_url, volume_level, app_key)
+
+            elif service.service == SERVICE_PLAY_URL:
+                url = service.data.get("url")
+                artist = service.data.get("artist")
+                album = service.data.get("album")
+                track = service.data.get("track")
+                volume_level = service.data.get("volume_level")
+                app_key = service.data.get("app_key")
+                get_metadata_from_url_file = service.data.get("get_metadata_from_url_file")
+                await hass.async_add_executor_job(player.play_url, url, artist, album, track, volume_level, app_key, get_metadata_from_url_file)
 
             else:
                 _logsi.LogError(STAppMessages.MSG_SERVICE_REQUEST_UNKNOWN, service.service, "service_handle_entity")
@@ -366,6 +389,14 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
         SERVICE_PLAY_TTS,
         service_handle_entity,
         schema=SERVICE_PLAY_TTS_SCHEMA,
+    )
+
+    _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_PLAY_URL, SERVICE_PLAY_URL_SCHEMA)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_PLAY_URL,
+        service_handle_entity,
+        schema=SERVICE_PLAY_URL_SCHEMA,
     )
 
     _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_PRESETLIST, SERVICE_PRESETLIST_SCHEMA)
