@@ -10,7 +10,7 @@ from xml.etree import ElementTree
 from bosesoundtouchapi import SoundTouchDevice, SoundTouchClient
 from bosesoundtouchapi.models import *
 from bosesoundtouchapi.uri import *
-from bosesoundtouchapi.websockets import SoundTouchWebSocket
+from bosesoundtouchapi.ws import SoundTouchWebSocket
 
 from homeassistant.core import HomeAssistant, callback
 

@@ -139,7 +139,7 @@ SessionDefaults.ColorBG = 0xFFFFFF
 ;Session.Main.ColorBG = 0xFFFFFF
 
 ; configure SoundTouchPlus sessions.
-Session.bosesoundtouchapi.websockets.soundtouchwebsocket.ColorBG = 0xFBD340
+Session.bosesoundtouchapi.ws.soundtouchwebsocket.ColorBG = 0xFBD340
 Session.custom_components.soundtouchplus.media_player.ColorBG = 0x40A9FB
 Session.custom_components.soundtouchplus.config_flow.ColorBG = 0x1AAE54
 Session.custom_components.soundtouchplus.ColorBG = 0x1AAE54

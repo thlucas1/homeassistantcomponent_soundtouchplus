@@ -57,6 +57,7 @@
     <Content Include=".gitignore" />
     <Content Include=".ruff.toml" />
     <Content Include=".vscode\tasks.json" />
+    <Content Include="CHANGELOG.md" />
     <Content Include="config\configuration.yaml" />
     <Content Include="config\smartinspect.cfg" />
     <Content Include="CONTRIBUTING.md" />
