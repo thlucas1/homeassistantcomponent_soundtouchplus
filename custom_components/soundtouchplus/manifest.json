@@ -1,13 +1,12 @@
 {
   "domain": "soundtouchplus",
   "name": "Bose SoundTouch Plus",
-  "version": "1.0.1",
   "codeowners": [ "@thlucas" ],
   "config_flow": true,
   "documentation": "https://github.com/thlucas1/homeassistantcomponent_soundtouchplus#readme",
-  "issue_tracker": "https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/issues",
   "integration_type": "device",
   "iot_class": "local_push",
+  "issue_tracker": "https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/issues",
   "loggers": [ "bosesoundtouchapi" ],
   "requirements": [
     "websocket-client>=1.6.4",
@@ -15,5 +14,6 @@
     "smartinspectPython>=3.0.26",
     "bosesoundtouchapi>=1.0.3"
   ],
+  "version": "1.0.2",
   "zeroconf": [ "_soundtouch._tcp.local." ]
 }

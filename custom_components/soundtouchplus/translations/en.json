@@ -14,7 +14,7 @@
         }
       },
       "discovery_confirm": {
-        "description": "Do you want to add the following Bose SoundTouch device to Home Assistant?<br /><br />\"{name}\" at IP address {host}",
+        "description": "Do you want to add the following Bose SoundTouch device to Home Assistant?\n\n\"{name}\" ({host})",
         "title": "Discovered SoundTouch Plus"
       },
       "ws_port": {
