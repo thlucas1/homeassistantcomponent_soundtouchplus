@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.4 ] - 2023/10/31
+
+  *  Updated code to handle devices that do not support websocket notifications.  In this case, HA will poll the device every 10 seconds for status updates.
+
 ###### [ 1.0.3 ] - 2023/10/30
 
   *  Added "play_url" service support that allows better support for playing URL media content.

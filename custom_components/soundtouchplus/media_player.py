@@ -79,7 +79,8 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     Representation of a Bose SoundTouch device.
     """
     # we will (by default) set polling to false, as the SoundTouch device should be
-    # sending us updates as they happen.
+    # sending us updates as they happen if it supports websockets.  if not, then we
+    # will reset this flag in the __init__ method.
     should_poll = False
 
     def __init__(self, initParms:EntityInitParms) -> None:
@@ -107,6 +108,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         # is used as the device name for device screens in the UI. This name is used on
         # entity screens, and used to build the Entity ID that's used in automations etc.
         self._attr_name = self._client.Device.DeviceName
+        
+        # if websockets are not supported, then we need to enable device polling.
+        if self._socket is None:
+            _logsi.LogVerbose("'%s': should_poll is being enabled, as the device does not support websockets" % (self.name))
+            self.should_poll = True
 
         _logsi.LogObject(SILevel.Verbose, "'%s': initialized" % (self.name), self._client)
         return
@@ -125,6 +131,9 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         The call back registration is done once this entity is registered with Home
         Assistant (rather than in the `__init__` method).
         """
+        if self._socket is None:
+            return
+        
         _logsi.LogVerbose("'%s': async_added_to_hass is adding notification event listeners" % (self.name))
 
         # add our listener(s) that will handle SoundTouch device status updates.
@@ -159,8 +168,8 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         Remove any registered call backs here.
         """
         # stop receiving device event notifications.
-        _logsi.LogVerbose("'%s': async_will_remove_from_hass is stopping websocket notifications" % (self.name))
         if self._socket is not None:
+            _logsi.LogVerbose("'%s': async_will_remove_from_hass is stopping websocket notifications" % (self.name))
             self._socket.StopNotification()
 
 
@@ -379,9 +388,10 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         # this can happen if the SoundTouch device loses power and drops the connection.
         # we could probably check for this somewhere else to have it restart automatically,
         # but let's start with here.
-        if self._socket.IsThreadRunForeverActive == False:
-            self._socket.StopNotification()
-            self._socket.StartNotification()
+        if self._socket is not None:
+            if self._socket.IsThreadRunForeverActive == False:
+                self._socket.StopNotification()
+                self._socket.StartNotification()
 
 
     def set_repeat(self, repeat:RepeatMode) -> None:
@@ -419,7 +429,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
     def update(self) -> None:
         """ Retrieve the latest data. """
-        _logsi.LogVerbose("'%s': update method" % (self.name))
+        _logsi.LogVerbose("'%s': update method (should_poll=%s)" % (self.name, self.should_poll))
         self._nowPlayingStatus = self._client.GetNowPlayingStatus(self.should_poll)
         self._volume = self._client.GetVolume(self.should_poll)
         self._zone = self._client.GetZoneStatus(self.should_poll)

@@ -21,10 +21,10 @@ The following Home Assistant media_player Platform services are supplied by this
 - NEXT_TRACK
 - PAUSE
 - PLAY
-- PLAY_MEDIA **
+- PLAY_MEDIA
 - PREVIOUS_TRACK
 - REPEAT_SET
-- SELECT_SOURCE **
+- SELECT_SOURCE
 - SHUFFLE_SET
 - STOP
 - TURN_OFF
@@ -32,39 +32,6 @@ The following Home Assistant media_player Platform services are supplied by this
 - VOLUME_MUTE
 - VOLUME_SET
 - VOLUME_STEP
-
-The SELECT_SOURCE supports selecting a Source as well as a SourceAccount value.  This is required functionality for specific Bose SoundTouch devices that require it (e.g. ST300).
-For example, to watch TV using the ST300 you must select source="PRODUCT" and sourceAccount="TV".  Your service call would look like this:
-
-``` yaml
-service: media_player.select_source
-data:
-  source: PRODUCT:TV
-target:
-  entity_id: media_player.soundtouch_10
-```
-
-PLAY_MEDIA also supports playing of both HTTP and HTTPS url's.  If the URL contains ID3 metadata tags, then the Album, Artist, and Song Title are automatically extracted and appear in the NowPlaying status.  Your service call would look like this:
-
-``` yaml
-service: media_player.play_media
-data:
-  media_content_type: music
-  media_content_id: >-
-    https://freetestdata.com/wp-content/uploads/2021/09/Free_Test_Data_1MB_MP3.mp3
-target:
-  entity_id: media_player.soundtouch_10
-```
-
-``` yaml
-service: media_player.play_media
-data:
-  media_content_type: music
-  media_content_id: >-
-    http://www.hyperion-records.co.uk/audiotest/14%20Clementi%20Piano%20Sonata%20in%20D%20major,%20Op%2025%20No%206%20-%20Movement%202%20Un%20poco%20andante.MP3
-target:
-  entity_id: media_player.soundtouch_10
-```
 
 The following custom services are also supplied by this integration.
 - Play Handoff: Handoff playing source from one SoundTouch device to another.
@@ -113,6 +80,7 @@ Click on the topics below to expand the section and reveal more information.
   <br/>
   Add the following lines to a new file (e.g. "smartinspect.cfg") in the HA `config` directory.  
   You will probably need to change the `host=192.168.1.1` address to your networks equivalent.  This is the location of the SmartInspect Console viewer application (see below for more details on the SI Viewer).
+  You can also log to a file as well as the console viewer if you wish.  To do this, comment out the first "Connections =..." line and uncomment the second "Connections =..." line that contains the "file(filename=..." syntax.  To somment, place a semi-colon (e.g. ;) in the first column of the line.  The example below will create a new log file in the Home Assistant "config" directory named "smartinspect-yyyy-mm-dd-hh-mm-ss.sil".
 
 ``` ini
 ; smartinspect.cfg
@@ -120,6 +88,7 @@ Click on the topics below to expand the section and reveal more information.
 
 ; specify SmartInspect properties.
 Connections = tcp(host=192.168.1.1,port=4228,timeout=30000,reconnect=true,reconnect.interval=10s,async.enabled=true)
+;Connections = tcp(host=192.168.1.1,port=4228,timeout=30000,reconnect=true,reconnect.interval=10s,async.enabled=true), file(filename="/config/smartinspect.sil",rotate=daily,maxparts=3,append=true)
 Enabled = True 
 Level = Verbose
 DefaultLevel = Debug
@@ -153,6 +122,87 @@ Session.custom_components.soundtouchplus.ColorBG = 0x1AAE54
   <summary>SmartInspect Redistributable Console Viewer </summary>
   <br/>
   The SmarrtInspect Redistributable Console Viewer (free) is required to view SmartInspect Log (.sil) formatted log files, as well capture packets via the TcpProtocol or PipeProtocol connections.  The Redistributable Console Viewer can be downloaded from the <a href="https://code-partners.com/offerings/smartinspect/releases/" target="_blank">Code-Partners Software Downloads Page</a>. Note that the "Redistributable Console Viewer" is a free product, while the "SmartInspect Full Setup" is the Professional level viewer that adds a few more bells and whistles for a fee.  Also note that a Console Viewer is NOT required to view plain text (non .sil) formatted log files.
+</details>
+
+## YAML Examples
+
+The following YAML examples will get you started on using the component.  
+Click on the topics below to expand the section and reveal more information.  
+
+<details>
+  <summary>Extended SELECT_SOURCE Support</summary>
+  <br/>
+  The SELECT_SOURCE supports selecting a Source as well as a SourceAccount value.  This is required functionality for specific Bose SoundTouch devices that require it (e.g. ST300).
+  For example, to watch TV using the ST300 you must select source="PRODUCT" and sourceAccount="TV".  Your service call would look like this:
+
+``` yaml
+service: media_player.select_source
+data:
+  source: PRODUCT:TV
+target:
+  entity_id: media_player.soundtouch_10
+```
+</details>
+
+<details>
+  <summary>PLAY_MEDIA Support for HTTP and HTTPS Content</summary>
+  <br/>
+  PLAY_MEDIA also supports playing of both HTTP and HTTPS url's.  If the URL contains ID3 metadata tags, then the Album, Artist, and Song Title are automatically extracted and appear in the NowPlaying status.  Your service call would look like this:
+
+``` yaml
+service: media_player.play_media
+data:
+  media_content_type: music
+  media_content_id: >-
+    https://freetestdata.com/wp-content/uploads/2021/09/Free_Test_Data_1MB_MP3.mp3
+target:
+  entity_id: media_player.soundtouch_10
+```
+
+  Another example for HTTP content:
+``` yaml
+service: media_player.play_media
+data:
+  media_content_type: music
+  media_content_id: >-
+    http://www.hyperion-records.co.uk/audiotest/14%20Clementi%20Piano%20Sonata%20in%20D%20major,%20Op%2025%20No%206%20-%20Movement%202%20Un%20poco%20andante.MP3
+target:
+  entity_id: media_player.soundtouch_10
+```
+</details>
+
+<details>
+  <summary>PLAY_URL Service Example</summary>
+  <br/>
+  The PLAY_URL service supports playing of both HTTP and HTTPS url's, as well as setting NowPlaying status value for the album, artist, and track.  If the URL contains ID3 metadata tags, then the Album, Artist, and Song Title are automatically extracted and appear in the NowPlaying status.  Your service call would look like this:
+
+``` yaml
+service: soundtouchplus.play_url
+data:
+  entity_id: media_player.soundtouch_10
+  url: >-
+    https://freetestdata.com/wp-content/uploads/2021/09/Free_Test_Data_1MB_MP3.mp3
+  artist: My Artist
+  album: My Album
+  track: My Track
+  volume_level: 20
+```
+</details>
+
+<details>
+  <summary>PLAY_URL Service with Embedded Metadata Example</summary>
+  <br/>
+  If the URL contains ID3 metadata tags, then the Album, Artist, and Song Title can be extracted from the ID3 metadata.  Your service call would look like this:
+
+``` yaml
+service: soundtouchplus.play_url
+data:
+  entity_id: media_player.soundtouch_10
+  url: >-
+    https://freetestdata.com/wp-content/uploads/2021/09/Free_Test_Data_1MB_MP3.mp3
+  volume_level: 20
+  get_metadata_from_url_file: true
+```
 </details>
 
 ## Contributions are welcome!

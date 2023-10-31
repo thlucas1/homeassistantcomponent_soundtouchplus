@@ -11,9 +11,9 @@
   "requirements": [
     "websocket-client>=1.6.4",
     "urllib3",
-    "smartinspectPython>=3.0.26",
+    "smartinspectPython>=3.0.27",
     "bosesoundtouchapi>=1.0.3"
   ],
-  "version": "1.0.3",
+  "version": "1.0.4",
   "zeroconf": [ "_soundtouch._tcp.local." ]
 }

@@ -37,7 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 
 try:
 
-    from smartinspectpython.siauto import SIAuto, SILevel, SISession, SIConfigurationTimer, SIColors
+    from smartinspectpython.siauto import SIAuto, SILevel, SISession, SIConfigurationTimer
 
     # load SmartInspect settings from a configuration settings file.
     siConfigPath: str = "./smartinspect.cfg"
@@ -476,17 +476,17 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
 
     try:
 
-        _logsi.LogVerbose("Component async_setup_entry is verifying SoundTouch WebSocket connectivity (%s)" % host, colorValue=SIColors.Gold)
+        _logsi.LogVerbose("Component async_setup_entry is verifying SoundTouch WebSocket connectivity (%s)" % (host))
 
         # get device capabilities - must have IsWebSocketApiProxyCapable=True 
         # in order to support notifications.
         capabilities:Capabilities = await hass.async_add_executor_job(client.GetCapabilities)
         if capabilities.IsWebSocketApiProxyCapable:
 
-            _logsi.LogVerbose("Component async_setup_entry has verified device is capable of websocket notifications (%s)" % host, colorValue=SIColors.Gold)
+            _logsi.LogVerbose("Component async_setup_entry has verified device is capable of websocket notifications (%s)" % (host))
 
             # create a websocket to receive notifications from the device.
-            _logsi.LogVerbose("Component async_setup_entry is creating SoundTouchWebSocket instance (%s)" % host, colorValue=SIColors.Gold)
+            _logsi.LogVerbose("Component async_setup_entry is creating SoundTouchWebSocket instance (%s)" % (host))
             socket = await hass.async_add_executor_job(SoundTouchWebSocket, client)
 
             # we cannot start listening for notifications just yet, as the entity has not been
@@ -495,7 +495,7 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
         else:
 
             # SoundTouch device does not support websocket notifications!
-            _logsi.LogVerbose("Component async_setup_entry - device does not support websocket notifications (%s)" % host, colorValue=SIColors.Gold)
+            _logsi.LogMessage("Component async_setup_entry - device does not support websocket notifications; polling will be enabled (%s)" % (host))
 
     except Exception as ex:
         _logsi.LogException("SoundTouch WebSocket creation exception!", ex)
