@@ -1,10 +1,14 @@
 ## Change Log
 
-All notable changes to this project are listed here.
+All notable changes to this project are listed here.  
 
-Change are listed in reverse chronological order (newest to oldest).
+Change are listed in reverse chronological order (newest to oldest).  
 
 <span class="changelog">
+
+###### [ 1.0.5 ] - 2023/11/01
+
+  *  Updated code to handle device websocket connection errors (e.g. power loss, socket connection errors, etc).  This was causing devices to not respond once the websocket connection was re-established.
 
 ###### [ 1.0.4 ] - 2023/10/31
 

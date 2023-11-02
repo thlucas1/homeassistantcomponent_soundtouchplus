@@ -26,3 +26,4 @@ config/*
 # Local project files to ignore.
 /custom_components/soundtouchplus/developer_notes.txt
 /.github/workflows/lint.yml
+/New_Release_Instructions.txt

@@ -78,10 +78,6 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     """
     Representation of a Bose SoundTouch device.
     """
-    # we will (by default) set polling to false, as the SoundTouch device should be
-    # sending us updates as they happen if it supports websockets.  if not, then we
-    # will reset this flag in the __init__ method.
-    should_poll = False
 
     def __init__(self, initParms:EntityInitParms) -> None:
         """
@@ -109,14 +105,36 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         # entity screens, and used to build the Entity ID that's used in automations etc.
         self._attr_name = self._client.Device.DeviceName
         
+        # we will (by default) set polling to false, as the SoundTouch device should be
+        # sending us updates as they happen if it supports websocket notificationss.  
+        # if not, then we will reset this flag in the __init__ method.
+        self._attr_should_poll = False
+        
         # if websockets are not supported, then we need to enable device polling.
         if self._socket is None:
-            _logsi.LogVerbose("'%s': should_poll is being enabled, as the device does not support websockets" % (self.name))
-            self.should_poll = True
+            _logsi.LogVerbose("'%s': _attr_should_poll is being enabled, as the device does not support websockets" % (self.name))
+            self._attr_should_poll = True
 
         _logsi.LogObject(SILevel.Verbose, "'%s': initialized" % (self.name), self._client)
         return
 
+
+    # @property
+    # def should_poll(self) -> bool:
+    #     """Return True if entity has to be polled for state.
+
+    #     False if entity pushes its state to HA.
+    #     """
+    #     return self._attr_should_poll
+
+    # @should_poll.setter
+    # def should_poll(self, value:bool):
+    #     """ 
+    #     Sets the _attr_should_poll property value.
+    #     """
+    #     if isinstance(value, bool):
+    #         self._attr_should_poll = value
+    
 
     async def async_added_to_hass(self) -> None:
         """
@@ -150,7 +168,8 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         self._socket.AddListener(SoundTouchNotifyCategorys.SoundTouchSdkInfo, self._OnSoundTouchInfoEvent)
 
         # add our listener that will handle SoundTouch websocket related events.
-        self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketClose, self._OnSoundTouchWebSocketCloseEvent)
+        self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketClose, self._OnSoundTouchWebSocketConnectionEvent)
+        self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketOpen, self._OnSoundTouchWebSocketConnectionEvent)
         self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketError, self._OnSoundTouchWebSocketErrorEvent)
 
         # start receiving device event notifications.
@@ -384,15 +403,6 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         """ Send mute command. """
         self._client.Mute()
 
-        # if device notification events thread is stopped, then restart it.
-        # this can happen if the SoundTouch device loses power and drops the connection.
-        # we could probably check for this somewhere else to have it restart automatically,
-        # but let's start with here.
-        if self._socket is not None:
-            if self._socket.IsThreadRunForeverActive == False:
-                self._socket.StopNotification()
-                self._socket.StartNotification()
-
 
     def set_repeat(self, repeat:RepeatMode) -> None:
         """ Set repeat mode. """
@@ -429,11 +439,36 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
     def update(self) -> None:
         """ Retrieve the latest data. """
-        _logsi.LogVerbose("'%s': update method (should_poll=%s)" % (self.name, self.should_poll))
-        self._nowPlayingStatus = self._client.GetNowPlayingStatus(self.should_poll)
-        self._volume = self._client.GetVolume(self.should_poll)
-        self._zone = self._client.GetZoneStatus(self.should_poll)
-
+        _logsi.LogVerbose("'%s': update method (_attr_should_poll=%s)" % (self.name, self._attr_should_poll))
+        
+        # get updated device status.
+        _logsi.LogVerbose("'%s': update method - getting nowPlaying status" % (self.name))
+        self._nowPlayingStatus = self._client.GetNowPlayingStatus(self._attr_should_poll)
+        _logsi.LogVerbose("'%s': update method - getting volume status" % (self.name))
+        self._volume = self._client.GetVolume(self._attr_should_poll)
+        _logsi.LogVerbose("'%s': update method - getting zone status" % (self.name))
+        self._zone = self._client.GetZoneStatus(self._attr_should_poll)
+                    
+        # does this device support websocket notifications?
+        # note - if socket is None, it denotes that websocket notifications are
+        # NOT supported for the device, and we should not try to restart.
+        if self._socket is not None:
+                      
+            # is polling enabled?  if so it should NOT be since websockets are supported.
+            # this denotes that a websocket error previously occured which broke the connection.
+            # this can happen if the SoundTouch device loses power and drops the connection.
+            if self._attr_should_poll == True:
+                
+                _logsi.LogVerbose("'%s': update method - checking _socket.IsThreadRunForeverActive status" % (self.name))
+                
+                # if device notification events thread is stopped, then restart it if possible.
+                if self._socket.IsThreadRunForeverActive == False:
+                    _logsi.LogVerbose("'%s': update is re-starting websocket notifications" % (self.name))
+                    self._socket.StopNotification()
+                    self._socket.StartNotification()
+                    _logsi.LogVerbose("'%s': update is setting _attr_should_poll=False since event notifications are active again" % (self.name))
+                    self._attr_should_poll = False
+                    
 
     def volume_down(self) -> None:
         """ Volume down media player. """
@@ -606,16 +641,28 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     # -----------------------------------------------------------------------------------
 
     @callback
-    def _OnSoundTouchWebSocketCloseEvent(self, client:SoundTouchClient, args) -> None:
+    def _OnSoundTouchWebSocketConnectionEvent(self, client:SoundTouchClient, args:str) -> None:
         if (args != None):
-            _logsi.LogError("SoundTouch device websocket close event: %s" % (str(args)), colorValue=SIColors.LightGreen)
+            _logsi.LogError("SoundTouch device websocket connection event: %s" % (str(args)), colorValue=SIColors.Coral)
 
 
     @callback
     def _OnSoundTouchWebSocketErrorEvent(self, client:SoundTouchClient, ex:Exception) -> None:
         if (ex != None):
-            _logsi.LogError("SoundTouch device websocket error event: %s" % (str(ex)), colorValue=SIColors.LightGreen)
-
+            _logsi.LogError("SoundTouch device websocket error event: (%s) %s" % (str(type(ex)), str(ex)), colorValue=SIColors.Coral)
+            _logsi.LogVerbose("'%s': Setting _attr_should_poll=True due to websocket error event" % (client.Device.DeviceName), colorValue=SIColors.Coral)
+            self._attr_should_poll = True
+            
+            # at this point we will assume that the device lost power since it lost the websocket connection.
+            # reset nowPlayingStatus, which will drive a MediaPlayerState.OFF state.
+            _logsi.LogVerbose("'%s': Setting _nowPlayingStatus to None to simulate a MediaPlayerState.OFF state" % (client.Device.DeviceName), colorValue=SIColors.Coral)
+            self._nowPlayingStatus = None
+            
+            # inform Home Assistant of the status update.
+            # this will turn the player off in the Home Assistant UI.
+            _logsi.LogVerbose("'%s': Calling async_write_ha_state to update player status" % (client.Device.DeviceName), colorValue=SIColors.Coral)          
+            self.async_write_ha_state()
+            
 
     @callback
     def _OnSoundTouchInfoEvent(self, client:SoundTouchClient, args:Element) -> None:
@@ -701,6 +748,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # inform Home Assistant of the status update.
             self.async_write_ha_state()
+
 
     # -----------------------------------------------------------------------------------
     # Helpfer functions

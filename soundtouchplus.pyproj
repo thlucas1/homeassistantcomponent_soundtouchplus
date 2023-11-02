@@ -68,6 +68,7 @@
     <Content Include="custom_components\soundtouchplus\translations\en.json" />
     <Content Include="hacs.json" />
     <Content Include="LICENSE" />
+    <Content Include="New_Release_Instructions.txt" />
     <Content Include="README.md" />
     <Content Include="requirements.txt" />
     <Content Include="scripts\develop" />
