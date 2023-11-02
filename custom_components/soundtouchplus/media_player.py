@@ -643,7 +643,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     @callback
     def _OnSoundTouchWebSocketConnectionEvent(self, client:SoundTouchClient, args:str) -> None:
         if (args != None):
-            _logsi.LogError("SoundTouch device websocket connection event: %s" % (str(args)), colorValue=SIColors.Coral)
+            _logsi.LogVerbose("SoundTouch device websocket connection event: %s" % (str(args)), colorValue=SIColors.Coral)
 
 
     @callback

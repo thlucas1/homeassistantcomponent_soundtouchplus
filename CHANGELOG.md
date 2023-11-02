@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.6 ] - 2023/11/02
+
+  *  Updated websocket connection event handler to log a debug message instead of an error when a socket connection is opened or closed..
+
 ###### [ 1.0.5 ] - 2023/11/01
 
   *  Updated code to handle device websocket connection errors (e.g. power loss, socket connection errors, etc).  This was causing devices to not respond once the websocket connection was re-established.
