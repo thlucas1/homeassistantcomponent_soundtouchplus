@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.8 ] - 2023/11/05
+
+  *  Updated config flow to allow configuration key name changes.  Updates were failing due to a configuration key name change.
+
 ###### [ 1.0.7 ] - 2023/11/05
 
   *  Updated config flow to allow entry for websocket port and ping interval values.

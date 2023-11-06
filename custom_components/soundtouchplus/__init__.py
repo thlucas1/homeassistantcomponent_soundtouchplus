@@ -467,18 +467,22 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
     (e.g. SoundTouchClient in our case) for each device that will be controlled.
     """
     host:str = entry.data[CONF_HOST]
-    port:int = entry.data[CONF_PORT] or DEFAULT_PORT
-    port_websocket:int = entry.data[CONF_PORT_WEBSOCKET] or DEFAULT_PORT_WEBSOCKET
-    ping_websocket_interval:int = entry.data[CONF_PING_WEBSOCKET_INTERVAL]
-    
-    # since a value of zero is allowed, we cant' do the "... or DEFAULT_PING_WEBSOCKET_INTERVAL
-    # logic above.  so we will check here for None just in case and default the value is it is None.
-    if ping_websocket_interval is None:
-        ping_websocket_interval = DEFAULT_PING_WEBSOCKET_INTERVAL
+    port:int = DEFAULT_PORT
+    port_websocket:int = DEFAULT_PORT_WEBSOCKET
+    ping_websocket_interval:int = DEFAULT_PING_WEBSOCKET_INTERVAL
 
     _logsi.LogObject(SILevel.Verbose, "Component async_setup_entry is starting (%s)" % host, entry)
     _logsi.LogDictionary(SILevel.Verbose, "Component async_setup_entry entry.data dictionary (%s)" % host, entry.data)
 
+    # always check for keys, in case up an upgrade that contains a new key
+    # that is not present in a previous version.
+    if CONF_PORT in entry.data.keys():
+        port = entry.data[CONF_PORT]
+    if CONF_PORT_WEBSOCKET in entry.data.keys():
+        port_websocket = entry.data[CONF_PORT_WEBSOCKET]
+    if CONF_PING_WEBSOCKET_INTERVAL in entry.data.keys():
+        ping_websocket_interval = entry.data[CONF_PING_WEBSOCKET_INTERVAL]
+    
     # create the SoundTouchDevice and SoundTouchClient objects.
     # the SoundTouchClient contains all of the methods used to control the actual device.
     _logsi.LogVerbose("Component async_setup_entry is creating SoundTouchDevice and SoundTouchClient instance (%s): port=%s" % (host, str(port)))
