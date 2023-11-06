@@ -38,12 +38,14 @@ from homeassistant.helpers import config_validation as cv
 
 from .const import (
     DOMAIN,
-    CONF_WS_PORT,
     CONF_DEVICE_NAME,
     CONF_DEVICE_ID,
+    CONF_PING_WEBSOCKET_INTERVAL,
+    CONF_PORT_WEBSOCKET,
+    DEFAULT_PING_WEBSOCKET_INTERVAL,
     DEFAULT_PORT,
-    DEFAULT_TIMEOUT,
-    DEFAULT_WS_PORT
+    DEFAULT_PORT_WEBSOCKET,
+    DEFAULT_TIMEOUT
 )
 
 # get smartinspect logger reference; create a new session for this module name.
@@ -112,12 +114,13 @@ class SoundTouchPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         Initialize a new SoundTouchPlus configflow.
         """
         _logsi.LogVerbose("ConfigFlow is initializing")
-        self._name: str | None = None
-        self._host: str | None = None
-        self._port: int | None = DEFAULT_PORT
-        self._ws_port: int | None = DEFAULT_WS_PORT
-        self._discovery_name: str | None = None
         self._device_id: str | None = None
+        self._discovery_name: str | None = None
+        self._host: str | None = None
+        self._name: str | None = None
+        self._ping_websocket_interval: int | None = DEFAULT_PING_WEBSOCKET_INTERVAL
+        self._port: int | None = DEFAULT_PORT
+        self._port_websocket: int | None = DEFAULT_PORT_WEBSOCKET
 
 
     async def async_step_user(self, user_input=None):
@@ -140,6 +143,8 @@ class SoundTouchPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # get form data that was entered by the user.
             self._host = user_input[CONF_HOST]
             self._port = user_input[CONF_PORT]
+            self._port_websocket = user_input[CONF_PORT_WEBSOCKET]
+            self._ping_websocket_interval = user_input[CONF_PING_WEBSOCKET_INTERVAL]
 
             try:
                 # validate the user input.
@@ -165,6 +170,8 @@ class SoundTouchPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_NAME: self._name,
                         CONF_HOST: self._host,
                         CONF_PORT: self._port,
+                        CONF_PORT_WEBSOCKET: self._port_websocket,
+                        CONF_PING_WEBSOCKET_INTERVAL: self._ping_websocket_interval,
                     }
                 )
 
@@ -183,10 +190,17 @@ class SoundTouchPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         to add a new device instance.
         """
         default_port = self._port or DEFAULT_PORT
+        default_port_websocket = self._port_websocket or DEFAULT_PORT_WEBSOCKET
+        default_ping_websocket_interval = self._ping_websocket_interval or DEFAULT_PING_WEBSOCKET_INTERVAL
+        
+        _logsi.LogVerbose("_show_user_form data: IP=%s, port=%s, portws=%s, pinginterval=%s" % (self._host, str(default_port), str(default_port_websocket), str(default_ping_websocket_interval)))
+
         schema = vol.Schema(
             {
                 vol.Required(CONF_HOST, default=self._host): str,
                 vol.Required(CONF_PORT, default=default_port): cv.port,
+                vol.Required(CONF_PORT_WEBSOCKET, default=default_port_websocket): cv.port,
+                vol.Required(CONF_PING_WEBSOCKET_INTERVAL, default=default_ping_websocket_interval): vol.All(vol.Coerce(int), vol.Range(min=0, max=3600)),
             }
         )
 
@@ -303,7 +317,8 @@ class SoundTouchPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_NAME: self._name,
             CONF_HOST: self._host,
             CONF_PORT: self._port,
-            CONF_WS_PORT: self._ws_port,
+            CONF_PORT_WEBSOCKET: self._port_websocket,
+            CONF_PING_WEBSOCKET_INTERVAL: self._ping_websocket_interval,
             CONF_TIMEOUT: DEFAULT_TIMEOUT,
         }
 

@@ -6,9 +6,13 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.7 ] - 2023/11/05
+
+  *  Updated config flow to allow entry for websocket port and ping interval values.
+
 ###### [ 1.0.6 ] - 2023/11/02
 
-  *  Updated websocket connection event handler to log a debug message instead of an error when a socket connection is opened or closed..
+  *  Updated websocket connection event handler to log a debug message instead of an error when a socket connection is opened or closed.
 
 ###### [ 1.0.5 ] - 2023/11/01
 

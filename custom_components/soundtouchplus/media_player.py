@@ -171,6 +171,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketClose, self._OnSoundTouchWebSocketConnectionEvent)
         self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketOpen, self._OnSoundTouchWebSocketConnectionEvent)
         self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketError, self._OnSoundTouchWebSocketErrorEvent)
+        self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketPong, self._OnSoundTouchWebSocketPongEvent)
 
         # start receiving device event notifications.
         _logsi.LogVerbose("'%s': async_added_to_hass is starting websocket notifications" % (self.name))
@@ -190,6 +191,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         if self._socket is not None:
             _logsi.LogVerbose("'%s': async_will_remove_from_hass is stopping websocket notifications" % (self.name))
             self._socket.StopNotification()
+            self._socket = None
 
 
     # Information about the devices that is partially visible in the UI.
@@ -662,6 +664,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             # this will turn the player off in the Home Assistant UI.
             _logsi.LogVerbose("'%s': Calling async_write_ha_state to update player status" % (client.Device.DeviceName), colorValue=SIColors.Coral)          
             self.async_write_ha_state()
+            
+
+    @callback
+    def _OnSoundTouchWebSocketPongEvent(self, client:SoundTouchClient, args:bytes) -> None:
+        _logsi.LogVerbose("SoundTouch device websocket pong event: (%s)" % (str(args)), colorValue=SIColors.Coral)
             
 
     @callback

@@ -6,25 +6,20 @@
         "description": "This integration is for Bose SoundTouch Speaker models that support the SoundTouch Webservices API; these include the ST10, ST300, etc.",
         "data": {
           "host": "IP Address",
-          "port": "Port"
+          "port": "Port",
+          "port_websocket": "WebSocket Port",
+          "ping_websocket_interval": "WebSocket Ping Interval"
         },
         "data_description": {
           "host": "Ip address or DNS alias of the device",
-          "port": "Bose WebSocket API Port of the device (default is 8090)"
+          "port": "Bose WebServices API Port of the device (default is 8090)",
+          "port_websocket": "Bose WebSocket API Port of the device (default is 8080)",
+          "ping_websocket_interval": "Bose WebSocket API Ping interval (in seconds) used to keep the connection alive; specify 0 to disable, or range of 30-3600, default is 300"
         }
       },
       "discovery_confirm": {
         "description": "Do you want to add the following Bose SoundTouch device to Home Assistant?\n\n\"{name}\" ({host})",
         "title": "Discovered SoundTouch Plus"
-      },
-      "ws_port": {
-        "description": "The WebSocket port. In order to connect over WebSocket, the SoundTouch device must have the 'IsWebSocketApiProxyCapable' defined in its 'capabilities' properties. If IsWebSocketApiProxyCapable is not enabled, then remove the port and leave empty.",
-        "data": {
-          "ws_port": "Port"
-        },
-        "data_description": {
-          "ws_port": "Bose WebSocket API Port of the device (default is 8080)"
-        }
       }
     },
     "error": {

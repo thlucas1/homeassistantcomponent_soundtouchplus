@@ -12,7 +12,7 @@ import voluptuous as vol
 
 from homeassistant.components.media_player import MediaPlayerEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, Platform
+from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
@@ -21,6 +21,11 @@ from .entity_init_parms import EntityInitParms
 from .stappmessages import STAppMessages
 from .const import (
     DOMAIN,
+    CONF_PORT_WEBSOCKET,
+    CONF_PING_WEBSOCKET_INTERVAL,
+    DEFAULT_PING_WEBSOCKET_INTERVAL,
+    DEFAULT_PORT,
+    DEFAULT_PORT_WEBSOCKET,
     SERVICE_PLAY_HANDOFF,
     SERVICE_PLAY_TTS,
     SERVICE_PLAY_URL,
@@ -90,7 +95,7 @@ SERVICE_PLAY_TTS_SCHEMA = vol.Schema(
         vol.Optional("album"): cv.string,
         vol.Optional("track"): cv.string,
         vol.Optional("tts_url"): cv.string,
-        vol.Optional("volume_level", default=0): vol.All(vol.Range(min=0,max=100)),
+        vol.Optional("volume_level", default=0): vol.All(vol.Range(min=10,max=70)),
         vol.Optional("app_key"): cv.string
     }
 )
@@ -102,7 +107,7 @@ SERVICE_PLAY_URL_SCHEMA = vol.Schema(
         vol.Optional("artist"): cv.string,
         vol.Optional("album"): cv.string,
         vol.Optional("track"): cv.string,
-        vol.Optional("volume_level", default=0): vol.All(vol.Range(min=0,max=100)),
+        vol.Optional("volume_level", default=0): vol.All(vol.Range(min=10,max=70)),
         vol.Optional("app_key"): cv.string,
         vol.Required("get_metadata_from_url_file", default=False): cv.boolean
     }
@@ -462,13 +467,22 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
     (e.g. SoundTouchClient in our case) for each device that will be controlled.
     """
     host:str = entry.data[CONF_HOST]
+    port:int = entry.data[CONF_PORT] or DEFAULT_PORT
+    port_websocket:int = entry.data[CONF_PORT_WEBSOCKET] or DEFAULT_PORT_WEBSOCKET
+    ping_websocket_interval:int = entry.data[CONF_PING_WEBSOCKET_INTERVAL]
+    
+    # since a value of zero is allowed, we cant' do the "... or DEFAULT_PING_WEBSOCKET_INTERVAL
+    # logic above.  so we will check here for None just in case and default the value is it is None.
+    if ping_websocket_interval is None:
+        ping_websocket_interval = DEFAULT_PING_WEBSOCKET_INTERVAL
 
     _logsi.LogObject(SILevel.Verbose, "Component async_setup_entry is starting (%s)" % host, entry)
+    _logsi.LogDictionary(SILevel.Verbose, "Component async_setup_entry entry.data dictionary (%s)" % host, entry.data)
 
     # create the SoundTouchDevice and SoundTouchClient objects.
     # the SoundTouchClient contains all of the methods used to control the actual device.
-    _logsi.LogVerbose("Component async_setup_entry is creating SoundTouchDevice and SoundTouchClient instance (%s)" % host)
-    device:SoundTouchDevice = await hass.async_add_executor_job(SoundTouchDevice, host)
+    _logsi.LogVerbose("Component async_setup_entry is creating SoundTouchDevice and SoundTouchClient instance (%s): port=%s" % (host, str(port)))
+    device:SoundTouchDevice = await hass.async_add_executor_job(SoundTouchDevice, host, 30, None, port)
     client:SoundTouchClient = await hass.async_add_executor_job(SoundTouchClient, device)
     _logsi.LogObject(SILevel.Verbose, "Component async_setup_entry created SoundTouchClient instance (%s): %s"  % (host, device.DeviceName), client)
 
@@ -486,8 +500,8 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
             _logsi.LogVerbose("Component async_setup_entry has verified device is capable of websocket notifications (%s)" % (host))
 
             # create a websocket to receive notifications from the device.
-            _logsi.LogVerbose("Component async_setup_entry is creating SoundTouchWebSocket instance (%s)" % (host))
-            socket = await hass.async_add_executor_job(SoundTouchWebSocket, client)
+            _logsi.LogVerbose("Component async_setup_entry is creating SoundTouchWebSocket instance (%s): port=%s, pingInterval=%s" % (host, str(port_websocket), str(ping_websocket_interval)))
+            socket = await hass.async_add_executor_job(SoundTouchWebSocket, client, port_websocket, ping_websocket_interval)
 
             # we cannot start listening for notifications just yet, as the entity has not been
             # added to HA UI yet.  this will happen in the `media_player.async_added_to_hass` method.
