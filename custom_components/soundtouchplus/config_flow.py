@@ -199,7 +199,7 @@ class SoundTouchPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_HOST, default=self._host): str,
                 vol.Required(CONF_PORT, default=default_port): cv.port,
-                vol.Required(CONF_PORT_WEBSOCKET, default=default_port_websocket): cv.port,
+                vol.Required(CONF_PORT_WEBSOCKET, default=default_port_websocket): vol.All(vol.Coerce(int), vol.Range(min=0, max=65535)),
                 vol.Required(CONF_PING_WEBSOCKET_INTERVAL, default=default_ping_websocket_interval): vol.All(vol.Coerce(int), vol.Range(min=0, max=3600)),
             }
         )

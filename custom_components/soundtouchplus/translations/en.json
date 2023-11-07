@@ -13,7 +13,7 @@
         "data_description": {
           "host": "Ip address or DNS alias of the device",
           "port": "Bose WebServices API Port of the device (default is 8090)",
-          "port_websocket": "Bose WebSocket API Port of the device (default is 8080)",
+          "port_websocket": "Bose WebSocket API Port of the device; specify 0 to disable, or range of 1-65535, default is 8080.  If disabled, device is polled by HA UI every 10 seconds.",
           "ping_websocket_interval": "Bose WebSocket API Ping interval (in seconds) used to keep the connection alive; specify 0 to disable, or range of 30-3600, default is 300"
         }
       },

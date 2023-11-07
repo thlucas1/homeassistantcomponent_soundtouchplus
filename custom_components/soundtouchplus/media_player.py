@@ -107,7 +107,6 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         
         # we will (by default) set polling to false, as the SoundTouch device should be
         # sending us updates as they happen if it supports websocket notificationss.  
-        # if not, then we will reset this flag in the __init__ method.
         self._attr_should_poll = False
         
         # if websockets are not supported, then we need to enable device polling.
@@ -452,8 +451,8 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         self._zone = self._client.GetZoneStatus(self._attr_should_poll)
                     
         # does this device support websocket notifications?
-        # note - if socket is None, it denotes that websocket notifications are
-        # NOT supported for the device, and we should not try to restart.
+        # note - if socket is None, it denotes that websocket notifications are NOT
+        # supported for the device (or are disabled), and we should not try to restart.
         if self._socket is not None:
                       
             # is polling enabled?  if so it should NOT be since websockets are supported.

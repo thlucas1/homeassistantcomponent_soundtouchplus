@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.9 ] - 2023/11/06
+
+  *  Allow user to disable websocket notifications if desired when device is added.  This will enable device polling every 10 seconds from Home Assistant UI for status updates.
+
 ###### [ 1.0.8 ] - 2023/11/05
 
   *  Updated config flow to allow configuration key name changes.  Updates were failing due to a configuration key name change.

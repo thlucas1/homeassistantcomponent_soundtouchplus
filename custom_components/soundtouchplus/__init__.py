@@ -499,7 +499,12 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
         # get device capabilities - must have IsWebSocketApiProxyCapable=True 
         # in order to support notifications.
         capabilities:Capabilities = await hass.async_add_executor_job(client.GetCapabilities)
-        if capabilities.IsWebSocketApiProxyCapable:
+        if (port_websocket == 0):
+
+            # SoundTouch device websocket notifications were disabled by user - device will be polled.
+            _logsi.LogMessage("Component async_setup_entry - device websocket notifications were disabled by the user; polling will be enabled (%s)" % (host))
+            
+        elif (capabilities.IsWebSocketApiProxyCapable == True):
 
             _logsi.LogVerbose("Component async_setup_entry has verified device is capable of websocket notifications (%s)" % (host))
 
