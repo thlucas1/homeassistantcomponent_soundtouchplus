@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.11 ] - 2023/11/09
+
+  *  Added a new extra state attribut to media_player named "soundtouchplus_source".  This will return a "source:sourceAccount" value if the sourceAccount value is populated; otherwise, it just returns the "source" value.
+
 ###### [ 1.0.10 ] - 2023/11/08
 
   *  Updated initialization method to load the _attr_source_list state property with the list of sources the device supports.  Also added listener to update the source list when it is changed in real-time.

@@ -6,8 +6,6 @@ from __future__ import annotations
 from functools import partial
 import logging
 import re
-import requests
-import time
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 from typing import Any
@@ -51,6 +49,7 @@ _logsi.SystemLogger = logging.getLogger(__name__)
 
 # our extra state attribute names.
 ATTR_SOUNDTOUCHPLUS_WARN_MSG = "soundtouchplus_warn_msg"
+ATTR_SOUNDTOUCHPLUS_SOURCE = "soundtouchplus_source"
 
 
 async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry, async_add_entities:AddEntitiesCallback) -> None:
@@ -339,6 +338,21 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
 
     @property
+    def soundtouchplus_source(self):
+        """ Name of the current input source (extended). """
+        if self._nowPlayingStatus is not None:
+            if (self._nowPlayingStatus.ContentItem is None):
+                return self._nowPlayingStatus.Source
+            elif (self._nowPlayingStatus.ContentItem.SourceAccount is not None) and (len(self._nowPlayingStatus.ContentItem.SourceAccount) > 0):
+                return "%s:%s" % (self._nowPlayingStatus.Source, self._nowPlayingStatus.ContentItem.SourceAccount)
+            elif (self._nowPlayingStatus.ContentItem.Source is not None):
+                return self._nowPlayingStatus.ContentItem.Source
+            else:
+                return self._nowPlayingStatus.Source
+        return None
+
+
+    @property
     def state(self) -> MediaPlayerState | None:
         """ Return the state of the device. """
         if self._nowPlayingStatus is None or self._nowPlayingStatus.Source == "STANDBY":
@@ -364,6 +378,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         # build list of our extra state attributes to return to HA UI.
         attributes = {}
         attributes[ATTR_SOUNDTOUCHPLUS_WARN_MSG] = self._WarnMsg
+        attributes[ATTR_SOUNDTOUCHPLUS_SOURCE] = self.soundtouchplus_source
         return attributes
 
 
