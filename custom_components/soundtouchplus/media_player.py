@@ -148,6 +148,13 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         The call back registration is done once this entity is registered with Home
         Assistant (rather than in the `__init__` method).
         """
+        # load list of supported sources.
+        _logsi.LogVerbose("'%s': loading list of sources that the device supports" % (self.name))
+        sourceList:SourceList = await self.hass.async_add_executor_job(self._client.GetSourceList, True)
+        self._attr_source_list = sourceList.ToSourceArray(True)
+        _logsi.LogVerbose("'%s': _attr_source_list = %s" % (self.name, str(self._attr_source_list)))
+
+        # if websocket support is disabled then we are done at this point.
         if self._socket is None:
             return
         
@@ -156,6 +163,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         # add our listener(s) that will handle SoundTouch device status updates.
         self._socket.AddListener(SoundTouchNotifyCategorys.nowPlayingUpdated, self._OnSoundTouchUpdateEvent_nowPlayingUpdated)
         # self._socket.AddListener(SoundTouchNotifyCategorys.nowSelectionUpdated, self.OnSoundTouchUpdateEvent)
+        self._socket.AddListener(SoundTouchNotifyCategorys.sourcesUpdated, self._OnSoundTouchUpdateEvent_sourcesUpdated)
         self._socket.AddListener(SoundTouchNotifyCategorys.volumeUpdated, self._OnSoundTouchUpdateEvent_volumeUpdated)
         self._socket.AddListener(SoundTouchNotifyCategorys.zoneUpdated, self._OnSoundTouchUpdateEvent_zoneUpdated)
         #self._socket.AddListener(SoundTouchNotifyCategorys.groupUpdated, self._OnSoundTouchUpdateEvent_groupUpdated)
@@ -190,6 +198,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         if self._socket is not None:
             _logsi.LogVerbose("'%s': async_will_remove_from_hass is stopping websocket notifications" % (self.name))
             self._socket.StopNotification()
+            self._socket.ClearListeners()
             self._socket = None
 
 
@@ -684,27 +693,6 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
 
     @callback
-    def _OnSoundTouchUpdateEvent_volumeUpdated(self, client:SoundTouchClient, args:Element) -> None:
-        """
-        Process a volumeUpdated event notification from the SoundTouch device.
-        """
-        if (args != None):
-
-            if (_logsi.IsOn(SILevel.Verbose)):
-                ElementTree.indent(args)  # for pretty printing
-                argsEncoded = ElementTree.tostring(args, encoding="unicode")
-                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
-
-            # create configuration model from update event argument and update the cache.
-            config:Volume = Volume(root=args[0])
-            client.ConfigurationCache[SoundTouchNodes.volume.Path] = config
-
-            # inform Home Assistant of the status update.
-            self.update()
-            self.async_write_ha_state()
-
-
-    @callback
     def _OnSoundTouchUpdateEvent_nowPlayingUpdated(self, client:SoundTouchClient, args:Element) -> None:
         """
         Process a nowPlayingUpdated event notification from the SoundTouch device.
@@ -719,6 +707,52 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             # create configuration model from update event argument and update the cache.
             config:NowPlayingStatus = NowPlayingStatus(root=args[0])
             client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path] = config
+
+            # inform Home Assistant of the status update.
+            self.update()
+            self.async_write_ha_state()
+
+
+    @callback
+    def _OnSoundTouchUpdateEvent_sourcesUpdated(self, client:SoundTouchClient, args:Element) -> None:
+        """
+        Process a sourcesUpdated event notification from the SoundTouch device.
+        """
+        if (args != None):
+
+            if (_logsi.IsOn(SILevel.Verbose)):
+                ElementTree.indent(args)  # for pretty printing
+                argsEncoded = ElementTree.tostring(args, encoding="unicode")
+                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
+
+            # create configuration model from update event argument and update the cache.
+            config:SourceList = SourceList(root=args[0])
+            client.ConfigurationCache[SoundTouchNodes.sources.Path] = config
+
+            # update HA UI source list as well.
+            self._attr_source_list = config.ToSourceArray(True)
+            _logsi.LogVerbose("'%s': _attr_source_list updated = %s" % (self.name, str(self._attr_source_list)))
+
+            # inform Home Assistant of the status update.
+            self.update()
+            self.async_write_ha_state()
+
+
+    @callback
+    def _OnSoundTouchUpdateEvent_volumeUpdated(self, client:SoundTouchClient, args:Element) -> None:
+        """
+        Process a volumeUpdated event notification from the SoundTouch device.
+        """
+        if (args != None):
+
+            if (_logsi.IsOn(SILevel.Verbose)):
+                ElementTree.indent(args)  # for pretty printing
+                argsEncoded = ElementTree.tostring(args, encoding="unicode")
+                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
+
+            # create configuration model from update event argument and update the cache.
+            config:Volume = Volume(root=args[0])
+            client.ConfigurationCache[SoundTouchNodes.volume.Path] = config
 
             # inform Home Assistant of the status update.
             self.update()

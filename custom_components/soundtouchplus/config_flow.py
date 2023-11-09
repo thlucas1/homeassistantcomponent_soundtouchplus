@@ -94,7 +94,7 @@ async def validate_device_connection_http(hass:HomeAssistant, data:dict) -> dict
         }
 
     except Exception as ex:
-        # return self.async_abort(reason="cannot_connect")
+        
         raise CannotConnect from ex
 
 

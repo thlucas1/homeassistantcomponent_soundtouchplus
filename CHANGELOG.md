@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.10 ] - 2023/11/08
+
+  *  Updated initialization method to load the _attr_source_list state property with the list of sources the device supports.  Also added listener to update the source list when it is changed in real-time.
+
 ###### [ 1.0.9 ] - 2023/11/06
 
   *  Allow user to disable websocket notifications if desired when device is added.  This will enable device polling every 10 seconds from Home Assistant UI for status updates.
