@@ -644,6 +644,13 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             sourceAccount:str = source[dlmidx + 1:]
             source = source[0:dlmidx]
             self._client.SelectSource(source, sourceAccount)
+            
+        # is the LOCAL source specified? if so, then use the SelectLocalSource() method to select the 
+        # source, as this is the only way to select the LOCAL source for some SoundTouch devices.
+        elif source == 'LOCAL':
+            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLocalSource", self.name, self.name)
+            self._client.SelectLocalSource()
+            
         else:
             self._client.SelectSource(source)
 
@@ -886,7 +893,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     # Custom Services
     # -----------------------------------------------------------------------------------
 
-    def play_handoff(self, to_player:MediaPlayerEntity, restore_volume:bool, snapshot_only:bool) -> None:
+    def service_play_handoff(self, to_player:MediaPlayerEntity, restore_volume:bool, snapshot_only:bool) -> None:
         """
         Handoff playing source from one SoundTouch MediaPlayerEntity to another.
         
@@ -901,7 +908,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 power off; False (default) to handoff the snapshot, restore it, 
                 and power off the FROM player.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "Play Handoff", self.name, self.entity_id)
+        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_play_handoff", self.name, self.entity_id)
 
         if not to_player:
             _logsi.LogWarning("Unable to find SoundTouch TO player")
@@ -933,7 +940,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         _logsi.LogVerbose("Play handoff from player '%s' to player '%s' complete", self.entity_id, to_player.entity_id)
 
 
-    def play_tts(self, message:str, artist:str, album:str, track:str, ttsUrl:str, volumeLevel:int, appKey:str):
+    def service_play_tts(self, message:str, artist:str, album:str, track:str, ttsUrl:str, volumeLevel:int, appKey:str):
         """
         Plays a notification message via Google TTS (Text-To-Speech) processing.
         
@@ -965,12 +972,12 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             parms['ttsUrl'] = ttsUrl
             parms['volumeLevel'] = volumeLevel
             parms['appKey'] = appKey
-            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("play_tts", self.name, self.entity_id), parms)
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("service_play_tts", self.name, self.entity_id), parms)
 
         self._client.PlayNotificationTTS(message, ttsUrl, artist, album, track, volumeLevel, appKey)
 
 
-    def play_url(self, url:str, artist:str, album:str, track:str, volumeLevel:int, appKey:str, getMetadataFromUrlFile:bool):
+    def service_play_url(self, url:str, artist:str, album:str, track:str, volumeLevel:int, appKey:str, getMetadataFromUrlFile:bool):
         """
         Play media content from a URL on a SoundTouch device.
         
@@ -1002,34 +1009,34 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             parms['volumeLevel'] = volumeLevel
             parms['appKey'] = appKey
             parms['getMetadataFromUrlFile'] = getMetadataFromUrlFile
-            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("play_url", self.name, self.entity_id), parms)
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("service_play_url", self.name, self.entity_id), parms)
 
         self._client.PlayUrl(url, artist, album, track, volumeLevel, appKey, getMetadataFromUrlFile)
 
 
-    def preset_list(self) -> PresetList:
+    def service_preset_list(self) -> PresetList:
         """
         Retrieves the list of presets defined for a device.
 
         Returns:
             A `PresetList` instance that contains defined presets.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "GetPresetList", self.name, self.entity_id)
+        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_preset_list", self.name, self.entity_id)
         return self._client.GetPresetList(True)
 
 
-    def recent_list(self) -> RecentList:
+    def service_recent_list(self) -> RecentList:
         """
         Retrieves the list of recently played items defined for a device.
 
         Returns:
             A `RecentList` instance that contains defined recently played items.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "GetRecentList", self.name, self.entity_id)
+        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_recent_list", self.name, self.entity_id)
         return self._client.GetRecentList(True)
 
 
-    def remote_keypress(self, key_id:str):
+    def service_remote_keypress(self, key_id:str):
         """
         Send key press and release requests to the player.
         
@@ -1043,20 +1050,20 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         allow it to be used for keys defined in the future that are not currently 
         defined.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Key='%s'", "Remote Keypress", self.name, self.entity_id, str(key_id))
+        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Key='%s'", "service_remote_keypress", self.name, self.entity_id, str(key_id))
         self._client.Action(key_id)
 
 
-    def snapshot_restore(self, restore_volume:bool) -> None:
+    def service_snapshot_restore(self, restore_volume:bool) -> None:
         """
         Restore now playing settings from a snapshot that was previously taken by 
-        the snapshot_store method.
+        the service_snapshot_store method.
         
         Args:
             restore_volume (bool):
                 True to restore volume setting; otherwise, False to not change volume.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Restore Volume='%s'", "Snapshot Restore", self.name, self.entity_id, str(restore_volume))
+        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Restore Volume='%s'", "service_snapshot_restore", self.name, self.entity_id, str(restore_volume))
 
         # if not restoring volume then remove it from the snapshot settings.
         if not restore_volume:
@@ -1066,10 +1073,10 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         self._client.RestoreSnapshot()
 
 
-    def snapshot_store(self) -> None:
+    def service_snapshot_store(self) -> None:
         """
         Store now playing settings to a snapshot, which can be restored later via
-        the snapshot_restore method.
+        the service_snapshot_restore method.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "Snapshot Store", self.name, self.entity_id)
+        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_snapshot_store", self.name, self.entity_id)
         self._client.StoreSnapshot()

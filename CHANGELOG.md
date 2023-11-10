@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.12 ] - 2023/11/10
+
+  *  Updated "select_source()" metthod processing to call the "SelectLocalSource()" method if LOCAL is specified for the source value; for some SoundTouch devices, this is the only way that the LOCAL source can be selected.
+
 ###### [ 1.0.11 ] - 2023/11/09
 
   *  Added a new extra state attribut to media_player named "soundtouchplus_source".  This will return a "source:sourceAccount" value if the sourceAccount value is populated; otherwise, it just returns the "source" value.

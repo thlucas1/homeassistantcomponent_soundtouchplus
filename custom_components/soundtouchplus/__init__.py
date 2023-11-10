@@ -196,18 +196,18 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
 
             # process service request.
             if service.service == SERVICE_SNAPSHOT_STORE:
-                await hass.async_add_executor_job(player.snapshot_store)
+                await hass.async_add_executor_job(player.service_snapshot_store)
 
             elif service.service == SERVICE_SNAPSHOT_RESTORE:
                 restore_volume = service.data.get("restore_volume")
-                await hass.async_add_executor_job(player.snapshot_restore, restore_volume)
+                await hass.async_add_executor_job(player.service_snapshot_restore, restore_volume)
 
             elif service.service == SERVICE_REMOTE_KEYPRESS:
                 key_id = service.data.get("key_id")
                 if key_id is None:
                     _logsi.LogError(STAppMessages.MSG_SERVICE_ARGUMENT_NULL, "key_id", service.service)
                     return
-                await hass.async_add_executor_job(player.remote_keypress, key_id)
+                await hass.async_add_executor_job(player.service_remote_keypress, key_id)
 
             elif service.service == SERVICE_PLAY_TTS:
                 message = service.data.get("message")
@@ -217,7 +217,7 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                 tts_url = service.data.get("tts_url")
                 volume_level = service.data.get("volume_level")
                 app_key = service.data.get("app_key")
-                await hass.async_add_executor_job(player.play_tts, message, artist, album, track, tts_url, volume_level, app_key)
+                await hass.async_add_executor_job(player.service_play_tts, message, artist, album, track, tts_url, volume_level, app_key)
 
             elif service.service == SERVICE_PLAY_URL:
                 url = service.data.get("url")
@@ -227,7 +227,7 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                 volume_level = service.data.get("volume_level")
                 app_key = service.data.get("app_key")
                 get_metadata_from_url_file = service.data.get("get_metadata_from_url_file")
-                await hass.async_add_executor_job(player.play_url, url, artist, album, track, volume_level, app_key, get_metadata_from_url_file)
+                await hass.async_add_executor_job(player.service_play_url, url, artist, album, track, volume_level, app_key, get_metadata_from_url_file)
 
             else:
                 _logsi.LogError(STAppMessages.MSG_SERVICE_REQUEST_UNKNOWN, service.service, "service_handle_entity")
@@ -274,7 +274,7 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                 # process play handoff service.
                 restore_volume = service.data.get("restore_volume")
                 snapshot_only = service.data.get("snapshot_only")
-                await hass.async_add_executor_job(from_player.play_handoff, to_player, restore_volume, snapshot_only)
+                await hass.async_add_executor_job(from_player.service_play_handoff, to_player, restore_volume, snapshot_only)
 
             else:
                 _logsi.LogError(STAppMessages.MSG_SERVICE_REQUEST_UNKNOWN, service.service, "service_handle_entityfromto")
@@ -311,13 +311,13 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             if service.service == SERVICE_PRESETLIST:
 
                 # get list of presets defined for the device.            
-                presetList:PresetList = await hass.async_add_executor_job(player.preset_list)
+                presetList:PresetList = await hass.async_add_executor_job(player.service_preset_list)
                 response = presetList.ToDictionary()
 
             elif service.service == SERVICE_RECENTLIST:
 
                 # get list of recently played items defined for the device.            
-                recentList:RecentList = await hass.async_add_executor_job(player.recent_list)
+                recentList:RecentList = await hass.async_add_executor_job(player.service_recent_list)
                 response = recentList.ToDictionary()
 
             # build list of items to return.
