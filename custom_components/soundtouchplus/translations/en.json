@@ -3,7 +3,7 @@
     "flow_title": "{name}",
     "step": {
       "user": {
-        "description": "This integration is for Bose SoundTouch Speaker models that support the SoundTouch Webservices API; these include the ST10, ST300, etc.",
+        "description": "This integration is for Bose SoundTouch Speaker models that support the SoundTouch Webservices API; these include the ST-10, ST-20, ST-30, ST-300, ST-520, etc.",
         "data": {
           "host": "IP Address",
           "port": "Port",
@@ -35,6 +35,24 @@
   },
   "device_automation": {},
   "services": {
+    "audio_tone_levels": {
+      "name": "Adjust Audio Tone Levels",
+      "description": "Adjust the Bass and Treble values for SoundTouch devices that support it.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouch device whose audio tone levels will be adjusted."
+        },
+        "bass_level": {
+          "name": "Bass Level",
+          "description": "The bass level to set."
+        },
+        "treble_level": {
+          "name": "Treble Level",
+          "description": "The treble level to set."
+        }
+      }
+    },
     "play_handoff": {
       "name": "Play Handoff Settings",
       "description": "Handoff playing source from one SoundTouch device to another.",
@@ -59,7 +77,7 @@
     },
     "play_tts": {
       "name": "Play TTS Message",
-      "description": "Play Text-To-Speech notification on a SoundTouch device.  Note that this is limited to ST10,20,30 devices, as Bose ST300 does not support notifications (AFAIK).",
+      "description": "Play Text-To-Speech notification on a SoundTouch device.  Note that this is limited to ST-10,20,30 devices, as Bose ST-300 does not support notifications (AFAIK).",
       "fields": {
         "entity_id": {
           "name": "Entity ID",

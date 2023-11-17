@@ -1,3 +1,39 @@
+audio_tone_levels:
+  name: Adjust Audio Tone Levels
+  description: Adjust the Bass and Treble values for SoundTouch devices that support it.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouch device whose audio tone levels will be adjusted.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    bass_level:
+      name: Bass Level
+      description: The bass level to set.
+      example: 50
+      required: true
+      selector:
+        number:
+          min: -100
+          max: 100
+          step: 25
+          mode: slider
+    treble_level:
+      name: Treble Level
+      description: The treble level to set.
+      example: 50
+      required: true
+      selector:
+        number:
+          min: -100
+          max: 100
+          step: 25
+          mode: slider
+
 play_handoff:
   name: Play Handoff
   description: Handoff playing source from one SoundTouch device to another.

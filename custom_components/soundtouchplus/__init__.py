@@ -26,6 +26,7 @@ from .const import (
     DEFAULT_PING_WEBSOCKET_INTERVAL,
     DEFAULT_PORT,
     DEFAULT_PORT_WEBSOCKET,
+    SERVICE_AUDIO_TONE_LEVELS,
     SERVICE_PLAY_HANDOFF,
     SERVICE_PLAY_TTS,
     SERVICE_PLAY_URL,
@@ -78,6 +79,14 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 # -----------------------------------------------------------------------------------
 # Custom Service Schemas.
 # -----------------------------------------------------------------------------------
+SERVICE_AUDIO_TONE_LEVELS_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("bass_level", default=0): vol.All(vol.Range(min=-100,max=100)),
+        vol.Required("treble_level", default=0): vol.All(vol.Range(min=-100,max=100)),
+    }
+)
+
 SERVICE_PLAY_HANDOFF_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id_from"): cv.entity_id,
@@ -228,6 +237,11 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                 app_key = service.data.get("app_key")
                 get_metadata_from_url_file = service.data.get("get_metadata_from_url_file")
                 await hass.async_add_executor_job(player.service_play_url, url, artist, album, track, volume_level, app_key, get_metadata_from_url_file)
+
+            elif service.service == SERVICE_AUDIO_TONE_LEVELS:
+                bass_level = service.data.get("bass_level")
+                treble_level = service.data.get("treble_level")
+                await hass.async_add_executor_job(player.service_audio_tone_levels, bass_level, treble_level)
 
             else:
                 _logsi.LogError(STAppMessages.MSG_SERVICE_REQUEST_UNKNOWN, service.service, "service_handle_entity")
@@ -380,6 +394,14 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
 
 
     # register all services this component provides, and their corresponding schemas.
+    _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_AUDIO_TONE_LEVELS, SERVICE_AUDIO_TONE_LEVELS_SCHEMA)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_AUDIO_TONE_LEVELS,
+        service_handle_entity,
+        schema=SERVICE_AUDIO_TONE_LEVELS_SCHEMA,
+    )
+
     _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_PLAY_HANDOFF, SERVICE_PLAY_HANDOFF_SCHEMA)
     hass.services.async_register(
         DOMAIN,

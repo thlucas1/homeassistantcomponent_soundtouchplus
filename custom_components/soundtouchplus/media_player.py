@@ -48,8 +48,13 @@ if (_logsi == None):
 _logsi.SystemLogger = logging.getLogger(__name__)
 
 # our extra state attribute names.
-ATTR_SOUNDTOUCHPLUS_WARN_MSG = "soundtouchplus_warn_msg"
+ATTR_SOUNDTOUCHPLUS_SOUND_MODE = "soundtouchplus_sound_mode"
 ATTR_SOUNDTOUCHPLUS_SOURCE = "soundtouchplus_source"
+ATTR_SOUNDTOUCHPLUS_TONE_BASS_LEVEL = "soundtouchplus_tone_bass_level"
+ATTR_SOUNDTOUCHPLUS_TONE_BASS_LEVEL_RANGE = "soundtouchplus_tone_bass_level_range"
+ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL = "soundtouchplus_tone_treble_level"
+ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL_RANGE = "soundtouchplus_tone_treble_level_range"
+ATTRVALUE_NOT_CAPABLE = "not capable"
 
 
 async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry, async_add_entities:AddEntitiesCallback) -> None:
@@ -90,10 +95,12 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         # initialize storage.
         self._client:SoundTouchClient = initParms.client
         self._socket:SoundTouchWebSocket = initParms.socket
-        self._nowPlayingStatus:NowPlayingStatus = None
-        self._volume:Volume = None
-        self._zone:Zone = None
-        self._WarnMsg:str = ""
+        self._CachedAudioDspControls:AudioDspControls = None
+        self._CachedAudioProductToneControls:AudioProductToneControls = None
+        self._CachedNowPlayingStatus:NowPlayingStatus = None
+        self._CachedSourceList:SourceList = None
+        self._CachedVolume:Volume = None
+        self._CachedZone:Zone = None
 
         # A unique_id for this entity within this domain.
         # Note: This is NOT used to generate the user visible Entity ID used in automations.
@@ -117,23 +124,6 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         return
 
 
-    # @property
-    # def should_poll(self) -> bool:
-    #     """Return True if entity has to be polled for state.
-
-    #     False if entity pushes its state to HA.
-    #     """
-    #     return self._attr_should_poll
-
-    # @should_poll.setter
-    # def should_poll(self, value:bool):
-    #     """ 
-    #     Sets the _attr_should_poll property value.
-    #     """
-    #     if isinstance(value, bool):
-    #         self._attr_should_poll = value
-    
-
     async def async_added_to_hass(self) -> None:
         """
         Run when this Entity has been added to HA.
@@ -149,9 +139,27 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         """
         # load list of supported sources.
         _logsi.LogVerbose("'%s': loading list of sources that the device supports" % (self.name))
-        sourceList:SourceList = await self.hass.async_add_executor_job(self._client.GetSourceList, True)
-        self._attr_source_list = sourceList.ToSourceArray(True)
-        _logsi.LogVerbose("'%s': _attr_source_list = %s" % (self.name, str(self._attr_source_list)))
+        self._CachedSourceList = await self.hass.async_add_executor_job(self._client.GetSourceList, True)
+        _logsi.LogVerbose("'%s': source_list = %s" % (self.name, str(self.source_list)))
+        _logsi.LogVerbose("'%s': source = %s" % (self.name, str(self.source)))
+
+        # load list of supported sound modes.
+        if SoundTouchNodes.audiodspcontrols.Path in self._client._Device._SupportedUris:
+            _logsi.LogVerbose("'%s': loading list of sound modes (audiodspcontrols) that the device supports" % (self.name))
+            self._CachedAudioDspControls = await self.hass.async_add_executor_job(self._client.GetAudioDspControls, True)
+            _logsi.LogVerbose("'%s': sound_mode_list = %s" % (self.name, str(self.sound_mode_list)))
+            _logsi.LogVerbose("'%s': sound_mode = %s" % (self.name, str(self.sound_mode)))
+        else:
+            _logsi.LogVerbose("'%s': device does not support sound modes (audiodspcontrols)" % (self.name))
+            self._CachedAudioDspControls = None
+        
+        # load list of supported tone levels.
+        if SoundTouchNodes.audioproducttonecontrols.Path in self._client._Device._SupportedUris:
+            _logsi.LogVerbose("'%s': loading bass tone range levels (audioproducttonecontrols) that the device supports" % (self.name))
+            self._CachedAudioProductToneControls = await self.hass.async_add_executor_job(self._client.GetAudioProductToneControls, True)
+        else:
+            _logsi.LogVerbose("'%s': device does not support tone level adjustments (audioproducttonecontrols)" % (self.name))
+            self._CachedAudioProductToneControls = None
 
         # if websocket support is disabled then we are done at this point.
         if self._socket is None:
@@ -160,20 +168,17 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         _logsi.LogVerbose("'%s': async_added_to_hass is adding notification event listeners" % (self.name))
 
         # add our listener(s) that will handle SoundTouch device status updates.
+        self._socket.AddListener(SoundTouchNotifyCategorys.audiodspcontrols, self._OnSoundTouchUpdateEvent_audiodspcontrols)
+        self._socket.AddListener(SoundTouchNotifyCategorys.audioproducttonecontrols, self._OnSoundTouchUpdateEvent_audioproducttonecontrols)
         self._socket.AddListener(SoundTouchNotifyCategorys.nowPlayingUpdated, self._OnSoundTouchUpdateEvent_nowPlayingUpdated)
-        # self._socket.AddListener(SoundTouchNotifyCategorys.nowSelectionUpdated, self.OnSoundTouchUpdateEvent)
         self._socket.AddListener(SoundTouchNotifyCategorys.sourcesUpdated, self._OnSoundTouchUpdateEvent_sourcesUpdated)
         self._socket.AddListener(SoundTouchNotifyCategorys.volumeUpdated, self._OnSoundTouchUpdateEvent_volumeUpdated)
         self._socket.AddListener(SoundTouchNotifyCategorys.zoneUpdated, self._OnSoundTouchUpdateEvent_zoneUpdated)
-        #self._socket.AddListener(SoundTouchNotifyCategorys.groupUpdated, self._OnSoundTouchUpdateEvent_groupUpdated)
-        # self._socket.AddListener(SoundTouchNotifyCategorys.presetsUpdated, self.OnSoundTouchUpdateEvent)
-        # self._socket.AddListener(SoundTouchNotifyCategorys.recentsUpdated, self.OnSoundTouchUpdateEvent)
-        # self._socket.AddListener(SoundTouchNotifyCategorys.infoUpdated, self.OnSoundTouchUpdateEvent)
 
         # add our listener(s) that will handle SoundTouch device informational events.
         self._socket.AddListener(SoundTouchNotifyCategorys.SoundTouchSdkInfo, self._OnSoundTouchInfoEvent)
 
-        # add our listener that will handle SoundTouch websocket related events.
+        # add our listener(s) that will handle SoundTouch websocket related events.
         self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketClose, self._OnSoundTouchWebSocketConnectionEvent)
         self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketOpen, self._OnSoundTouchWebSocketConnectionEvent)
         self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketError, self._OnSoundTouchWebSocketErrorEvent)
@@ -239,14 +244,6 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     # Implement MediaPlayerEntity Properties
     # -----------------------------------------------------------------------------------
     @property
-    def device_class(self) -> MediaPlayerDeviceClass | None:
-        """
-        Return the class of this entity.
-        """
-        return MediaPlayerDeviceClass.SPEAKER
-
-
-    @property
     def supported_features(self) -> MediaPlayerEntityFeature:
         """
         Flag media player features that are supported.
@@ -260,6 +257,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             | MediaPlayerEntityFeature.PLAY_MEDIA \
             | MediaPlayerEntityFeature.PREVIOUS_TRACK \
             | MediaPlayerEntityFeature.REPEAT_SET \
+            | MediaPlayerEntityFeature.SELECT_SOUND_MODE \
             | MediaPlayerEntityFeature.SELECT_SOURCE \
             | MediaPlayerEntityFeature.SHUFFLE_SET \
             | MediaPlayerEntityFeature.STOP \
@@ -271,105 +269,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
 
     @property
-    def is_volume_muted(self):
-        """ Boolean if volume is currently muted. """
-        if self._volume is not None:
-            return self._volume.IsMuted
-        return False
-
-
-    @property
-    def media_album_name(self):
-        """ Album name of current playing media. """
-        if self._nowPlayingStatus is not None:
-            return self._nowPlayingStatus.Album
-        return None
-
-
-    @property
-    def media_artist(self):
-        """ Artist of current playing media. """
-        if self._nowPlayingStatus is not None:
-            return self._nowPlayingStatus.Artist
-        return None
-
-
-    @property
-    def media_duration(self):
-        """ Duration of current playing media in seconds. """
-        if self._nowPlayingStatus is not None:
-            return self._nowPlayingStatus.Duration
-        return None
-
-
-    @property
-    def media_image_url(self):
-        """ Image url of current playing media. """
-        if self._nowPlayingStatus is not None:
-            return self._nowPlayingStatus.Image
-        return None
-
-
-    @property
-    def media_title(self):
-        """ Title of current playing media. """
-        if self._nowPlayingStatus is not None:
-            if self._nowPlayingStatus.StationName is not None:
-                return self._nowPlayingStatus.StationName
-            if self._nowPlayingStatus.Artist is not None:
-                return f"{self._nowPlayingStatus.Artist} - {self._nowPlayingStatus.Track}"
-        return None
-
-
-    @property
-    def media_track(self):
-        """ Artist of current playing media. """
-        if self._nowPlayingStatus is not None:
-            return self._nowPlayingStatus.Track
-        return None
-
-
-    @property
-    def source(self):
-        """ Name of the current input source. """
-        if self._nowPlayingStatus is not None:
-            return self._nowPlayingStatus.Source
-        return None
-
-
-    @property
-    def soundtouchplus_source(self):
-        """ Name of the current input source (extended). """
-        if self._nowPlayingStatus is not None:
-            if (self._nowPlayingStatus.ContentItem is None):
-                return self._nowPlayingStatus.Source
-            elif (self._nowPlayingStatus.ContentItem.SourceAccount is not None) and (len(self._nowPlayingStatus.ContentItem.SourceAccount) > 0):
-                return "%s:%s" % (self._nowPlayingStatus.Source, self._nowPlayingStatus.ContentItem.SourceAccount)
-            elif (self._nowPlayingStatus.ContentItem.Source is not None):
-                return self._nowPlayingStatus.ContentItem.Source
-            else:
-                return self._nowPlayingStatus.Source
-        return None
-
-
-    @property
-    def state(self) -> MediaPlayerState | None:
-        """ Return the state of the device. """
-        if self._nowPlayingStatus is None or self._nowPlayingStatus.Source == "STANDBY":
-            result = MediaPlayerState.OFF
-        elif self._nowPlayingStatus.Source == "INVALID_SOURCE":
-            result = None
-        elif self._nowPlayingStatus.PlayStatus == "PLAY_STATE":
-            result = MediaPlayerState.PLAYING
-        elif self._nowPlayingStatus.PlayStatus == "BUFFERING_STATE":
-            result = MediaPlayerState.PLAYING
-        elif self._nowPlayingStatus.PlayStatus == "PAUSE_STATE":
-            result = MediaPlayerState.PAUSED
-        elif self._nowPlayingStatus.PlayStatus == "STOP_STATE":
-            result = MediaPlayerState.PAUSED
-        else:
-            result = None
-        return result
+    def device_class(self) -> MediaPlayerDeviceClass | None:
+        """
+        Return the class of this entity.
+        """
+        return MediaPlayerDeviceClass.SPEAKER
 
 
     @property
@@ -377,17 +281,147 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         """ Return entity specific state attributes. """
         # build list of our extra state attributes to return to HA UI.
         attributes = {}
-        attributes[ATTR_SOUNDTOUCHPLUS_WARN_MSG] = self._WarnMsg
         attributes[ATTR_SOUNDTOUCHPLUS_SOURCE] = self.soundtouchplus_source
+        
+        if self._CachedAudioDspControls is None:
+            attributes[ATTR_SOUNDTOUCHPLUS_SOUND_MODE] = ATTRVALUE_NOT_CAPABLE
+        else:
+            attributes[ATTR_SOUNDTOUCHPLUS_SOUND_MODE] = self._CachedAudioDspControls.AudioMode
+
+        if self._CachedAudioProductToneControls is None:
+            attributes[ATTR_SOUNDTOUCHPLUS_TONE_BASS_LEVEL] = ATTRVALUE_NOT_CAPABLE
+            attributes[ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL] = ATTRVALUE_NOT_CAPABLE
+        else:
+            attributes[ATTR_SOUNDTOUCHPLUS_TONE_BASS_LEVEL] = self._CachedAudioProductToneControls.Bass.Value
+            attributes[ATTR_SOUNDTOUCHPLUS_TONE_BASS_LEVEL_RANGE] = self._CachedAudioProductToneControls.Bass.ToMinMaxString()
+            attributes[ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL] = self._CachedAudioProductToneControls.Treble.Value
+            attributes[ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL_RANGE] = self._CachedAudioProductToneControls.Treble.ToMinMaxString()
+            
         return attributes
+
+
+    @property
+    def group_members(self) -> list[str] | None:
+        """ List of members which are currently grouped together. """
+        return self._attr_group_members
+
+
+    @property
+    def is_volume_muted(self):
+        """ Boolean if volume is currently muted. """
+        if self._CachedVolume is not None:
+            return self._CachedVolume.IsMuted
+        return False
+
+
+    @property
+    def media_album_name(self):
+        """ Album name of current playing media. """
+        if self._CachedNowPlayingStatus is not None:
+            return self._CachedNowPlayingStatus.Album
+        return None
+
+
+    @property
+    def media_artist(self):
+        """ Artist of current playing media. """
+        if self._CachedNowPlayingStatus is not None:
+            return self._CachedNowPlayingStatus.Artist
+        return None
+
+
+    @property
+    def media_duration(self):
+        """ Duration of current playing media in seconds. """
+        if self._CachedNowPlayingStatus is not None:
+            return self._CachedNowPlayingStatus.Duration
+        return None
+
+
+    @property
+    def media_image_url(self):
+        """ Image url of current playing media. """
+        if self._CachedNowPlayingStatus is not None:
+            return self._CachedNowPlayingStatus.Image
+        return None
+
+
+    @property
+    def media_title(self):
+        """ Title of current playing media. """
+        if self._CachedNowPlayingStatus is not None:
+            if self._CachedNowPlayingStatus.StationName is not None:
+                return self._CachedNowPlayingStatus.StationName
+            if self._CachedNowPlayingStatus.Artist is not None:
+                return f"{self._CachedNowPlayingStatus.Artist} - {self._CachedNowPlayingStatus.Track}"
+        return None
+
+
+    @property
+    def media_track(self):
+        """ Artist of current playing media. """
+        if self._CachedNowPlayingStatus is not None:
+            return self._CachedNowPlayingStatus.Track
+        return None
+
+
+    @property
+    def sound_mode(self) -> str | None:
+        """ Name of the current sound mode. """
+        if self._CachedAudioDspControls is not None:
+            return self._CachedAudioDspControls.AudioMode
+        return None
+
+
+    @property
+    def sound_mode_list(self) -> list[str] | None:
+        """ List of available sound modes. """
+        if self._CachedAudioDspControls is not None:
+            return self._CachedAudioDspControls.ToSupportedAudioModesArray()
+        return None
+
+
+    @property
+    def source(self):
+        """ Name of the current input source. """
+        if self._CachedNowPlayingStatus is not None:
+            return self._CachedNowPlayingStatus.Source
+        return None
+
+
+    @property
+    def source_list(self) -> list[str] | None:
+        """ List of available input sources. """
+        if self._CachedSourceList is not None:
+            return self._CachedSourceList.ToSourceArray()
+        return None
+
+
+    @property
+    def state(self) -> MediaPlayerState | None:
+        """ Return the state of the device. """
+        if self._CachedNowPlayingStatus is None or self._CachedNowPlayingStatus.Source == "STANDBY":
+            result = MediaPlayerState.OFF
+        elif self._CachedNowPlayingStatus.Source == "INVALID_SOURCE":
+            result = None
+        elif self._CachedNowPlayingStatus.PlayStatus == "PLAY_STATE":
+            result = MediaPlayerState.PLAYING
+        elif self._CachedNowPlayingStatus.PlayStatus == "BUFFERING_STATE":
+            result = MediaPlayerState.PLAYING
+        elif self._CachedNowPlayingStatus.PlayStatus == "PAUSE_STATE":
+            result = MediaPlayerState.PAUSED
+        elif self._CachedNowPlayingStatus.PlayStatus == "STOP_STATE":
+            result = MediaPlayerState.PAUSED
+        else:
+            result = None
+        return result
 
 
     @property
     def volume_level(self) -> float | None:
         """ Volume level of the media player (0.0 to 1.0). """
-        if self._volume is not None:
-            #_logsi.LogVerbose("'%s': volume_level = %s" % (self.name, self._volume.Actual))
-            return self._volume.Actual / 100
+        if self._CachedVolume is not None:
+            return self._CachedVolume.Actual / 100
         return None
 
     # -----------------------------------------------------------------------------------
@@ -468,11 +502,21 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         
         # get updated device status.
         _logsi.LogVerbose("'%s': update method - getting nowPlaying status" % (self.name))
-        self._nowPlayingStatus = self._client.GetNowPlayingStatus(self._attr_should_poll)
+        self._CachedNowPlayingStatus = self._client.GetNowPlayingStatus(self._attr_should_poll)
         _logsi.LogVerbose("'%s': update method - getting volume status" % (self.name))
-        self._volume = self._client.GetVolume(self._attr_should_poll)
+        self._CachedVolume = self._client.GetVolume(self._attr_should_poll)
         _logsi.LogVerbose("'%s': update method - getting zone status" % (self.name))
-        self._zone = self._client.GetZoneStatus(self._attr_should_poll)
+        self._CachedZone = self._client.GetZoneStatus(self._attr_should_poll)
+        
+        # does this device support audiodspcontrols?
+        if SoundTouchNodes.audiodspcontrols.Path in self._client._Device._SupportedUris:
+            _logsi.LogVerbose("'%s': update method - getting audio dsp controls (e.g. sound_mode)" % (self.name))
+            self._CachedAudioDspControls = self._client.GetAudioDspControls(self._attr_should_poll)
+                    
+        # does this device support audioproducttonecontrols?
+        if SoundTouchNodes.audioproducttonecontrols.Path in self._client._Device._SupportedUris:
+            _logsi.LogVerbose("'%s': update method - getting audio product tone controls (e.g. bass, treble levels)" % (self.name))
+            self._CachedAudioProductToneControls = self._client.GetAudioProductToneControls(self._attr_should_poll)
                     
         # does this device support websocket notifications?
         # note - if socket is None, it denotes that websocket notifications are NOT
@@ -535,7 +579,6 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             self._client.CreateZone(masterZone)
 
         except SoundTouchWarning as ex:
-            self._WarnMsg = ex.Message
             _logsi.LogWarning(ex.Message)
             raise
 
@@ -568,7 +611,6 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 self._client.RemoveZoneMembers([zoneMember])
 
         except SoundTouchWarning as ex:
-            self._WarnMsg = ex.Message
             _logsi.LogWarning(ex.Message)
             raise
 
@@ -625,6 +667,33 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                     break
 
 
+    def select_sound_mode(self, sound_mode: str) -> None:
+        """
+        Select sound mode.
+        
+        Args:
+            sound_mode (str):
+                Sound mode to select.
+
+        The sound_mode argument must be one of the audio modes supported by the device.
+        Be aware that some devices do not support audiodspcontrols (e.g. sound modes).
+        """
+        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - SoundMode='%s'", "Select Sound Mode", self.name, self.name, sound_mode)
+
+        # if device does not support audio modes then we are done.
+        if self._CachedAudioDspControls is None:
+            _logsi.LogWarning("'%s': Device does not support AudioDspControls; cannot change the sound mode" % (self.name))
+            return
+        
+        # does sound mode list contain the specified sound_mode?
+        # if so, then change the sound mode; otherwise log an error message.
+        if sound_mode in self._CachedAudioDspControls.SupportedAudioModes:
+            cfgUpdate:AudioDspControls = AudioDspControls(audioMode=sound_mode)
+            self._client.SetAudioDspControls(cfgUpdate)
+        else:
+            _logsi.LogError("'%s': Specified sound_mode value '%s' is not a supported audio mode; check the sound_mode_list state value for valid audio modes" % (self.name, sound_mode))
+            
+
     def select_source(self, source:str) -> None:
         """
         Select input source.
@@ -650,6 +719,14 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         elif source == 'LOCAL':
             _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLocalSource", self.name, self.name)
             self._client.SelectLocalSource()
+            
+        elif source == 'LASTSOURCE':
+            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLastSource", self.name, self.name)
+            self._client.SelectLastSource()
+            
+        elif source == 'LASTSOUNDTOUCHSOURCE':
+            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLastSoundTouchSource", self.name, self.name)
+            self._client.SelectLastSoundTouchSource()
             
         else:
             self._client.SelectSource(source)
@@ -688,7 +765,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             # at this point we will assume that the device lost power since it lost the websocket connection.
             # reset nowPlayingStatus, which will drive a MediaPlayerState.OFF state.
             _logsi.LogVerbose("'%s': Setting _nowPlayingStatus to None to simulate a MediaPlayerState.OFF state" % (client.Device.DeviceName), colorValue=SIColors.Coral)
-            self._nowPlayingStatus = None
+            self._CachedNowPlayingStatus = None
             
             # inform Home Assistant of the status update.
             # this will turn the player off in the Home Assistant UI.
@@ -715,6 +792,48 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             self.async_write_ha_state()
 
     @callback
+    def _OnSoundTouchUpdateEvent_audiodspcontrols(self, client:SoundTouchClient, args:Element) -> None:
+        """
+        Process a audiodspcontrols event notification from the SoundTouch device.
+        """
+        if (args != None):
+
+            if (_logsi.IsOn(SILevel.Verbose)):
+                ElementTree.indent(args)  # for pretty printing
+                argsEncoded = ElementTree.tostring(args, encoding="unicode")
+                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
+
+            # create configuration model from update event argument and update the cache.
+            self._CachedAudioDspControls = AudioDspControls(root=args[0])
+            client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path] = self._CachedAudioDspControls
+            _logsi.LogVerbose("'%s': audiodspcontrols (sound_mode_list) updated = %s" % (self.name, self._CachedAudioDspControls.ToString()))
+            
+            # inform Home Assistant of the status update.
+            self.async_write_ha_state()
+
+
+    @callback
+    def _OnSoundTouchUpdateEvent_audioproducttonecontrols(self, client:SoundTouchClient, args:Element) -> None:
+        """
+        Process a audioproducttonecontrols event notification from the SoundTouch device.
+        """
+        if (args != None):
+
+            if (_logsi.IsOn(SILevel.Verbose)):
+                ElementTree.indent(args)  # for pretty printing
+                argsEncoded = ElementTree.tostring(args, encoding="unicode")
+                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
+
+            # create configuration model from update event argument and update the cache.
+            self._CachedAudioProductToneControls = AudioProductToneControls(root=args[0])
+            client.ConfigurationCache[SoundTouchNodes.audioproducttonecontrols.Path] = self._CachedAudioProductToneControls
+            _logsi.LogVerbose("'%s': audioproducttonecontrols updated = %s" % (self.name, self._CachedAudioProductToneControls.ToString()))
+            
+            # inform Home Assistant of the status update.
+            self.async_write_ha_state()
+
+
+    @callback
     def _OnSoundTouchUpdateEvent_nowPlayingUpdated(self, client:SoundTouchClient, args:Element) -> None:
         """
         Process a nowPlayingUpdated event notification from the SoundTouch device.
@@ -727,11 +846,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
 
             # create configuration model from update event argument and update the cache.
-            config:NowPlayingStatus = NowPlayingStatus(root=args[0])
-            client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path] = config
+            self._CachedNowPlayingStatus = NowPlayingStatus(root=args[0])
+            client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path] = self._CachedNowPlayingStatus
+            _logsi.LogVerbose("'%s': NowPlayingStatus updated = %s" % (self.name, self._CachedNowPlayingStatus.ToString()))
 
             # inform Home Assistant of the status update.
-            self.update()
             self.async_write_ha_state()
 
 
@@ -748,15 +867,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
 
             # create configuration model from update event argument and update the cache.
-            config:SourceList = SourceList(root=args[0])
-            client.ConfigurationCache[SoundTouchNodes.sources.Path] = config
-
-            # update HA UI source list as well.
-            self._attr_source_list = config.ToSourceArray(True)
-            _logsi.LogVerbose("'%s': _attr_source_list updated = %s" % (self.name, str(self._attr_source_list)))
+            self._CachedSourceList = SourceList(root=args[0])
+            client.ConfigurationCache[SoundTouchNodes.sources.Path] = self._CachedSourceList
+            _logsi.LogVerbose("'%s': sources (source_list) updated = %s" % (self.name, self._CachedSourceList.ToString()))
 
             # inform Home Assistant of the status update.
-            self.update()
             self.async_write_ha_state()
 
 
@@ -773,11 +888,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
 
             # create configuration model from update event argument and update the cache.
-            config:Volume = Volume(root=args[0])
-            client.ConfigurationCache[SoundTouchNodes.volume.Path] = config
+            self._CachedVolume = Volume(root=args[0])
+            client.ConfigurationCache[SoundTouchNodes.volume.Path] = self._CachedVolume
+            _logsi.LogVerbose("'%s': volume (source_list) updated = %s" % (self.name, self._CachedVolume.ToString()))
 
             # inform Home Assistant of the status update.
-            self.update()
             self.async_write_ha_state()
 
 
@@ -892,6 +1007,50 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     # -----------------------------------------------------------------------------------
     # Custom Services
     # -----------------------------------------------------------------------------------
+
+    @property
+    def soundtouchplus_source(self):
+        """ Name of the current input source (extended). """
+        if self._CachedNowPlayingStatus is not None:
+            if (self._CachedNowPlayingStatus.ContentItem is None):
+                return self._CachedNowPlayingStatus.Source
+            elif (self._CachedNowPlayingStatus.ContentItem.SourceAccount is not None) and (len(self._CachedNowPlayingStatus.ContentItem.SourceAccount) > 0):
+                return "%s:%s" % (self._CachedNowPlayingStatus.Source, self._CachedNowPlayingStatus.ContentItem.SourceAccount)
+            elif (self._CachedNowPlayingStatus.ContentItem.Source is not None):
+                return self._CachedNowPlayingStatus.ContentItem.Source
+            else:
+                return self._CachedNowPlayingStatus.Source
+        return None
+
+
+    def service_audio_tone_levels(self, bassLevel:int, trebleLevel:int):
+        """
+        Adjust the Bass and Treble values for SoundTouch devices that support it.
+        
+        Args:
+            bassLevel (int):
+                The bass level to set; if None, then the level is not adjusted.
+            trebleLevel (int):
+                The treble level to set; if None, then the level is not adjusted.
+        """
+        if _logsi.IsOn(SILevel.Verbose):
+            parms:dict = {}
+            parms['bassLevel'] = bassLevel
+            parms['trebleLevel'] = trebleLevel
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("service_audio_tone_levels", self.name, self.entity_id), parms)
+
+        if self._CachedAudioProductToneControls is None:
+            _logsi.LogWarning("'%s': Device does not support AudioProductToneControls; cannot change the tone levels" % (self.name))
+            return
+
+        # get current tone levels.
+        config:AudioProductToneControls = self._client.GetAudioProductToneControls()
+        
+        # set new tone control values.
+        config.Bass.Value = bassLevel
+        config.Treble.Value = bassLevel
+        self._client.SetAudioProductToneControls(config)
+
 
     def service_play_handoff(self, to_player:MediaPlayerEntity, restore_volume:bool, snapshot_only:bool) -> None:
         """

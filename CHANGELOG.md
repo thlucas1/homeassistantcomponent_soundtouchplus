@@ -6,13 +6,24 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.14 ] - 2023/11/15
+
+  *  Added service "Adjust Audio Tone Levels" to allow bass and treble levels to be adjusted for devices that support AudioProductToneControls capability.
+  *  Added new extra state attribute named "soundtouchplus_audio_bass_level" to indicate the current bass level.
+  *  Added new extra state attribute named "soundtouchplus_audio_treble_level" to indicate the current treble level.
+  *  Updated `select_source` method with the ability to select the last source (LASTSOURCE), as well as the last Soundtouch source (LASTSOUNDTOUCHSOURCE).
+
+###### [ 1.0.13 ] - 2023/11/11
+
+  *  Added "select_sound_mode()" support, which allows the device to enable AUDIO_MODE_DIALOG or AUDIO_MODE_NORMAL.  Note that only certain SoundTouch devices support the audiodspcontrols API (e.g. ST-300 does, ST-10 does not).
+
 ###### [ 1.0.12 ] - 2023/11/10
 
-  *  Updated "select_source()" metthod processing to call the "SelectLocalSource()" method if LOCAL is specified for the source value; for some SoundTouch devices, this is the only way that the LOCAL source can be selected.
+  *  Updated "select_source()" method processing to call the "SelectLocalSource()" method if LOCAL is specified for the source value; for some SoundTouch devices, this is the only way that the LOCAL source can be selected.
 
 ###### [ 1.0.11 ] - 2023/11/09
 
-  *  Added a new extra state attribut to media_player named "soundtouchplus_source".  This will return a "source:sourceAccount" value if the sourceAccount value is populated; otherwise, it just returns the "source" value.
+  *  Added a new extra state attribute to media_player named "soundtouchplus_source".  This will return a "source:sourceAccount" value if the sourceAccount value is populated; otherwise, it just returns the "source" value.
 
 ###### [ 1.0.10 ] - 2023/11/08
 
