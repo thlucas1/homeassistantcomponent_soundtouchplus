@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.15 ] - 2023/11/20
+
+  *  Updated `media_player.source_list` property to include sourceAccount as well as the source in the returned list (e.g. "PRODUCT:TV", etc).
+
 ###### [ 1.0.14 ] - 2023/11/15
 
   *  Added service "Adjust Audio Tone Levels" to allow bass and treble levels to be adjusted for devices that support AudioProductToneControls capability.

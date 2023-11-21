@@ -393,7 +393,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     def source_list(self) -> list[str] | None:
         """ List of available input sources. """
         if self._CachedSourceList is not None:
-            return self._CachedSourceList.ToSourceArray()
+            return self._CachedSourceList.ToSourceArray(True)
         return None
 
 
