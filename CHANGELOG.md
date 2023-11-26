@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.16 ] - 2023/11/26
+
+  *  Corrected high cpu rate condition in the underlying `SmartInspectPython` package api.
+
 ###### [ 1.0.15 ] - 2023/11/20
 
   *  Updated `media_player.source_list` property to include sourceAccount as well as the source in the returned list (e.g. "PRODUCT:TV", etc).

@@ -9,11 +9,11 @@
   "issue_tracker": "https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/issues",
   "loggers": [ "bosesoundtouchapi" ],
   "requirements": [
-    "websocket-client>=1.6.4",
+    "websocket-client==1.6.4",
     "urllib3",
-    "smartinspectPython>=3.0.27",
-    "bosesoundtouchapi>=1.0.19"
+    "smartinspectPython==3.0.28",
+    "bosesoundtouchapi==1.0.20"
   ],
-  "version": "1.0.15",
+  "version": "1.0.16",
   "zeroconf": [ "_soundtouch._tcp.local." ]
 }

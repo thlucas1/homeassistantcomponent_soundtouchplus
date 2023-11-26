@@ -40,7 +40,6 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 #LOGGER = logging.getLogger(__package__)
 
-
 try:
 
     from smartinspectpython.siauto import SIAuto, SILevel, SISession, SIConfigurationTimer
@@ -51,7 +50,7 @@ try:
 
     # start monitoring the configuration file for changes, and reload it when it changes.
     # this will check the file for changes every 60 seconds.
-    siConfig:SIConfigurationTimer = SIConfigurationTimer(SIAuto.Si, siConfigPath, 60)
+    siConfig:SIConfigurationTimer = SIConfigurationTimer(SIAuto.Si, siConfigPath)
 
     # get smartinspect logger reference; create a new session for this module name.
     _logsi:SISession = SIAuto.Si.GetSession(__name__)
@@ -59,13 +58,13 @@ try:
         _logsi = SIAuto.Si.AddSession(__name__, True)
     _logsi.SystemLogger = _LOGGER
     _logsi.LogSeparator(SILevel.Error)
-    _logsi.LogVerbose("__init__.py HAS SoundTouch: initialization")
+    _logsi.LogVerbose("__init__.py HAS SoundTouchPlus: initialization")
     _logsi.LogAppDomain(SILevel.Verbose)
     _logsi.LogSystem(SILevel.Verbose)
 
 except Exception as ex:
 
-    _LOGGER.warning("HAS Soundtouch could not init SmartInspect debugging! %s", str(ex))
+    _LOGGER.warning("HAS SoundtouchPlus could not init SmartInspect debugging! %s", str(ex))
 
 PLATFORMS:list[str] = [Platform.MEDIA_PLAYER]
 """ 
