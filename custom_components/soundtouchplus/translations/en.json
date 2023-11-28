@@ -53,6 +53,44 @@
         }
       }
     },
+    "play_contentitem": {
+      "name": "Play Content Item",
+      "description": "Play media content from a content item source (e.g. TUNEIN station, etc) on a SoundTouch device.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouch device to play the media."
+        },
+        "name": {
+          "name": "Item Name",
+          "description": "Name of the content item."
+        },
+        "source": {
+          "name": "Source",
+          "description": "Source to select to play the content; the value is case-sensitive, and should normally be UPPER case."
+        },
+        "source_account": {
+          "name": "Source Account",
+          "description": "Source account this content item is played with.  Default is none."
+        },
+        "item_type": {
+          "name": "Item Type",
+          "description": "Type of content item to play; the value is case-sensitive, and should normally be lower case."
+        },
+        "location": {
+          "name": "Content Location",
+          "description": "A direct link to the media content that will be played."
+        },
+        "container_art": {
+          "name": "Container Art",
+          "description": "A direct link to the container art (if present)."
+        },
+        "is_presetable": {
+          "name": "Is Presetable?",
+          "description": "true if this item can be saved as a Preset; otherwise, false."
+        }
+      }
+    },
     "play_handoff": {
       "name": "Play Handoff Settings",
       "description": "Handoff playing source from one SoundTouch device to another.",

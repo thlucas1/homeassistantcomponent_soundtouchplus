@@ -27,6 +27,7 @@ from .const import (
     DEFAULT_PORT,
     DEFAULT_PORT_WEBSOCKET,
     SERVICE_AUDIO_TONE_LEVELS,
+    SERVICE_PLAY_CONTENTITEM,
     SERVICE_PLAY_HANDOFF,
     SERVICE_PLAY_TTS,
     SERVICE_PLAY_URL,
@@ -84,6 +85,19 @@ SERVICE_AUDIO_TONE_LEVELS_SCHEMA = vol.Schema(
         vol.Required("bass_level", default=0): vol.All(vol.Range(min=-100,max=100)),
         vol.Required("treble_level", default=0): vol.All(vol.Range(min=-100,max=100)),
     }
+)
+
+SERVICE_PLAY_CONTENTITEM_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("name"): cv.string,
+        vol.Required("source"): cv.string,
+        vol.Optional("source_account"): cv.string,
+        vol.Required("item_type"): cv.string,
+        vol.Required("location"): cv.string,
+        vol.Optional("container_art"): cv.string,
+        vol.Required("is_presetable", default=False): cv.boolean
+    }   
 )
 
 SERVICE_PLAY_HANDOFF_SCHEMA = vol.Schema(
@@ -216,6 +230,16 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     _logsi.LogError(STAppMessages.MSG_SERVICE_ARGUMENT_NULL, "key_id", service.service)
                     return
                 await hass.async_add_executor_job(player.service_remote_keypress, key_id)
+
+            elif service.service == SERVICE_PLAY_CONTENTITEM:
+                name = service.data.get("name")
+                source = service.data.get("source")
+                source_account = service.data.get("source_account")
+                item_type = service.data.get("item_type")
+                location = service.data.get("location")
+                container_art = service.data.get("container_art")
+                is_presetable = service.data.get("is_presetable")
+                await hass.async_add_executor_job(player.service_play_contentitem, name, source, source_account, item_type, location, container_art, is_presetable)
 
             elif service.service == SERVICE_PLAY_TTS:
                 message = service.data.get("message")
@@ -399,6 +423,14 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
         SERVICE_AUDIO_TONE_LEVELS,
         service_handle_entity,
         schema=SERVICE_AUDIO_TONE_LEVELS_SCHEMA,
+    )
+
+    _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_PLAY_CONTENTITEM, SERVICE_PLAY_CONTENTITEM_SCHEMA)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_PLAY_CONTENTITEM,
+        service_handle_entity,
+        schema=SERVICE_PLAY_CONTENTITEM_SCHEMA,
     )
 
     _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_PLAY_HANDOFF, SERVICE_PLAY_HANDOFF_SCHEMA)

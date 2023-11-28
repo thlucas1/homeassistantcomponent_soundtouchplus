@@ -34,6 +34,69 @@ audio_tone_levels:
           step: 25
           mode: slider
 
+play_contentitem:
+  name: Play Content Item
+  description: Play media content from a content item source (e.g. TUNEIN station, etc) on a SoundTouch device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouch device to play the media.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    name:
+      name: Content Item Name
+      description: Name of the content item.
+      example: "K-LOVE Radio"
+      required: true
+      selector:
+        text:
+    source:
+      name: Source
+      description: Source to select to play the content; the value is case-sensitive, and should normally be UPPER case.
+      example: "TUNEIN"
+      required: true
+      selector:
+        text:
+    source_account:
+      name: Source Account
+      description: Source account this content item is played with.  Default is none.
+      example: ""
+      required: false
+      selector:
+        text:
+    item_type:
+      name: Item Type
+      description: Type of content item to play; the value is case-sensitive, and should normally be lower case.
+      example: "stationurl"
+      required: true
+      selector:
+        text:
+    location:
+      name: Content Location
+      description: A direct link to the media content that will be played.
+      example: "/v1/playback/station/s33828"
+      required: true
+      selector:
+        text:
+    container_art:
+      name: Container Art
+      description: A direct link to the container art (if present).
+      example: "http://cdn-profiles.tunein.com/s33828/images/logog.png?t=637986894890000000"
+      required: false
+      selector:
+        text:
+    is_presetable:
+      name: Is Presetable?
+      description: true if this item can be saved as a Preset; otherwise, false.
+      example: "false"
+      required: true
+      selector:
+        boolean:
+
 play_handoff:
   name: Play Handoff
   description: Handoff playing source from one SoundTouch device to another.

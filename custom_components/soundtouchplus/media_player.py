@@ -1051,6 +1051,44 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         config.Treble.Value = bassLevel
         self._client.SetAudioProductToneControls(config)
 
+        
+    def service_play_contentitem(self, name:str, source:str, sourceAccount:str, itemType:str, location:str, containerArt:str, isPresetable:bool):
+        """
+        Play media content from a content item source (e.g. TUNEIN station, etc) on a SoundTouch device.
+        
+        Args:
+            name (str):
+                Name of the content item (e.g. "K-LOVE Radio").
+            source (str):
+                Source to select to play the content (e.g. "TUNEIN").  
+                The value is case-sensitive, and should normally be UPPER case.
+            sourceAccount (str):
+                Source account this content item is played with.  
+                Default is none.
+            itemType (str):
+                Type of content item to play (e.g. "stationurl").  
+                The value is case-sensitive, and should normally be lower case.
+            location (str):
+                A direct link to the media content that will be played (e.g. "/v1/playback/station/s33828").
+            containerArt (str):
+                A direct link to the container art, if present (e.g. "http://cdn-profiles.tunein.com/s33828/images/logog.png?t=637986894890000000").
+            isPresetable (bool):
+                True if this item can be saved as a Preset; otherwise, False.
+        """
+        if _logsi.IsOn(SILevel.Verbose):
+            parms:dict = {}
+            parms['name'] = name
+            parms['source'] = source
+            parms['sourceAccount'] = sourceAccount
+            parms['itemType'] = itemType
+            parms['location'] = location
+            parms['containerArt'] = containerArt
+            parms['isPresetable'] = isPresetable
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("service_play_contentitem", self.name, self.entity_id), parms)
+            
+        contentItem:ContentItem = ContentItem(source, itemType, location, sourceAccount, isPresetable, name, containerArt)
+        self._client.PlayContentItem(contentItem)
+
 
     def service_play_handoff(self, to_player:MediaPlayerEntity, restore_volume:bool, snapshot_only:bool) -> None:
         """

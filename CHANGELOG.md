@@ -6,9 +6,13 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.17 ] - 2023/11/27
+
+  *  Added service "Play Content Item" to allow media content from sources (e.g. TUNEIN, LOCAL_MUSIC, etc) to be played directly.
+
 ###### [ 1.0.16 ] - 2023/11/26
 
-  *  Corrected high cpu rate condition in the underlying `SmartInspectPython` package api.
+  *  Corrected high cpu rate condition in the underlying `SmartInspectPython` package api.  This was causing the integration to consume 50%+ of the cpu at all times.
 
 ###### [ 1.0.15 ] - 2023/11/20
 

@@ -16,6 +16,7 @@ DEFAULT_TIMEOUT = 15
 
 # custom service names.
 SERVICE_AUDIO_TONE_LEVELS = "audio_tone_levels"
+SERVICE_PLAY_CONTENTITEM = "play_contentitem"
 SERVICE_PLAY_HANDOFF = "play_handoff"
 SERVICE_PLAY_TTS = "play_tts"
 SERVICE_PLAY_URL = "play_url"
