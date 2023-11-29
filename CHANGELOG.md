@@ -10,6 +10,7 @@ Change are listed in reverse chronological order (newest to oldest).
 
   *  Updated service "Play Content Item" to make most parameters optional, to support switching to LOCAL source if necessary.
   *  Updated README.md page to reference documentation in the GitHub Wiki pages.
+  *  Changed github validation script to run once per month instead of once per day.
 
 ###### [ 1.0.17 ] - 2023/11/27
 
