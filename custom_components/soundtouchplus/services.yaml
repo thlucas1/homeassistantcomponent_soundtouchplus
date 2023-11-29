@@ -51,7 +51,7 @@ play_contentitem:
       name: Content Item Name
       description: Name of the content item.
       example: "K-LOVE Radio"
-      required: true
+      required: false
       selector:
         text:
     source:
@@ -72,14 +72,14 @@ play_contentitem:
       name: Item Type
       description: Type of content item to play; the value is case-sensitive, and should normally be lower case.
       example: "stationurl"
-      required: true
+      required: false
       selector:
         text:
     location:
       name: Content Location
       description: A direct link to the media content that will be played.
       example: "/v1/playback/station/s33828"
-      required: true
+      required: false
       selector:
         text:
     container_art:

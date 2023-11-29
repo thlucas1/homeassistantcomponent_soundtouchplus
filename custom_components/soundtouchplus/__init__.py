@@ -90,11 +90,11 @@ SERVICE_AUDIO_TONE_LEVELS_SCHEMA = vol.Schema(
 SERVICE_PLAY_CONTENTITEM_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
-        vol.Required("name"): cv.string,
+        vol.Optional("name"): cv.string,
         vol.Required("source"): cv.string,
         vol.Optional("source_account"): cv.string,
-        vol.Required("item_type"): cv.string,
-        vol.Required("location"): cv.string,
+        vol.Optional("item_type"): cv.string,
+        vol.Optional("location"): cv.string,
         vol.Optional("container_art"): cv.string,
         vol.Required("is_presetable", default=False): cv.boolean
     }   

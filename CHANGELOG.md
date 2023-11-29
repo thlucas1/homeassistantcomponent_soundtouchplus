@@ -6,6 +6,11 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.18 ] - 2023/11/29
+
+  *  Updated service "Play Content Item" to make most parameters optional, to support switching to LOCAL source if necessary.
+  *  Updated README.md page to reference documentation in the GitHub Wiki pages.
+
 ###### [ 1.0.17 ] - 2023/11/27
 
   *  Added service "Play Content Item" to allow media content from sources (e.g. TUNEIN, LOCAL_MUSIC, etc) to be played directly.

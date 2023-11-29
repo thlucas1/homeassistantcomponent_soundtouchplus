@@ -1085,7 +1085,13 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             parms['containerArt'] = containerArt
             parms['isPresetable'] = isPresetable
             _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("service_play_contentitem", self.name, self.entity_id), parms)
+
+        # is this a LOCAL source?
+        if source is not None and len(source) > 0 and source == 'LOCAL':
+            _logsi.LogVerbose("LOCAL source detected - calling SelectLocalSource for player '%s'", self.entity_id)
+            self._client.SelectLocalSource()
             
+        # set content item to play, and play it.
         contentItem:ContentItem = ContentItem(source, itemType, location, sourceAccount, isPresetable, name, containerArt)
         self._client.PlayContentItem(contentItem)
 
