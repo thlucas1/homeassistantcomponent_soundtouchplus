@@ -6,6 +6,11 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.19 ] - 2023/12/04
+
+  *  Updated underlying `bosesoundtouchapi` package requirement to version 1.0.22.
+  *  Updated `sourcesUpdated` event processing to refresh the source list when the list has changed.
+
 ###### [ 1.0.18 ] - 2023/11/29
 
   *  Updated service "Play Content Item" to make most parameters optional, to support switching to LOCAL source if necessary.

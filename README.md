@@ -43,7 +43,9 @@ The following custom services are also supplied by this integration.
 - Snapshot Restore: Restore SoundTouch device settings from a snapshot.
 - Snapshot Store: Store SoundTouch device settings to a snapshot.
 
-Check out the [Services Provided wiki page](https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/wiki/Services-Provided) for detailed explanations and YAML examples of the services provided by this integration.
+Check out the [Services Provided wiki](https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/wiki/Services-Provided) page for detailed explanations and YAML examples of the custom services provided by this integration.
+
+Check out the [Media Player Service Enhancements wiki](https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/wiki/Media-Player-Service-Enhancements) page for detailed explanations and YAML examples of the media player service enhancements provided by this integration.
 
 ## HACS Installation Instructions
 

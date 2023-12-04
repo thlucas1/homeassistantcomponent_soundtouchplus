@@ -342,7 +342,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     def media_image_url(self):
         """ Image url of current playing media. """
         if self._CachedNowPlayingStatus is not None:
-            return self._CachedNowPlayingStatus.Image
+            return self._CachedNowPlayingStatus.ArtUrl
         return None
 
 
@@ -866,12 +866,12 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 argsEncoded = ElementTree.tostring(args, encoding="unicode")
                 _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
 
-            # create configuration model from update event argument and update the cache.
-            self._CachedSourceList = SourceList(root=args[0])
-            client.ConfigurationCache[SoundTouchNodes.sources.Path] = self._CachedSourceList
+            # refresh the list of sources since the sourcesUpdated event does not supply them.
+            self._CachedSourceList = self._client.GetSourceList(True)
             _logsi.LogVerbose("'%s': sources (source_list) updated = %s" % (self.name, self._CachedSourceList.ToString()))
 
             # inform Home Assistant of the status update.
+            self._attr_source_list = self._CachedSourceList.ToSourceArray(True)
             self.async_write_ha_state()
 
 
@@ -890,7 +890,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             # create configuration model from update event argument and update the cache.
             self._CachedVolume = Volume(root=args[0])
             client.ConfigurationCache[SoundTouchNodes.volume.Path] = self._CachedVolume
-            _logsi.LogVerbose("'%s': volume (source_list) updated = %s" % (self.name, self._CachedVolume.ToString()))
+            _logsi.LogVerbose("'%s': volume updated = %s" % (self.name, self._CachedVolume.ToString()))
 
             # inform Home Assistant of the status update.
             self.async_write_ha_state()
