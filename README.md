@@ -39,6 +39,7 @@ The following custom services are also supplied by this integration.
 - Play URL: Play media content URL on a SoundTouch device.  Note that this is limited to ST10,20,30 devices, as Bose ST300 does not support notifications (AFAIK).
 - Get Preset List: Retrieves the list of presets defined to the device.
 - Get Recent List: Retrieves the list of recently played items defined to the device.
+- Reboot Device: Reboots the operating system of the SoundTouch device.
 - Remote Keypress: Simulates the press and release of a key on the SoundTouch device remote control.
 - Snapshot Restore: Restore SoundTouch device settings from a snapshot.
 - Snapshot Store: Store SoundTouch device settings to a snapshot.

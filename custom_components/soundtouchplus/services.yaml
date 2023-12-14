@@ -284,6 +284,29 @@ preset_list:
           integration: soundtouchplus
           domain: media_player
 
+reboot_device:
+  name: Reboot Device
+  description: Reboots the SoundTouch device operating system; all connectivity will be lost for about 30-45 seconds while the speaker reboots.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouch device to be rebooted.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    port:
+      name: SSH Port Number
+      description: The port number of the SSH server that is running on the device; default is port 17000.
+      example: 17000
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 65535
+
 recent_list:
   name: Get Recent List
   description: Retrieves the list of recently played items defined to the device.
@@ -323,33 +346,47 @@ remote_keypress:
           mode: dropdown
           sort: true
           options:
-            - PLAY
-            - PAUSE
-            - PLAY_PAUSE
-            - STOP
-            - PREV_TRACK
-            - NEXT_TRACK
-            - THUMBS_UP
-            - THUMBS_DOWN
+            - ADD_FAVORITE
+            - AUX_INPUT
             - BOOKMARK
-            - POWER
             - MUTE
-            - VOLUME_UP
-            - VOLUME_DOWN
+            - NEXT_TRACK
+            - PAUSE
+            - PLAY
+            - PLAY_PAUSE
+            - POWER
             - PRESET_1
             - PRESET_2
             - PRESET_3
             - PRESET_4
             - PRESET_5
             - PRESET_6
-            - AUX_INPUT
-            - SHUFFLE_OFF
-            - SHUFFLE_ON
+            - PREV_TRACK
+            - REMOVE_FAVORITE
+            - REPEAT_ALL
             - REPEAT_OFF
             - REPEAT_ONE
-            - REPEAT_ALL
-            - ADD_FAVORITE
-            - REMOVE_FAVORITE
+            - SHUFFLE_OFF
+            - SHUFFLE_ON
+            - STOP
+            - THUMBS_DOWN
+            - THUMBS_UP
+            - VOLUME_DOWN
+            - VOLUME_UP
+    key_state:
+      name: Key State
+      description: SoundTouch remote control key state. 
+        Most keys will use 'both' for state; the 'PRESET_n' key ids use 'press' to store a preset, and 'release' to select (or play) a preset.
+      example: "both"
+      required: false
+      selector:
+        select:
+          mode: dropdown
+          sort: true
+          options:
+            - both
+            - press
+            - release
 
 snapshot_restore:
   name: Snapshot Restore

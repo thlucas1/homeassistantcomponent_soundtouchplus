@@ -179,7 +179,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         self._socket.AddListener(SoundTouchNotifyCategorys.SoundTouchSdkInfo, self._OnSoundTouchInfoEvent)
 
         # add our listener(s) that will handle SoundTouch websocket related events.
-        self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketClose, self._OnSoundTouchWebSocketConnectionEvent)
+        self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketClose, self._OnSoundTouchWebSocketClosedEvent)
         self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketOpen, self._OnSoundTouchWebSocketConnectionEvent)
         self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketError, self._OnSoundTouchWebSocketErrorEvent)
         self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketPong, self._OnSoundTouchWebSocketPongEvent)
@@ -756,6 +756,12 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
 
     @callback
+    def _OnSoundTouchWebSocketClosedEvent(self, client:SoundTouchClient, statCode, args:str) -> None:
+        if (args != None):
+            _logsi.LogVerbose("SoundTouch device websocket closed event: (%s) %s" % (str(statCode), str(args)), colorValue=SIColors.Coral)
+
+
+    @callback
     def _OnSoundTouchWebSocketErrorEvent(self, client:SoundTouchClient, ex:Exception) -> None:
         if (ex != None):
             _logsi.LogError("SoundTouch device websocket error event: (%s) %s" % (str(type(ex)), str(ex)), colorValue=SIColors.Coral)
@@ -1228,6 +1234,31 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         return self._client.GetPresetList(True)
 
 
+    def service_reboot_device(self, sshPort:int):
+        """
+        Reboots the SoundTouch device operating system.
+        
+        Args:
+            sshPort (int):
+                SSH port to connect to; default is 17000.
+                
+        Returns:
+            The server response, in string format.
+                
+        This method will open a telnet connection to the SoundTouch SSH server
+        running on the device (port 17000).  It will then issue a `sys reboot`
+        command to reboot the device.  The telnet session will fail if any other
+        process has a telnet session open to the device; this is a SoundTouch
+        device limitation, as only one SSH session is allowed per device.
+        
+        If successful, all communication with the device will be lost while the 
+        device is rebooting. SoundTouch web-services API connectivity should be 
+        restored within 30 - 45 seconds if the reboot is successful.
+        """
+        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_reboot_device", self.name, self.entity_id)
+        self._client.Device.RebootDevice(sshPort)
+
+
     def service_recent_list(self) -> RecentList:
         """
         Retrieves the list of recently played items defined for a device.
@@ -1239,7 +1270,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         return self._client.GetRecentList(True)
 
 
-    def service_remote_keypress(self, key_id:str):
+    def service_remote_keypress(self, key_id:str, key_state:str):
         """
         Send key press and release requests to the player.
         
@@ -1253,8 +1284,14 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         allow it to be used for keys defined in the future that are not currently 
         defined.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Key='%s'", "service_remote_keypress", self.name, self.entity_id, str(key_id))
-        self._client.Action(key_id)
+        if key_state is None:
+            key_state = KeyStates.Both.value
+            if key_id is not None and key_id.startswith('PRESET_'):
+                key_state = KeyStates.Release.value
+        key_state = key_state.lower()
+
+        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Key='%s', State='%s'", "service_remote_keypress", self.name, self.entity_id, str(key_id), str(key_state))
+        self._client.Action(key_id, key_state)
 
 
     def service_snapshot_restore(self, restore_volume:bool) -> None:

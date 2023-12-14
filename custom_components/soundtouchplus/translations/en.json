@@ -199,6 +199,20 @@
         }
       }
     },
+    "reboot_device": {
+      "name": "Reboot Device",
+      "description": "Reboots the SoundTouch device operating system; all connectivity will be lost for about 30-45 seconds while the speaker reboots.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouch device to be rebooted."
+        },
+        "port": {
+          "name": "SSH Port Number",
+          "description": "The port number of the SSH server that is running on the device; default is port 17000."
+        }
+      }
+    },
     "recent_list": {
       "name": "Get Recent List",
       "description": "Retrieves the list of recently played items defined to the device.",
@@ -220,6 +234,10 @@
         "key_id": {
           "name": "Key Identifier",
           "description": "SoundTouch remote control key identifier."
+        },
+        "key_state": {
+          "name": "Key State",
+          "description": "SoundTouch remote control key state.  Most key identifiers will use 'both' for state; the 'PRESET_n' key identifiers use 'press' to store a preset, and 'release' to select (or play) a preset."
         }
       }
     },

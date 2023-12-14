@@ -32,6 +32,7 @@ from .const import (
     SERVICE_PLAY_TTS,
     SERVICE_PLAY_URL,
     SERVICE_PRESETLIST,
+    SERVICE_REBOOT_DEVICE,
     SERVICE_RECENTLIST,
     SERVICE_REMOTE_KEYPRESS,
     SERVICE_SNAPSHOT_RESTORE,
@@ -141,6 +142,13 @@ SERVICE_PRESETLIST_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_REBOOT_DEVICE_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("port", default=17000): vol.All(vol.Range(min=1,max=65535))
+    }
+)
+
 SERVICE_RECENTLIST_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
@@ -151,6 +159,7 @@ SERVICE_REMOTE_KEYPRESS_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
         vol.Required("key_id"): cv.string,
+        vol.Optional("key_state", default=KeyStates.Both.value): cv.string,
     }
 )
 
@@ -226,10 +235,17 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
 
             elif service.service == SERVICE_REMOTE_KEYPRESS:
                 key_id = service.data.get("key_id")
+                key_state = service.data.get("key_state")
                 if key_id is None:
                     _logsi.LogError(STAppMessages.MSG_SERVICE_ARGUMENT_NULL, "key_id", service.service)
                     return
-                await hass.async_add_executor_job(player.service_remote_keypress, key_id)
+                if key_state is None:
+                    key_state = KeyStates.Both
+                await hass.async_add_executor_job(player.service_remote_keypress, key_id, key_state)
+
+            elif service.service == SERVICE_REBOOT_DEVICE:
+                port = service.data.get("port")
+                await hass.async_add_executor_job(player.service_reboot_device, port)
 
             elif service.service == SERVICE_PLAY_CONTENTITEM:
                 name = service.data.get("name")
@@ -464,6 +480,14 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
         service_handle_getlist,
         schema=SERVICE_PRESETLIST_SCHEMA,
         supports_response=SupportsResponse.ONLY,
+    )
+
+    _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_REBOOT_DEVICE, SERVICE_REBOOT_DEVICE_SCHEMA)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_REBOOT_DEVICE,
+        service_handle_entity,
+        schema=SERVICE_REBOOT_DEVICE_SCHEMA,
     )
 
     _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_RECENTLIST, SERVICE_RECENTLIST_SCHEMA)
