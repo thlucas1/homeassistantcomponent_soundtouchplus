@@ -9,7 +9,7 @@ Change are listed in reverse chronological order (newest to oldest).
 ###### [ 1.0.20 ] - 2023/12/13
 
   *  Added service "Reboot Device" - Reboots the operating system of the SoundTouch device.
-  *  Updated Remote Keypress service to include key_state argument.  This allows presets to be
+  *  Updated Remote Keypress service to include key_state argument.  This allows presets to be stored (press) or selected for playing (release).
   *  Updated underlying `bosesoundtouchapi` package requirement to version 1.0.30.
 
 ###### [ 1.0.19 ] - 2023/12/04
