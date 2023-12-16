@@ -196,12 +196,19 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
     """
     # trace the ConfigType dictionary for debugging purposes.
     if _logsi.IsOn(SILevel.Verbose):
+
         _logsi.LogVerbose("Component async_setup starting")
+
+        # log the manifest file contents.
+        myConfigDir:str = "%s/custom_components/%s" % (hass.config.config_dir, DOMAIN)
+        myManifestPath:str = "%s/manifest.json" % (myConfigDir)
+        _logsi.LogTextFile(SILevel.Verbose, "Integration Manifest File (%s)" % myManifestPath, myManifestPath)
+
         for item in config:
             itemKey:str = str(item)
             itemObj = config[itemKey]
             if isinstance(itemObj,dict):
-                _logsi.LogDictionary(SILevel.Verbose, "ConfigType '%s' data (dictionary)" % itemKey, itemObj)
+                _logsi.LogDictionary(SILevel.Verbose, "ConfigType '%s' data (dictionary)" % itemKey, itemObj, prettyPrint=True)
             elif isinstance(itemObj,list):
                 _logsi.LogArray(SILevel.Verbose, "ConfigType '%s' data (list)" % itemKey, itemObj)
             else:
@@ -374,7 +381,7 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                 response = recentList.ToDictionary()
 
             # build list of items to return.
-            _logsi.LogDictionary(SILevel.Verbose, "Service Response data", response)
+            _logsi.LogDictionary(SILevel.Verbose, "Service Response data", response, prettyPrint=True)
             return response 
 
         except SoundTouchWarning as ex:  pass   # should already be logged
@@ -560,10 +567,17 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
     if CONF_PING_WEBSOCKET_INTERVAL in entry.data.keys():
         ping_websocket_interval = entry.data[CONF_PING_WEBSOCKET_INTERVAL]
     
-    # create the SoundTouchDevice and SoundTouchClient objects.
-    # the SoundTouchClient contains all of the methods used to control the actual device.
     _logsi.LogVerbose("Component async_setup_entry is creating SoundTouchDevice and SoundTouchClient instance (%s): port=%s" % (host, str(port)))
+
+    # create the SoundTouchDevice object.
     device:SoundTouchDevice = await hass.async_add_executor_job(SoundTouchDevice, host, 30, None, port)
+    _logsi.LogObject(SILevel.Verbose, "Component async_setup_entry created SoundTouchDevice instance (%s): %s"  % (host, device.DeviceName), device)
+    _logsi.LogVerbose("(%s): %s - Device Info: ID='%s', Type='%s', Country='%s', Region='%s'" % (host, device.DeviceName, device.DeviceId, device.DeviceType, device.CountryCode, device.RegionCode))
+    _logsi.LogVerbose("(%s): %s - Device does NOT support the following URL services: %s" % (host, device.DeviceName, device.UnSupportedUrlNames))
+    if len(device.UnknownUrlNames) > 0:
+        _logsi.LogVerbose("(%s): %s - Device contains URL services that are not known by the API: %s" % (host, device.DeviceName, device.UnknownUrlNames))
+    
+    # create the SoundTouchClient object, which contains all of the methods used to control the actual device.
     client:SoundTouchClient = await hass.async_add_executor_job(SoundTouchClient, device)
     _logsi.LogObject(SILevel.Verbose, "Component async_setup_entry created SoundTouchClient instance (%s): %s"  % (host, device.DeviceName), client)
 

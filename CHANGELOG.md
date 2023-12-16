@@ -6,11 +6,16 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.21 ] - 2023/12/16
+
+  *  Updated underlying `bosesoundtouchapi` package requirement to version 1.0.35.
+  *  Updated configuration caching to utilize the `SoundTouchClient` module cache instead of local variables.  It's doing the same thing, without twice the overhead of memory storage.
+
 ###### [ 1.0.20 ] - 2023/12/13
 
   *  Added service "Reboot Device" - Reboots the operating system of the SoundTouch device.
   *  Updated Remote Keypress service to include key_state argument.  This allows presets to be stored (press) or selected for playing (release).
-  *  Updated underlying `bosesoundtouchapi` package requirement to version 1.0.30.
+  *  Updated underlying `bosesoundtouchapi` package requirement to version 1.0.31.
 
 ###### [ 1.0.19 ] - 2023/12/04
 
