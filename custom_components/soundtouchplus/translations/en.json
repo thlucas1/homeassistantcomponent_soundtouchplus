@@ -53,6 +53,28 @@
         }
       }
     },
+    "musicservice_station_list": {
+      "name": "Get Music Service Station List",
+      "description": "Retrieves the list of your stored stations from the specified music service (e.g. PANDORA, etc).",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouch device that will query the specified music service."
+        },
+        "source": {
+          "name": "Source",
+          "description": "Music service source to navigate (e.g. 'PANDORA', etc); the value is case-sensitive, and should normally be UPPER case."
+        },
+        "source_account": {
+          "name": "Source Account",
+          "description": "Music service source account (e.g. the music service user-id).  Default is none."
+        },
+        "sort_type": {
+          "name": "Sort Type",
+          "description": "Sort type used by the Music Service to sort the returned items by ('dateCreated', 'stationName'); the value is case-sensitive."
+        }
+      }
+    },
     "play_contentitem": {
       "name": "Play Content Item",
       "description": "Play media content from a content item source (e.g. TUNEIN station, etc) on a SoundTouch device.",

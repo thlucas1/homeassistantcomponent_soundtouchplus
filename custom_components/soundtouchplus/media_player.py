@@ -1155,6 +1155,34 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         self._client.SetAudioProductToneControls(config)
 
         
+    def service_musicservice_station_list(self, source:str, sourceAccount:str, sortType:str) -> NavigateResponse:
+        """
+        Retrieves a list of your stored stations from the specified music service (e.g. PANDORA, etc).
+
+        Args:
+            source (str):
+                Music service source to navigate (e.g. "PANDORA", "STORED_MUSIC", etc).
+                The value is case-sensitive, and should normally be UPPER case.
+            sourceAccount (str):
+                Music service source account (e.g. the music service user-id).
+            sortType (str):
+                Sort type used by the Music Service to sort the returned items by.
+                The value is case-sensitive.
+
+        Returns:
+            A `NavigateResponse` instance that contain the results.
+        """
+        if _logsi.IsOn(SILevel.Verbose):
+            parms:dict = {}
+            parms['source'] = source
+            parms['sourceAccount'] = sourceAccount
+            parms['sortType'] = sortType
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("service_musicservice_station_list", self.name, self.entity_id), parms)
+
+        criteria:Navigate = Navigate(source, sourceAccount, sortType=sortType)
+        return self._client.GetMusicServiceStations(criteria)
+
+
     def service_play_contentitem(self, name:str, source:str, sourceAccount:str, itemType:str, location:str, containerArt:str, isPresetable:bool):
         """
         Play media content from a content item source (e.g. TUNEIN station, etc) on a SoundTouch device.

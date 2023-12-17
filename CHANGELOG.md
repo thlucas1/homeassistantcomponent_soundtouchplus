@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.22 ] - 2023/12/17
+
+  *  Added service "Music Service Station List" - Gets a list of your stored stations from the specified music service (e.g. PANDORA, etc).
+
 ###### [ 1.0.21 ] - 2023/12/16
 
   *  Updated underlying `bosesoundtouchapi` package requirement to version 1.0.35.

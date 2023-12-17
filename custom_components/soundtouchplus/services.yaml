@@ -34,6 +34,46 @@ audio_tone_levels:
           step: 25
           mode: slider
 
+musicservice_station_list:
+  name: Get Music Service Station List
+  description: Retrieves the list of your stored stations from the specified music service (e.g. PANDORA, etc).
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouch device that will query the specified music service.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    source:
+      name: Source
+      description: Music service source to navigate (e.g. 'PANDORA', etc); the value is case-sensitive, and should normally be UPPER case.
+      example: "PANDORA"
+      required: true
+      selector:
+        text:
+    source_account:
+      name: Source Account
+      description: Music service source account (e.g. the music service user-id).  Default is none.
+      example: ""
+      required: false
+      selector:
+        text:
+    sort_type:
+      name: Sort Type
+      description: Sort type used by the Music Service to sort the returned items by; the value is case-sensitive.
+      example: "stationName"
+      required: false
+      selector:
+        select:
+          mode: dropdown
+          sort: true
+          options:
+            - dateCreated
+            - stationName
+
 play_contentitem:
   name: Play Content Item
   description: Play media content from a content item source (e.g. TUNEIN station, etc) on a SoundTouch device.
