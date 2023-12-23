@@ -9,6 +9,7 @@ from bosesoundtouchapi.ws import SoundTouchWebSocket
 
 from homeassistant.core import HomeAssistant
 from homeassistant.components.media_player import MediaPlayerEntity
+from homeassistant.config_entries import ConfigEntry
 
 # get smartinspect logger reference; create a new session for this module name.
 _logsi:SISession = SIAuto.Si.GetSession(__name__)
@@ -25,13 +26,15 @@ class EntityInitParms:
     player entity.
     """
 
-    def __init__(self, hass:HomeAssistant, client:SoundTouchClient, socket:SoundTouchWebSocket) -> None:
+    def __init__(self, hass:HomeAssistant, configEntry:ConfigEntry, client:SoundTouchClient, socket:SoundTouchWebSocket) -> None:
         """ 
         Initialize the SoundTouch data object for a device. 
 
         Args:
             hass (HomeAssistant):
                 Home Assistant instance.
+            configEntry (ConfigEntry):
+                Configuration entry instance.
             client (SoundTouchClient):
                 SoundTouchClient instance.
             socket (SoundTouchWebSocket):
@@ -40,7 +43,8 @@ class EntityInitParms:
         _logsi.LogVerbose("Component EntityInitParms object is initializing")
 
         # initialize instance.
-        self.hass = hass
+        self.hass:HomeAssistant = hass
+        self.configEntry:ConfigEntry = configEntry
         self.client:SoundTouchClient = client
         self.socket:SoundTouchWebSocket = socket
         self.media_player:MediaPlayerEntity = None

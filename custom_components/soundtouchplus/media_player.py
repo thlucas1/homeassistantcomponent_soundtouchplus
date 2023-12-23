@@ -37,7 +37,7 @@ from homeassistant.helpers.device_registry import (
 )
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, CONF_OPTION_SOURCE_LIST
 from .entity_init_parms import EntityInitParms
 from .stappmessages import STAppMessages
 
@@ -60,7 +60,7 @@ ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL_RANGE = "soundtouchplus_tone_treble_level_
 ATTRVALUE_NOT_CAPABLE = "not capable"
 
 
-async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry, async_add_entities:AddEntitiesCallback) -> None:
+async def async_setup_entry(hass:HomeAssistant, configEntry:ConfigEntry, async_add_entities:AddEntitiesCallback) -> None:
     """
     Set up the Bose SoundTouch media player based on a config entry.
 
@@ -68,17 +68,19 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry, async_add_ent
     which was initiated via the `hass.config_entries.async_forward_entry_setup` call.
     """
     # get media player entity initialization parameters (e.g. EntityInitParms).
-    initParms:EntityInitParms = hass.data[DOMAIN][entry.entry_id]
+    initParms:EntityInitParms = hass.data[DOMAIN][configEntry.entry_id]
 
     # create the platform instance, passing our initialiation parameters.
-    _logsi.LogVerbose("media_player.py - async_setup_entry is creating the SoundTouchMediaPlayer instance")
+    _logsi.LogVerbose("'%s': media_player.py - async_setup_entry is creating the SoundTouchMediaPlayer instance" % configEntry.entry_id)
     media_player = SoundTouchMediaPlayer(initParms)
 
     # add all entities to Home Assistant.
+    _logsi.LogVerbose("'%s': media_player.py - async_setup_entry is adding the SoundTouchMediaPlayer instance entities to Home Assistant" % configEntry.entry_id)
     async_add_entities([media_player], True)
 
     # store the reference to the media player object.
-    hass.data[DOMAIN][entry.entry_id].media_player = media_player
+    _logsi.LogVerbose("'%s': media_player.py - async_setup_entry is storing the SoundTouchMediaPlayer reference to hass.data[DOMAIN]" % configEntry.entry_id)
+    hass.data[DOMAIN][configEntry.entry_id].media_player = media_player
 
 
 class SoundTouchMediaPlayer(MediaPlayerEntity):
@@ -118,6 +120,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         if self._socket is None:
             _logsi.LogVerbose("'%s': _attr_should_poll is being enabled, as the device does not support websockets" % (self.name))
             self._attr_should_poll = True
+            
+        # load option: source_list - list of supported sources.
+        if CONF_OPTION_SOURCE_LIST in initParms.configEntry.options.keys():
+            self._attr_source_list = initParms.configEntry.options[CONF_OPTION_SOURCE_LIST]
+            _logsi.LogArray(SILevel.Verbose, "'%s': config option: '%s' = '%s'" % (self.name, CONF_OPTION_SOURCE_LIST, str(self._attr_source_list)), self._attr_source_list)
 
         _logsi.LogObject(SILevel.Verbose, "'%s': initialized" % (self.name), self._client)
         return
@@ -136,31 +143,45 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         The call back registration is done once this entity is registered with Home
         Assistant (rather than in the `__init__` method).
         """
+        _logsi.LogVerbose("'%s': async_added_to_hass is starting" % (self.name))
+        
         # load list of supported sources.
-        _logsi.LogVerbose("'%s': loading list of sources that the device supports" % (self.name))
-        await self.hass.async_add_executor_job(self._client.GetSourceList, True)
-        _logsi.LogVerbose("'%s': source_list = %s" % (self.name, str(self.source_list)))
-        _logsi.LogVerbose("'%s': source = %s" % (self.name, str(self.source)))
+        _logsi.LogVerbose("'%s': async_added_to_hass loading list of ALL sources that the device supports" % (self.name))
+        config:SourceList = await self.hass.async_add_executor_job(self._client.GetSourceList, True)
+
+        if self._attr_source_list is None or len(self._attr_source_list) == 0:
+            _logsi.LogVerbose("'%s': source_list not defined in config options; defaulting to ALL sources" % (self.name))
+            self._attr_source_list = config.ToSourceTitleArray()
+            
+        _logsi.LogVerbose("'%s': async_added_to_hass source_list = %s" % (self.name, str(self._attr_source_list)))
+        _logsi.LogVerbose("'%s': async_added_to_hass current source = %s" % (self.name, str(self.source)))
 
         # load list of supported sound modes.
         if SoundTouchNodes.audiodspcontrols.Path in self._client.Device.SupportedUris:
-            _logsi.LogVerbose("'%s': loading list of sound modes (audiodspcontrols) that the device supports" % (self.name))
-            await self.hass.async_add_executor_job(self._client.GetAudioDspControls, True)
-            _logsi.LogVerbose("'%s': sound_mode_list = %s" % (self.name, str(self.sound_mode_list)))
-            _logsi.LogVerbose("'%s': sound_mode = %s" % (self.name, str(self.sound_mode)))
+            _logsi.LogVerbose("'%s': async_added_to_hass loading list of sound modes (audiodspcontrols) that the device supports" % (self.name))
+            dspconfig:AudioDspControls = await self.hass.async_add_executor_job(self._client.GetAudioDspControls, True)
+
+            if self._attr_sound_mode_list is None or len(self._attr_sound_mode_list) == 0:
+                self._attr_sound_mode_list = dspconfig.ToSupportedAudioModeTitlesArray()
+                
+            # load current sound mode.
+            self._attr_sound_mode = AudioDspAudioModes.GetNameByValue(dspconfig.AudioMode)
+
+            _logsi.LogVerbose("'%s': async_added_to_hass sound_mode_list = %s" % (self.name, str(self._attr_sound_mode_list)))
+            _logsi.LogVerbose("'%s': async_added_to_hass current sound_mode = %s" % (self.name, str(self._attr_sound_mode)))
         else:
-            _logsi.LogVerbose("'%s': device does not support sound modes (audiodspcontrols)" % (self.name))
+            _logsi.LogVerbose("'%s': async_added_to_hass device does not support sound modes (audiodspcontrols)" % (self.name))
         
         # load list of supported tone levels.
         if SoundTouchNodes.audioproducttonecontrols.Path in self._client.Device.SupportedUris:
-            _logsi.LogVerbose("'%s': loading bass tone range levels (audioproducttonecontrols) that the device supports" % (self.name))
+            _logsi.LogVerbose("'%s': async_added_to_hass loading bass tone range levels (audioproducttonecontrols) that the device supports" % (self.name))
             await self.hass.async_add_executor_job(self._client.GetAudioProductToneControls, True)
         else:
-            _logsi.LogVerbose("'%s': device does not support tone level adjustments (audioproducttonecontrols)" % (self.name))
+            _logsi.LogVerbose("'%s': async_added_to_hass device does not support tone level adjustments (audioproducttonecontrols)" % (self.name))
 
         # load zone configuration.
         if SoundTouchNodes.getZone.Path in self._client.Device.SupportedUris:
-            _logsi.LogVerbose("'%s': loading zone configuration" % (self.name))
+            _logsi.LogVerbose("'%s': async_added_to_hass loading zone configuration" % (self.name))
             config:Zone = await self.hass.async_add_executor_job(self._client.GetZoneStatus, True)
             self._attr_group_members = self._BuildZoneMemberEntityIdList(config)
 
@@ -184,7 +205,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         self._socket.AddListener(SoundTouchNotifyCategorys.SoundTouchSdkInfo, self._OnSoundTouchInfoEvent)
 
         # add our listener(s) that will handle SoundTouch websocket related events.
-        self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketClose, self._OnSoundTouchWebSocketClosedEvent)
+        self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketClose, self._OnSoundTouchWebSocketCloseEvent)
         self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketOpen, self._OnSoundTouchWebSocketConnectionEvent)
         self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketError, self._OnSoundTouchWebSocketErrorEvent)
         self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketPong, self._OnSoundTouchWebSocketPongEvent)
@@ -195,6 +216,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
         # list various details
         _logsi.LogObject(SILevel.Verbose, "'%s': async_added_to_hass identifiers: name=%s, unique_id=%s, entity_id=%s" % (self.name, self.name, self.unique_id, self.entity_id), self)
+        _logsi.LogVerbose("'%s': async_added_to_hass is ending" % (self.name))
 
 
     async def async_will_remove_from_hass(self) -> None:
@@ -384,55 +406,52 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     @property
     def sound_mode(self) -> str | None:
         """ Name of the current sound mode. """
-        if SoundTouchNodes.audiodspcontrols.Path in self._client.ConfigurationCache:
-            config:AudioDspControls = self._client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path]
-            return config.AudioMode
-        return None
+        return self._attr_sound_mode
 
 
     @property
     def sound_mode_list(self) -> list[str] | None:
         """ List of available sound modes. """
-        if SoundTouchNodes.audiodspcontrols.Path in self._client.ConfigurationCache:
-            config:AudioDspControls = self._client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path]
-            return config.ToSupportedAudioModesArray()
-        return None
+        return self._attr_sound_mode_list
 
 
     @property
     def source(self):
-        """ Name of the current input source. """
+        """ Title of the current input source. """
         if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
             config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
+            if SoundTouchNodes.sources.Path in self._client.ConfigurationCache:
+                sourceList:SourceList = self._client.ConfigurationCache[SoundTouchNodes.sources.Path]
+                return sourceList.GetTitleBySource(config.Source, config.SourceAccount)
             return config.Source
         return None
 
 
     @property
     def source_list(self) -> list[str] | None:
-        """ List of available input sources. """
-        if SoundTouchNodes.sources.Path in self._client.ConfigurationCache:
-            config:SourceList = self._client.ConfigurationCache[SoundTouchNodes.sources.Path]
-            return config.ToSourceArray(True)
-        return None
+        """ List of configured input sources. """
+        return self._attr_source_list
 
 
     @property
     def state(self) -> MediaPlayerState | None:
         """ Return the state of the device. """
+        result = None
         if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
             config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
-            if config.Source == "STANDBY":
+            if config.Source == SoundTouchSources.STANDBY.value:
                 result = MediaPlayerState.OFF
-            elif config.Source == "INVALID_SOURCE":
+            elif config.Source == SoundTouchSources.INVALID:
                 result = None
-            elif config.PlayStatus == "PLAY_STATE":
+            elif config.PlayStatus == PlayStatusTypes.Playing.value:
                 result = MediaPlayerState.PLAYING
-            elif config.PlayStatus == "BUFFERING_STATE":
+            elif config.PlayStatus == PlayStatusTypes.Buffering.value:
                 result = MediaPlayerState.PLAYING
-            elif config.PlayStatus == "PAUSE_STATE":
+            elif config.PlayStatus == PlayStatusTypes.Paused.value:
                 result = MediaPlayerState.PAUSED
-            elif config.PlayStatus == "STOP_STATE":
+            elif config.PlayStatus == PlayStatusTypes.Stopped.value:
+                result = MediaPlayerState.PAUSED
+            elif config.PlayStatus == PlayStatusTypes.Invalid.value:
                 result = MediaPlayerState.PAUSED
         else:
             result = None
@@ -676,7 +695,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             **kwargs (Any):
                 Keyword arguments.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Media=%s ('%s')", "Play Media", self.name, self.name, str(media_type), media_id)
+        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Media=%s ('%s')", "Play Media", self.name, self.entity_id, str(media_type), media_id)
 
         # is the media an http or https url?
         if re.match(r"http[s]?://", str(media_id)):
@@ -701,19 +720,26 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         
         Args:
             sound_mode (str):
-                Sound mode to select.
+                Sound mode to select - the following (case-sensitive) formats are supported:  
+                - audio mode name string (e.g. "Dialog")
+                - audio mode value string (e.g. "AUDIO_MODE_DIALOG")
 
         The sound_mode argument must be one of the audio modes supported by the device.
         Be aware that some devices do not support audiodspcontrols (e.g. sound modes).
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - SoundMode='%s'", "Select Sound Mode", self.name, self.name, sound_mode)
+        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - SoundMode='%s'", "Select Sound Mode", self.name, self.entity_id, sound_mode)
 
-        # if device does not support audio modes then we are done.
+        # does device support audio dsp controls?
         if SoundTouchNodes.audiodspcontrols.Path in self._client.ConfigurationCache:
-            config:AudioDspControls = self._client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path]
             
+            # is sound_mode an audio mode name?  if so, then we need the value.
+            audioDspAudioMode:str = AudioDspAudioModes.GetValueByName(sound_mode)
+            if audioDspAudioMode is not None:
+                sound_mode = audioDspAudioMode
+
             # does sound mode list contain the specified sound_mode?
             # if so, then change the sound mode; otherwise log an error message.
+            config:AudioDspControls = self._client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path]
             if sound_mode in config.SupportedAudioModes:
                 cfgUpdate:AudioDspControls = AudioDspControls(audioMode=sound_mode)
                 self._client.SetAudioDspControls(cfgUpdate)
@@ -729,36 +755,72 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         
         Args:
             source (str):
-                Source to select.
-
-        The source argument can be specified as just a source value (e.g. "AUX", "BLUETOOTH", etc),
-        or as a source and sourceAccount value delimited by a colon (e.g. "PRODUCT:TV").  
+                Source to select - the following (case-sensitive) formats are supported:  
+                - source string (e.g. "AIRPLAY")  
+                - source and account string (e.g. "PANDORA:yourpandorauserid")  
+                - source title string (e.g. "My NAS Music")  
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Source='%s'", "Select Source", self.name, self.name, source)
+        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Source='%s'", "Select Source", self.name, self.entity_id, source)
+        
+        sourceAccount:str = None
 
-        # does source contain the source and account name (delimited by ":")?
-        dlmidx:int = source.find(":")
-        if dlmidx > -1:
-            sourceAccount:str = source[dlmidx + 1:]
-            source = source[0:dlmidx]
-            self._client.SelectSource(source, sourceAccount)
+        # is source a SourceTitle value?
+        sourceItem = self._GetSourceItemByTitle(source)
+        if sourceItem is not None:
             
+            source = sourceItem.Source
+            sourceAccount = sourceItem.SourceAccount
+            
+        else:
+
+            # does source contain the source and account name (delimited by ":")?
+            dlmidx:int = source.find(":")
+            if dlmidx > -1:
+                sourceAccount:str = source[dlmidx + 1:]
+                source:str = source[0:dlmidx]
+
         # is the LOCAL source specified? if so, then use the SelectLocalSource() method to select the 
         # source, as this is the only way to select the LOCAL source for some SoundTouch devices.
-        elif source == 'LOCAL':
-            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLocalSource", self.name, self.name)
+        if source == 'LOCAL':
+            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLocalSource", self.name, self.entity_id)
             self._client.SelectLocalSource()
             
         elif source == 'LASTSOURCE':
-            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLastSource", self.name, self.name)
+            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLastSource", self.name, self.entity_id)
             self._client.SelectLastSource()
             
         elif source == 'LASTSOUNDTOUCHSOURCE':
-            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLastSoundTouchSource", self.name, self.name)
+            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLastSoundTouchSource", self.name, self.entity_id)
             self._client.SelectLastSoundTouchSource()
             
-        else:
+        elif source == 'LASTWIFISOURCE':
+            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLastWifiSource", self.name, self.entity_id)
+            self._client.SelectLastWifiSource()
+
+        elif source in ['AUX','AIRPLAY']: # AUX requires both source and source account.
+            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectSource", self.name, self.entity_id)
+            self._client.SelectSource(source, sourceAccount)
+            
+        elif source in ['BLUETOOTH']:
+            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectSource", self.name, self.entity_id)
             self._client.SelectSource(source)
+            
+        else:
+            
+            # if source is for a music service, then the select source requires a location
+            # variable.  since we cannot supply that on this method, we will perform a 
+            # lookup in the recently played items to retrieve the last station played for the source.
+            _logsi.LogVerbose("'%s': retrieving recently played content for source '%s (%s)' ..." % (self.name, source, sourceAccount))
+            recentList:RecentList = self._client.GetRecentList(False)
+            recent:Recent
+            for recent in recentList.Recents:
+                if recent.Source == source:
+                    _logsi.LogObject(SILevel.Verbose, "'%s': recently played contentItem found for source '%s (%s)'" % (self.name, source, sourceAccount), recent.ContentItem, excludeNonPublic=True)
+                    self._client.PlayContentItem(recent.ContentItem)
+                    return
+                
+            # if no recent was found, then just try to select the source (with source account).
+            self._client.SelectSource(source, sourceAccount)
 
 
     async def async_browse_media(
@@ -785,9 +847,9 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
 
     @callback
-    def _OnSoundTouchWebSocketClosedEvent(self, client:SoundTouchClient, statCode, args:str) -> None:
+    def _OnSoundTouchWebSocketCloseEvent(self, client:SoundTouchClient, statCode=None, args:str=None) -> None:
         if (args != None):
-            _logsi.LogVerbose("SoundTouch device websocket closed event: (%s) %s" % (str(statCode), str(args)), colorValue=SIColors.Coral)
+            _logsi.LogVerbose("SoundTouch device websocket close event: (%s) %s" % (str(statCode), str(args)), colorValue=SIColors.Coral)
 
 
     @callback
@@ -846,7 +908,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             
             # inform Home Assistant of the status update.
             self.async_write_ha_state()
-
+            
 
     @callback
     def _OnSoundTouchUpdateEvent_audioproducttonecontrols(self, client:SoundTouchClient, args:Element) -> None:
@@ -889,7 +951,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # inform Home Assistant of the status update.
             self.async_write_ha_state()
-
+                
 
     @callback
     def _OnSoundTouchUpdateEvent_presetsUpdated(self, client:SoundTouchClient, args:Element) -> None:
@@ -956,7 +1018,6 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogVerbose("'%s': sources (source_list) updated = %s" % (self.name, config.ToString()))
 
             # inform Home Assistant of the status update.
-            self._attr_source_list = config.ToSourceArray(True)
             self.async_write_ha_state()
 
 
@@ -1105,6 +1166,31 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         _logsi.LogVerbose("DeviceId value of '%s' was resolved to media_player entity_id '%s' for the '%s' method call" % (str(deviceId), entity_id, serviceName))
         return entity_id
     
+
+    def _GetSourceItemByTitle(self, title:str) -> SourceItem:
+        """
+        Returns a `SourceItem` instance for the given source title value
+        if a matching title was found in the source_list; otherwise, None.
+        
+        Args:
+            title (str):
+                Source title string to locate in the `SourceItems` cache
+                configuration list.  
+                Value is case-sensitive, and must match exactly.
+                
+        Returns:
+            A `SourceItem` if the title argument value was found; otherwise, None.
+        """
+        # is source argument a source title value?
+        sourceList:SourceList = self._client.GetSourceList(False)
+        sourceItem:SourceItem = sourceList.GetSourceItemByTitle(title)
+        if sourceItem is None:
+            _logsi.LogVerbose("Source title '%s' was NOT resolved for SoundTouch device '%s' (id=%s)" % (title, self.name, self.entity_id))
+        else:
+            _logsi.LogObject(SILevel.Verbose, "Source title '%s' was resolved for SoundTouch device '%s' (id=%s) - Source Item" % (title, self.name, self.entity_id), sourceItem, excludeNonPublic=True)
+        return sourceItem
+
+    
     # -----------------------------------------------------------------------------------
     # Custom Services
     # -----------------------------------------------------------------------------------
@@ -1161,12 +1247,14 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
         Args:
             source (str):
-                Music service source to navigate (e.g. "PANDORA", "STORED_MUSIC", etc).
-                The value is case-sensitive, and should normally be UPPER case.
+                Music service source to navigate (e.g. "PANDORA", "STORED_MUSIC", etc).  
+                This can also be a source title value (e.g. "Tunein").  
+                The value is case-sensitive.
             sourceAccount (str):
-                Music service source account (e.g. the music service user-id).
+                Music service source account (e.g. the music service user-id).  
+                Ignored if the source argument contains a source title value.  
             sortType (str):
-                Sort type used by the Music Service to sort the returned items by.
+                Sort type used by the Music Service to sort the returned items by.  
                 The value is case-sensitive.
 
         Returns:
@@ -1178,6 +1266,12 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             parms['sourceAccount'] = sourceAccount
             parms['sortType'] = sortType
             _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("service_musicservice_station_list", self.name, self.entity_id), parms)
+
+        # is source argument a source title value?
+        sourceItem = self._GetSourceItemByTitle(source)
+        if sourceItem is not None:
+            source = sourceItem.Source
+            sourceAccount = sourceItem.SourceAccount
 
         criteria:Navigate = Navigate(source, sourceAccount, sortType=sortType)
         return self._client.GetMusicServiceStations(criteria)
@@ -1192,9 +1286,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 Name of the content item (e.g. "K-LOVE Radio").
             source (str):
                 Source to select to play the content (e.g. "TUNEIN").  
-                The value is case-sensitive, and should normally be UPPER case.
+                This can also be a source title value (e.g. "Tunein").  
+                The value is case-sensitive.
             sourceAccount (str):
                 Source account this content item is played with.  
+                Ignored if the source argument contains a source title value.  
                 Default is none.
             itemType (str):
                 Type of content item to play (e.g. "stationurl").  
@@ -1216,6 +1312,12 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             parms['containerArt'] = containerArt
             parms['isPresetable'] = isPresetable
             _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("service_play_contentitem", self.name, self.entity_id), parms)
+
+        # is source argument a source title value?
+        sourceItem:SourceItem = self._GetSourceItemByTitle(source)
+        if sourceItem is not None:
+            source = sourceItem.Source
+            sourceAccount = sourceItem.SourceAccount
 
         # is this a LOCAL source?
         if source is not None and len(source) > 0 and source == 'LOCAL':

@@ -23,6 +23,7 @@ from .const import (
     DOMAIN,
     CONF_PORT_WEBSOCKET,
     CONF_PING_WEBSOCKET_INTERVAL,
+    CONF_OPTION_SOURCE_LIST,
     DEFAULT_PING_WEBSOCKET_INTERVAL,
     DEFAULT_PORT,
     DEFAULT_PORT_WEBSOCKET,
@@ -39,6 +40,8 @@ from .const import (
     SERVICE_SNAPSHOT_RESTORE,
     SERVICE_SNAPSHOT_STORE
 )
+
+OPTIONS_UPDATE_LISTENER_REMOVE = "options_update_listener_remove"
 
 _LOGGER = logging.getLogger(__name__)
 #LOGGER = logging.getLogger(__package__)
@@ -128,7 +131,7 @@ SERVICE_PLAY_TTS_SCHEMA = vol.Schema(
         vol.Optional("album"): cv.string,
         vol.Optional("track"): cv.string,
         vol.Optional("tts_url"): cv.string,
-        vol.Optional("volume_level", default=0): vol.All(vol.Range(min=10,max=70)),
+        vol.Optional("volume_level", default=0): vol.All(vol.Range(min=0,max=70)),
         vol.Optional("app_key"): cv.string
     }
 )
@@ -140,7 +143,7 @@ SERVICE_PLAY_URL_SCHEMA = vol.Schema(
         vol.Optional("artist"): cv.string,
         vol.Optional("album"): cv.string,
         vol.Optional("track"): cv.string,
-        vol.Optional("volume_level", default=0): vol.All(vol.Range(min=10,max=70)),
+        vol.Optional("volume_level", default=0): vol.All(vol.Range(min=0,max=70)),
         vol.Optional("app_key"): cv.string,
         vol.Required("get_metadata_from_url_file", default=False): cv.boolean
     }
@@ -236,6 +239,7 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
         try:
             _logsi.LogVerbose(STAppMessages.MSG_SERVICE_CALL_START, service.service, "service_handle_entity")
             _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_CALL_PARM, service)
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_SERVICE_CALL_DATA, service.data)
 
             # get media_player instance from service parameter; if not found, then we are done.
             player = _GetEntityFromServiceData(hass, service, "entity_id")
@@ -322,6 +326,7 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
         try:
             _logsi.LogVerbose(STAppMessages.MSG_SERVICE_CALL_START, service.service, "service_handle_entityfromto")
             _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_CALL_PARM, service)
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_SERVICE_CALL_DATA, service.data)
 
             # get player instance from service parameter; if not found, then we are done.
             from_player = _GetEntityFromServiceData(hass, service, "entity_id_from")
@@ -369,6 +374,7 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
         try:
             _logsi.LogVerbose(STAppMessages.MSG_SERVICE_CALL_START, service.service, "service_handle_getlist")
             _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_CALL_PARM, service)
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_SERVICE_CALL_DATA, service.data)
 
             # get player instance from service parameter; if not found, then we are done.
             player = _GetEntityFromServiceData(hass, service, "entity_id")
@@ -407,7 +413,7 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
         except SoundTouchError as ex:  pass     # should already be logged
         except Exception as ex:
             # log exception, but not to system logger as HA will take care of it.
-            _logsi.LogException(STAppMessages.MSG_SERVICE_REQUEST_EXCEPTION % (service.service, "service_handle_presetlist"), ex, logToSystemLogger=False)
+            _logsi.LogException(STAppMessages.MSG_SERVICE_REQUEST_EXCEPTION % (service.service, "service_handle_getlist"), ex, logToSystemLogger=False)
             raise
 
 
@@ -563,14 +569,14 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
+async def async_setup_entry(hass:HomeAssistant, configEntry:ConfigEntry) -> bool:
     """
     Set up device instance from a config entry.
 
     Args:
         hass (HomeAssistant):
             HomeAssistant instance.
-        entry (ConfigEntry):
+        configEntry (ConfigEntry):
             HomeAssistant configuration entry dictionary.  This contains configuration
             settings for the specific component device entry.
 
@@ -578,38 +584,62 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
     configured for the component.  It takes care of loading the device controller instance 
     (e.g. SoundTouchClient in our case) for each device that will be controlled.
     """
-    host:str = entry.data[CONF_HOST]
+    host:str = configEntry.data[CONF_HOST]
     port:int = DEFAULT_PORT
     port_websocket:int = DEFAULT_PORT_WEBSOCKET
     ping_websocket_interval:int = DEFAULT_PING_WEBSOCKET_INTERVAL
+    option_source_list:list[str] = []
 
-    _logsi.LogObject(SILevel.Verbose, "Component async_setup_entry is starting (%s)" % host, entry)
-    _logsi.LogDictionary(SILevel.Verbose, "Component async_setup_entry entry.data dictionary (%s)" % host, entry.data)
+    _logsi.LogObject(SILevel.Verbose, "Component async_setup_entry is starting (%s)" % host, configEntry)
+    _logsi.LogDictionary(SILevel.Verbose, "Component async_setup_entry configEntry.data dictionary (%s)" % host, configEntry.data)
+    _logsi.LogDictionary(SILevel.Verbose, "Component async_setup_entry configEntry.options dictionary (%s)" % host, configEntry.options)
 
-    # always check for keys, in case up an upgrade that contains a new key
+    # always check for keys, in case of an upgrade that contains a new key
     # that is not present in a previous version.
-    if CONF_PORT in entry.data.keys():
-        port = entry.data[CONF_PORT]
-    if CONF_PORT_WEBSOCKET in entry.data.keys():
-        port_websocket = entry.data[CONF_PORT_WEBSOCKET]
-    if CONF_PING_WEBSOCKET_INTERVAL in entry.data.keys():
-        ping_websocket_interval = entry.data[CONF_PING_WEBSOCKET_INTERVAL]
+
+    # load config entry parameters.
+    if CONF_PORT in configEntry.data.keys():
+        port = configEntry.data[CONF_PORT]
+    if CONF_PORT_WEBSOCKET in configEntry.data.keys():
+        port_websocket = configEntry.data[CONF_PORT_WEBSOCKET]
+    if CONF_PING_WEBSOCKET_INTERVAL in configEntry.data.keys():
+        ping_websocket_interval = configEntry.data[CONF_PING_WEBSOCKET_INTERVAL]
+        
+    # load config entry options.
+    if CONF_OPTION_SOURCE_LIST in configEntry.options.keys():
+        option_source_list = configEntry.options.get(CONF_OPTION_SOURCE_LIST)
     
     _logsi.LogVerbose("Component async_setup_entry is creating SoundTouchDevice and SoundTouchClient instance (%s): port=%s" % (host, str(port)))
 
-    # create the SoundTouchDevice object.
-    device:SoundTouchDevice = await hass.async_add_executor_job(SoundTouchDevice, host, 30, None, port)
-    _logsi.LogObject(SILevel.Verbose, "Component async_setup_entry created SoundTouchDevice instance (%s): %s"  % (host, device.DeviceName), device)
-    _logsi.LogVerbose("(%s): %s - Device Info: ID='%s', Type='%s', Country='%s', Region='%s'" % (host, device.DeviceName, device.DeviceId, device.DeviceType, device.CountryCode, device.RegionCode))
-    _logsi.LogVerbose("(%s): %s - Device does NOT support the following URL services: %s" % (host, device.DeviceName, device.UnSupportedUrlNames))
-    if len(device.UnknownUrlNames) > 0:
-        _logsi.LogVerbose("(%s): %s - Device contains URL services that are not known by the API: %s" % (host, device.DeviceName, device.UnknownUrlNames))
-    
-    # create the SoundTouchClient object, which contains all of the methods used to control the actual device.
-    client:SoundTouchClient = await hass.async_add_executor_job(SoundTouchClient, device)
-    _logsi.LogObject(SILevel.Verbose, "Component async_setup_entry created SoundTouchClient instance (%s): %s"  % (host, device.DeviceName), client)
-
+    device:SoundTouchDevice = None
+    client:SoundTouchClient = None
     socket:SoundTouchWebSocket = None
+    
+    try:
+        
+        # create the SoundTouchDevice object.
+        device:SoundTouchDevice = await hass.async_add_executor_job(SoundTouchDevice, host, 30, None, port)
+        _logsi.LogObject(SILevel.Verbose, "Component async_setup_entry created SoundTouchDevice instance (%s): %s"  % (host, device.DeviceName), device)
+        _logsi.LogVerbose("(%s): %s - Device Info: ID='%s', Type='%s', Country='%s', Region='%s'" % (host, device.DeviceName, device.DeviceId, device.DeviceType, device.CountryCode, device.RegionCode))
+        _logsi.LogVerbose("(%s): %s - Device does NOT support the following URL services: %s" % (host, device.DeviceName, device.UnSupportedUrlNames))
+        if len(device.UnknownUrlNames) > 0:
+            _logsi.LogVerbose("(%s): %s - Device contains URL services that are not known by the API: %s" % (host, device.DeviceName, device.UnknownUrlNames))
+    
+        # create the SoundTouchClient object, which contains all of the methods used to control the actual device.
+        client:SoundTouchClient = await hass.async_add_executor_job(SoundTouchClient, device)
+        _logsi.LogObject(SILevel.Verbose, "Component async_setup_entry created SoundTouchClient instance (%s): %s"  % (host, device.DeviceName), client)
+        
+    except Exception as ex:
+
+        # this is usually caused by a temporary error (e.g. device unplugged, network connectivity, etc), in 
+        # which case the user will need to manually reload the device when the temporary condition is cleared.
+        # if it's a permanent error (e.g. ip address change), then the user needs to correct the configuration.
+        
+        # indicate failure.
+        _logsi.LogError("Component async_setup_entry - SoundTouchDevice instance could not be created; exception details should already be logged.")
+        device = None
+        client = None
+        return False
 
     try:
 
@@ -637,34 +667,42 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
         else:
 
             # SoundTouch device does not support websocket notifications!
-            _logsi.LogMessage("Component async_setup_entry - device does not support websocket notifications; polling will be enabled (%s)" % (host))
+            _logsi.LogWarning("Component async_setup_entry - device does not support websocket notifications; polling will be enabled (%s)" % (host))
 
     except Exception as ex:
-        _logsi.LogException("SoundTouch WebSocket creation exception!", ex)
+        
+        # log failure.
+        _logsi.LogError("Component async_setup_entry - SoundTouchWebSocket instance could not be created: %s" % str(ex))
+        socket = None
 
     # create media player entity initialization parameters.
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = EntityInitParms(hass, client, socket)
+    hass.data.setdefault(DOMAIN, {})[configEntry.entry_id] = EntityInitParms(hass, configEntry, client, socket)
 
     # we are now ready for HA to create individual objects for each platform that
     # our device requires; in our case, it's just a media_player platform.
     # we initiate this by calling the `async_forward_entry_setups`, which 
     # calls the `async_setup_entry` function in each platform module for 
     # each device instance.
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(configEntry, PLATFORMS)
+
+    # register an update listener to update config entry when options are updated.
+    # we also store a reference to the unsubscribe function to cleanup if an entry is unloaded.
+    _logsi.LogVerbose("Component async_setup_entry registering options update listener (%s): %s"  % (host, device.DeviceName))
+    configEntry.async_on_unload(configEntry.add_update_listener(options_update_listener))
 
     # indicate success.
     _logsi.LogVerbose("Component async_setup_entry is complete (%s): %s"  % (host, device.DeviceName))
     return True
 
 
-async def async_unload_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
+async def async_unload_entry(hass:HomeAssistant, configEntry:ConfigEntry) -> bool:
     """
     Unload config entry.
 
     Args:
         hass (HomeAssistant):
             HomeAssistant instance.
-        entry (ConfigEntry):
+        configEntry (ConfigEntry):
             HomeAssistant configuration entry object.
 
     The __init__.py module "async_unload_entry" unloads a configuration entry.
@@ -672,27 +710,39 @@ async def async_unload_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
     This method is called when an entry/configured device is to be removed. The class
     needs to unload itself, and remove callbacks.
     """
-    _logsi.LogObject(SILevel.Verbose, "Component async_unload_entry starting", entry)
+    _logsi.LogObject(SILevel.Verbose, "Component async_unload_entry starting", configEntry)
 
     # unload any platforms this device supports.
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
+    unload_ok = await hass.config_entries.async_unload_platforms(configEntry, PLATFORMS)
+    
     # if unload was successful, then remove data associated with the device.
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id)
+
+        # remove config entry from domain.
+        _logsi.LogVerbose("Component async_unload_entry removing configEntry from hass.data for our domain")
+        initParms:EntityInitParms = hass.data[DOMAIN].pop(configEntry.entry_id)
+        _logsi.LogObject(SILevel.Verbose, "Component async_unload_entry removed configEntry from hass.data for our domain - initParms", initParms)
+        _logsi.LogObject(SILevel.Verbose, "Component async_unload_entry removed configEntry from hass.data for our domain - initParms.configEntry", initParms.configEntry)
+
+        # remove options_update_listener.
+        # not sure if this code is needed, but left it in just in case.
+        if OPTIONS_UPDATE_LISTENER_REMOVE in initParms.configEntry.update_listeners:
+            _logsi.LogVerbose("Component async_unload_entry options update listener remove is starting")
+            initParms.configEntry.update_listeners[OPTIONS_UPDATE_LISTENER_REMOVE]()
+            _logsi.LogVerbose("Component async_unload_entry options update listener remove complete")
 
     _logsi.LogVerbose("Component async_unload_entry completed")
     return unload_ok
 
 
-async def async_reload_entry(hass:HomeAssistant, entry:ConfigEntry) -> None:
+async def async_reload_entry(hass:HomeAssistant, configEntry:ConfigEntry) -> None:
     """
     Reload config entry.
 
     Args:
         hass (HomeAssistant):
             HomeAssistant instance.
-        entry (ConfigEntry):
+        configEntry (ConfigEntry):
             HomeAssistant configuration entry object.
 
     The __init__.py module "async_reload_entry" reloads a configuration entry.
@@ -700,9 +750,27 @@ async def async_reload_entry(hass:HomeAssistant, entry:ConfigEntry) -> None:
     This method is called when an entry/configured device is to be reloaded. The class
     needs to unload itself, remove callbacks, and call async_setup_entry.
     """
-    _logsi.LogObject(SILevel.Verbose, "Component async_reload_entry starting", entry)
+    _logsi.LogObject(SILevel.Verbose, "Component async_reload_entry starting", configEntry)
 
-    await async_unload_entry(hass, entry)
-    await async_setup_entry(hass, entry)
+    await async_unload_entry(hass, configEntry)
+    await async_setup_entry(hass, configEntry)
 
     _logsi.LogVerbose("Component async_reload_entry completed")
+
+
+async def options_update_listener(hass:HomeAssistant, configEntry:ConfigEntry) -> None:
+    """
+    Handle options update.
+    
+    Args:
+        hass (HomeAssistant):
+            HomeAssistant instance.
+        configEntry (ConfigEntry):
+            HomeAssistant configuration entry object.
+
+    Reloads the config entry so that we can act on updated options data that was saved.
+
+    This method is called when a user has updated configuration options via the UI.
+    """
+    _logsi.LogVerbose("Component Options have been updated; reloading configuration (%s)" % configEntry.entry_id)
+    await hass.config_entries.async_reload(configEntry.entry_id)

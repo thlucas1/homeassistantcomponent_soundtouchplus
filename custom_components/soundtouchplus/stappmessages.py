@@ -32,6 +32,11 @@ class STAppMessages:
     ServiceCall Parameters
     """
 
+    MSG_SERVICE_CALL_DATA:str = "ServiceCall Data"
+    """
+    ServiceCall Data
+    """
+
     MSG_SERVICE_REQUEST_REGISTER:str = "SoundTouch - Component async_setup is registering component async service request: '%s'"
     """
     SoundTouch - Component async_setup is registering component async service request: '%s'

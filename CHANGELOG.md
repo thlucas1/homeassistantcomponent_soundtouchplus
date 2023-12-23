@@ -6,6 +6,13 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.23 ] - 2023/12/20
+
+  * Added configuration options support - source_select processing, to only show sources that the user wants.
+  * Added friendlier sound_mode_list display values for devices that support audiodspcontrols (ST-300, etc).
+  * Updated code in __init__.py to log an error message (instead of an exception) when a SoundTouchClient instance could not be created.  This is usually caused by a temporary error (e.g. device unplugged, network connectivity, etc), in which case the user will need to manually reload the device when the temporary condition is cleared.  If it's a permanent error (e.g. ip address change), then the user needs to correct the configuration.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.43.
+
 ###### [ 1.0.22 ] - 2023/12/17
 
   *  Added service "Music Service Station List" - Gets a list of your stored stations from the specified music service (e.g. PANDORA, etc).

@@ -7,6 +7,7 @@ CONF_DEVICE_NAME = "device_name"
 CONF_DEVICE_ID = "device_id"
 CONF_PING_WEBSOCKET_INTERVAL = "ping_websocket_interval"
 CONF_PORT_WEBSOCKET = "port_websocket"
+CONF_OPTION_SOURCE_LIST = "source_list"
 
 DEFAULT_PING_WEBSOCKET_INTERVAL = 0
 DEFAULT_PORT = 8090
