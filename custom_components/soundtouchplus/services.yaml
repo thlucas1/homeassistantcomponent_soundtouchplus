@@ -323,6 +323,13 @@ preset_list:
         entity:
           integration: soundtouchplus
           domain: media_player
+    include_empty_slots:
+      name: Include Empty Slots?
+      description: True to include ALL preset slots (both empty and set); otherwise, False (default) to only include preset slots that have been set.
+      example: "false"
+      required: false
+      selector:
+        boolean:
 
 reboot_device:
   name: Reboot Device

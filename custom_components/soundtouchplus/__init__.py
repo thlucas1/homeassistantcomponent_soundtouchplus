@@ -152,6 +152,7 @@ SERVICE_PLAY_URL_SCHEMA = vol.Schema(
 SERVICE_PRESET_LIST_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("include_empty_slots", default=False): cv.boolean,
     }
 )
 
@@ -396,8 +397,11 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             elif service.service == SERVICE_PRESET_LIST:
 
                 # get list of presets defined for the device.
+                include_empty_slots = service.data.get("include_empty_slots")
+                if include_empty_slots is None:
+                    include_empty_slots = False
                 results:PresetList = await hass.async_add_executor_job(player.service_preset_list)
-                response = results.ToDictionary()
+                response = results.ToDictionary(includeEmptyPresets=include_empty_slots)
 
             elif service.service == SERVICE_RECENT_LIST:
 

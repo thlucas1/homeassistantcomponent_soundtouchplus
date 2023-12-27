@@ -234,6 +234,10 @@
         "entity_id": {
           "name": "Entity ID",
           "description": "Entity ID of the SoundTouch device whose preset list will be retrieved."
+        },
+        "include_empty_slots": {
+          "name": "Include Empty Slots?",
+          "description": "True to include ALL preset slots (both empty and set); otherwise, False (default) to only include preset slots that have been set."
         }
       }
     },

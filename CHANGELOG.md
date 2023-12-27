@@ -6,6 +6,11 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.24 ] - 2023/12/26
+
+  * Added `include_empty_slots` argument to the `preset_list` service - True to include ALL preset slots (both empty and set); otherwise, False (default) to only include preset slots that have been set.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.44.
+
 ###### [ 1.0.23 ] - 2023/12/20
 
   * Added configuration options support - source_select processing, to only show sources that the user wants.
