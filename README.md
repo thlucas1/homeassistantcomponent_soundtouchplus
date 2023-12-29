@@ -44,6 +44,7 @@ The following custom services are also supplied by this integration.
 - Remote Keypress: Simulates the press and release of a key on the SoundTouch device remote control.
 - Snapshot Restore: Restore SoundTouch device settings from a snapshot.
 - Snapshot Store: Store SoundTouch device settings to a snapshot.
+- Zone Toggle Member: Toggles the given zone member to or from the master device's zone.  A new zone will be created automatically if needed.
 
 Check out the [Services Provided wiki](https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/wiki/Services-Provided) page for detailed explanations and YAML examples of the custom services provided by this integration.
 

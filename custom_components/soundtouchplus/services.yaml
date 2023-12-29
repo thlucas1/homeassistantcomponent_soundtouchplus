@@ -469,3 +469,26 @@ snapshot_store:
         entity:
           integration: soundtouchplus
           domain: media_player
+
+zone_toggle_member:
+  name: Toggle Zone Member
+  description: Toggles the given zone member to or from the master device's zone.  A new zone will be created automatically if needed.
+  fields:
+    entity_id_master:
+      name: Master Zone Entity ID
+      description: Entity ID of the SoundTouch device master zone.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    entity_id_member:
+      name: Member Zone Entity ID
+      description: Entity ID of the SoundTouch device that will be toggled to or from the master zone.
+      example: "media_player.soundtouch_bedroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player

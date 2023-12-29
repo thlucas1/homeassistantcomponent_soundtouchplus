@@ -6,6 +6,12 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.25 ] - 2023/12/27
+
+  * Added source title resolution to the `preset_list` and `recent_list` services, which includes a ui-friendly source title value for preset and recent list items.
+  * Added service "Toggle Zone Member" - Toggles the given zone member in the master device's zone.  If the member exists in the zone then it is removed; if the member does not exist in the zone, then it is added.  A new zone is automatically created if necessary.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.48.  This also increases PoolManager sizes and fixes the "Connection pool is full, discarding connection ..." warning messages.
+
 ###### [ 1.0.24 ] - 2023/12/26
 
   * Added `include_empty_slots` argument to the `preset_list` service - True to include ALL preset slots (both empty and set); otherwise, False (default) to only include preset slots that have been set.

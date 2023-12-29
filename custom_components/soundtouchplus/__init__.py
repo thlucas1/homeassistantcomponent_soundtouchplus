@@ -38,7 +38,8 @@ from .const import (
     SERVICE_RECENT_LIST,
     SERVICE_REMOTE_KEYPRESS,
     SERVICE_SNAPSHOT_RESTORE,
-    SERVICE_SNAPSHOT_STORE
+    SERVICE_SNAPSHOT_STORE,
+    SERVICE_ZONE_TOGGLE_MEMBER
 )
 
 OPTIONS_UPDATE_LISTENER_REMOVE = "options_update_listener_remove"
@@ -190,6 +191,13 @@ SERVICE_SNAPSHOT_STORE_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_ZONE_TOGGLE_MEMBER_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id_master"): cv.entity_id,
+        vol.Required("entity_id_member"): cv.entity_id,
+    }
+)
+
 
 async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
     """
@@ -329,18 +337,18 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_CALL_PARM, service)
             _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_SERVICE_CALL_DATA, service.data)
 
-            # get player instance from service parameter; if not found, then we are done.
-            from_player = _GetEntityFromServiceData(hass, service, "entity_id_from")
-            if from_player is None:
-                return
-
-            # get player instance from service parameter; if not found, then we are done.
-            to_player = _GetEntityFromServiceData(hass, service, "entity_id_to")
-            if to_player is None:
-                return
-
             # process service request.
             if service.service == SERVICE_PLAY_HANDOFF:
+
+                # get player instance from service parameter; if not found, then we are done.
+                from_player = _GetEntityFromServiceData(hass, service, "entity_id_from")
+                if from_player is None:
+                    return
+
+                # get player instance from service parameter; if not found, then we are done.
+                to_player = _GetEntityFromServiceData(hass, service, "entity_id_to")
+                if to_player is None:
+                    return
 
                 # if FROM and TO player are the same then don't allow it.
                 if from_player.entity_id == to_player.entity_id:
@@ -352,6 +360,26 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                 snapshot_only = service.data.get("snapshot_only")
                 await hass.async_add_executor_job(from_player.service_play_handoff, to_player, restore_volume, snapshot_only)
 
+            elif service.service == SERVICE_ZONE_TOGGLE_MEMBER:
+
+                # get player instance from service parameter; if not found, then we are done.
+                from_player = _GetEntityFromServiceData(hass, service, "entity_id_master") # for zone services
+                if from_player is None:
+                    return
+
+                # get player instance from service parameter; if not found, then we are done.
+                to_player = _GetEntityFromServiceData(hass, service, "entity_id_member") # for zone services
+                if to_player is None:
+                    return
+
+                # if FROM and TO player are the same then don't allow it.
+                if from_player.entity_id == to_player.entity_id:
+                    _logsi.LogWarning("FROM and TO players (id='%s') are the same; cannot toggle the master zone", str(to_player.entity_id))
+                    return
+
+                # process zone toggle member service.
+                await hass.async_add_executor_job(from_player.service_zone_toggle_member, to_player)
+
             else:
                 _logsi.LogError(STAppMessages.MSG_SERVICE_REQUEST_UNKNOWN, service.service, "service_handle_entityfromto")
                 return
@@ -359,6 +387,7 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
         except SoundTouchWarning as ex:  pass   # should already be logged
         except SoundTouchError as ex:  pass     # should already be logged
         except Exception as ex:
+            
             # log exception, but not to system logger as HA will take care of it.
             _logsi.LogException(STAppMessages.MSG_SERVICE_REQUEST_EXCEPTION % (service.service, "service_handle_entityfromto"), ex, logToSystemLogger=False)
             raise
@@ -566,6 +595,14 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
         SERVICE_SNAPSHOT_STORE,
         service_handle_entity,
         schema=SERVICE_SNAPSHOT_STORE_SCHEMA,
+    )
+
+    _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_ZONE_TOGGLE_MEMBER, SERVICE_ZONE_TOGGLE_MEMBER_SCHEMA)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_ZONE_TOGGLE_MEMBER,
+        service_handle_entityfromto,
+        schema=SERVICE_ZONE_TOGGLE_MEMBER_SCHEMA,
     )
 
     # indicate success.

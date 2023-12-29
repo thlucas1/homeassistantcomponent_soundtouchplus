@@ -127,6 +127,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogArray(SILevel.Verbose, "'%s': config option: '%s' = '%s'" % (self.name, CONF_OPTION_SOURCE_LIST, str(self._attr_source_list)), self._attr_source_list)
 
         _logsi.LogObject(SILevel.Verbose, "'%s': initialized" % (self.name), self._client)
+        _logsi.LogObject(SILevel.Verbose, "'%s': initialized - media_player" % (self.name), self)
         return
 
 
@@ -1347,7 +1348,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_play_handoff", self.name, self.entity_id)
 
         if not to_player:
-            _logsi.LogWarning("Unable to find SoundTouch TO player")
+            _logsi.LogWarning("Unable to find SoundTouchPlus TO player")
             return
         
         # take a snapshot of what we are currently playing.
@@ -1458,7 +1459,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             A `PresetList` instance that contains defined presets.
         """
         _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_preset_list", self.name, self.entity_id)
-        return self._client.GetPresetList(True)
+        return self._client.GetPresetList(True, resolveSourceTitles=True)
 
 
     def service_reboot_device(self, sshPort:int):
@@ -1494,7 +1495,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             A `RecentList` instance that contains defined recently played items.
         """
         _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_recent_list", self.name, self.entity_id)
-        return self._client.GetRecentList(True)
+        return self._client.GetRecentList(True, resolveSourceTitles=True)
 
 
     def service_remote_keypress(self, key_id:str, key_state:str):
@@ -1547,3 +1548,24 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         """
         _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_snapshot_store", self.name, self.entity_id)
         self._client.StoreSnapshot()
+
+
+    def service_zone_toggle_member(self, zone_member_player:MediaPlayerEntity) -> None:
+        """
+        Toggles the given zone member in the master device's zone.  If the member exists in the
+        zone then it is removed; if the member does not exist in the zone, then it is added.
+        
+        Args:
+            zone_member_player (MediaPlayerEntity):
+                A SoundTouch MediaPlayerEntity that will be toggled in the master zone.
+        """
+        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_zone_toggle_member", self.name, self.entity_id)
+
+        if zone_member_player is None:
+            _logsi.LogWarning("Unable to find SoundTouchPlus zone member player")
+            return
+        
+        # toggle the 
+        _logsi.LogVerbose("Master Zone player '%s' is toggling zone member '%s'", self.entity_id, zone_member_player.entity_id)
+        zoneMember:ZoneMember = ZoneMember(zone_member_player._client.Device.Host, zone_member_player._client.Device.DeviceId)
+        self._client.ToggleZoneMember(zoneMember)
