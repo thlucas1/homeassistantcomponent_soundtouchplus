@@ -3,7 +3,7 @@ Support for interface with a Bose SoundTouch.
 """
 from __future__ import annotations
 
-from datetime import datetime
+import datetime as dt
 from functools import partial
 import logging
 import re
@@ -36,6 +36,7 @@ from homeassistant.helpers.device_registry import (
     format_mac,
 )
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util.dt import utcnow
 
 from .const import DOMAIN, CONF_OPTION_SOURCE_LIST
 from .entity_init_parms import EntityInitParms
@@ -285,6 +286,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             | MediaPlayerEntityFeature.PLAY_MEDIA \
             | MediaPlayerEntityFeature.PREVIOUS_TRACK \
             | MediaPlayerEntityFeature.REPEAT_SET \
+            | MediaPlayerEntityFeature.SEEK \
             | MediaPlayerEntityFeature.SELECT_SOUND_MODE \
             | MediaPlayerEntityFeature.SELECT_SOURCE \
             | MediaPlayerEntityFeature.SHUFFLE_SET \
@@ -366,12 +368,25 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
 
     @property
-    def media_duration(self):
+    def media_duration(self) -> int | None:
         """ Duration of current playing media in seconds. """
-        if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
-            config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
-            return config.Duration
-        return None
+        return self._attr_media_duration
+
+
+    @property
+    def media_position(self) -> int | None:
+        """ Position of current playing media in seconds. """
+        return self._attr_media_position
+
+
+    @property
+    def media_position_updated_at(self) -> dt.datetime | None:
+        """ 
+        When was the position of the current playing media valid.
+        
+        Returns value from homeassistant.util.dt.utcnow().
+        """
+        return self._attr_media_position_updated_at
 
 
     @property
@@ -402,6 +417,18 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
             return config.Track
         return None
+
+
+    @property
+    def repeat(self) -> RepeatMode | str | None:
+        """ Return current repeat mode. """
+        return self._attr_repeat
+
+
+    @property
+    def shuffle(self) -> bool | None:
+        """ Boolean if shuffle is enabled. """
+        return self._attr_shuffle
 
 
     @property
@@ -471,6 +498,23 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     # Implement MediaPlayerEntity Methods
     # -----------------------------------------------------------------------------------
 
+    def media_seek(self, position: float) -> None:
+        """ Send seek command. """
+        # is seek supported for the currently playing media?
+        if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
+            config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
+            if config.IsSeekSupported:
+                
+                # execute seek function and update seek-related attributes.
+                self._client.MediaSeekToTime(int(position), delay=0)
+                self._attr_media_position = config.Position
+                self._attr_media_duration = config.Duration
+                self._attr_media_position_updated_at = utcnow()
+                _logsi.LogVerbose("media_seek - position float=%s, int=%s, date_updated=%s" % (str(position), int(position), str(self._attr_media_position_updated_at)))
+            else:
+                _logsi.LogVerbose("media_seek - currently playing media does not support seek function")
+        
+
     def media_next_track(self) -> None:
         """ Send next track command. """
         self._client.MediaNextTrack()
@@ -497,7 +541,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
 
     def media_stop(self) -> None:
-        """Send stop command."""
+        """ Send stop command. """
         self._client.MediaStop()
 
 
@@ -508,16 +552,18 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
     def set_repeat(self, repeat:RepeatMode) -> None:
         """ Set repeat mode. """
-        if repeat == RepeatMode.ALL:
+        _logsi.LogVerbose("set_repeat - repeat = '%s'" % (str(repeat)))
+        if repeat == RepeatMode.ALL.value:
             self._client.MediaRepeatAll()
-        elif repeat == RepeatMode.OFF:
+        elif repeat == RepeatMode.OFF.value:
             self._client.MediaRepeatOff()
-        elif repeat == RepeatMode.ONE:
+        elif repeat == RepeatMode.ONE.value:
             self._client.MediaRepeatOne()
 
 
     def set_shuffle(self, shuffle:bool) -> None:
         """ Enable/disable shuffle mode. """
+        _logsi.LogVerbose("set_shuffle - repeat = '%s'" % (str(shuffle)))
         if shuffle:
             self._client.MediaShuffleOn()
         else:
@@ -542,15 +588,23 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     def update(self) -> None:
         """ Retrieve the latest data. """
         _logsi.LogVerbose("'%s': update method (_attr_should_poll=%s)" % (self.name, self._attr_should_poll))
-        
-        # get updated device status - this will also update the client configuration cache for each.
+
+        # if `_attr_should_poll` is True, then cache values are refreshed every 10 seconds for each configuration type.
+        # otherwise, the cache updates are performed in the websocket event processing when we get updates from the device.
+
+        # get now playing status.
         _logsi.LogVerbose("'%s': update method - getting nowPlaying status" % (self.name))
-        self._client.GetNowPlayingStatus(self._attr_should_poll)
+        config:NowPlayingStatus = self._client.GetNowPlayingStatus(self._attr_should_poll)
+        self._UpdateNowPlayingData(config)
+        
+        # get volume status.
         _logsi.LogVerbose("'%s': update method - getting volume status" % (self.name))
         self._client.GetVolume(self._attr_should_poll)
+
+        # get zone status.
         _logsi.LogVerbose("'%s': update method - getting zone status" % (self.name))
         config:Zone = self._client.GetZoneStatus(self._attr_should_poll)
-        
+
         # if we are polling, then we need to rebuild the group_members in case it changes;
         # otherwise, the group_members are rebuilt in the zoneupdated event.
         if self._attr_should_poll == True:
@@ -949,6 +1003,9 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 config:NowPlayingStatus = NowPlayingStatus(root=args[0])
                 client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path] = config
                 _logsi.LogVerbose("'%s': NowPlayingStatus updated = %s" % (self.name, config.ToString()))
+                
+                # update nowplaying attributes.
+                self._UpdateNowPlayingData(config)
 
             # inform Home Assistant of the status update.
             self.async_write_ha_state()
@@ -1191,6 +1248,31 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogObject(SILevel.Verbose, "Source title '%s' was resolved for SoundTouch device '%s' (id=%s) - Source Item" % (title, self.name, self.entity_id), sourceItem, excludeNonPublic=True)
         return sourceItem
 
+
+    def _UpdateNowPlayingData(self, config:NowPlayingStatus) -> None:
+        """
+        Updates all media_player attributes that have to do with now playing information.
+        """
+        # update seek-related attributes.
+        self._attr_media_position = config.Position
+        self._attr_media_duration = config.Duration
+        self._attr_media_position_updated_at = utcnow()
+        
+        # update shuffle related attributes.
+        self._attr_shuffle = None
+        if config.ShuffleSetting is not None:
+            self._attr_shuffle = config.IsShuffleEnabled
+        
+        # update repeat related attributes.
+        self._attr_repeat = None
+        if config.IsRepeatEnabled:
+            if config.RepeatSetting == RepeatSettingTypes.All.value:
+                self._attr_repeat = RepeatMode.ALL.value
+            elif config.RepeatSetting == RepeatSettingTypes.Off.value:
+                self._attr_repeat = RepeatMode.OFF.value
+            elif config.RepeatSetting == RepeatSettingTypes.One.value:
+                self._attr_repeat = RepeatMode.ONE.value
+               
     
     # -----------------------------------------------------------------------------------
     # Custom Services

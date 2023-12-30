@@ -6,6 +6,13 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.26 ] - 2023/12/29
+
+  * Added "set_repeat()" support, which allows track play to be repeated (one, all, off).
+  * Added "set_shuffle()" support, which allows track play to be shuffled (on, off).
+  * Added "media_seek()" support, which allows playing track position to be changed, as well as display duration, position, and estimated time remaining values.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.51.
+
 ###### [ 1.0.25 ] - 2023/12/27
 
   * Added source title resolution to the `preset_list` and `recent_list` services, which includes a ui-friendly source title value for preset and recent list items.

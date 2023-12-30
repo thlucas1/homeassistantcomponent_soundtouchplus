@@ -308,8 +308,8 @@
       }
     },
     "zone_toggle_member": {
-      "name": "Toggle Zone Member",
-      "description": "Toggles the given zone member to or from the master device's zone.  A new zone will be created automatically if needed.",
+      "name": "Zone Member Toggle",
+      "description": "Toggles the given zone member to or from a master device's zone.  A new zone will be created automatically if needed.",
       "fields": {
         "entity_id_master": {
           "name": "Master Zone Entity ID",
