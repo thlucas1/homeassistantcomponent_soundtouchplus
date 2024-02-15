@@ -24,6 +24,8 @@ config/*
 /Git*.cmd
 
 # Local project files to ignore.
+/developer_notes.txt
 /custom_components/soundtouchplus/developer_notes.txt
 /.github/workflows/lint.yml
 /New_Release_Instructions.txt
+/custom_components/soundtouchplus/zzz_Publish.cmd
