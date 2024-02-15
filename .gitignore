@@ -23,9 +23,9 @@ config/*
 # GIT support files to ignore.
 /Git*.cmd
 
-# Local project files to ignore.
-/developer_notes.txt
-/custom_components/soundtouchplus/developer_notes.txt
+# Local project files and folders to ignore.
 /.github/workflows/lint.yml
-/New_Release_Instructions.txt
 /custom_components/soundtouchplus/zzz_Publish.cmd
+/images
+/developer_notes.txt
+/New_Release_Instructions.txt

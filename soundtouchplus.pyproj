@@ -25,11 +25,11 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="custom_components\soundtouchplus\browse_media.py" />
     <Compile Include="custom_components\soundtouchplus\config_flow.py" />
     <Compile Include="custom_components\soundtouchplus\const.py" />
-    <Compile Include="custom_components\soundtouchplus\entity_init_parms.py" />
+    <Compile Include="custom_components\soundtouchplus\instancedata_soundtouchplus.py" />
     <Compile Include="custom_components\soundtouchplus\media_player.py" />
-    <Compile Include="custom_components\soundtouchplus\soundtouchplusdata.py" />
     <Compile Include="custom_components\soundtouchplus\stappmessages.py" />
     <Compile Include="custom_components\soundtouchplus\__init__.py" />
   </ItemGroup>
@@ -42,6 +42,7 @@
     <Folder Include="custom_components\" />
     <Folder Include="custom_components\soundtouchplus\" />
     <Folder Include="custom_components\soundtouchplus\translations\" />
+    <Folder Include="images\" />
     <Folder Include="scripts\" />
   </ItemGroup>
   <ItemGroup>
@@ -61,12 +62,16 @@
     <Content Include="config\configuration.yaml" />
     <Content Include="config\smartinspect.cfg" />
     <Content Include="CONTRIBUTING.md" />
-    <Content Include="custom_components\soundtouchplus\developer_notes.txt" />
     <Content Include="custom_components\soundtouchplus\manifest.json" />
     <Content Include="custom_components\soundtouchplus\services.yaml" />
     <Content Include="custom_components\soundtouchplus\strings.json" />
     <Content Include="custom_components\soundtouchplus\translations\en.json" />
+    <Content Include="custom_components\soundtouchplus\zzz_Publish.cmd" />
+    <Content Include="developer_notes.txt" />
     <Content Include="hacs.json" />
+    <Content Include="images\soundtouchplus_medialib_pandora_stations.png" />
+    <Content Include="images\soundtouchplus_medialib_presets.png" />
+    <Content Include="images\soundtouchplus_medialib_recently_played.png" />
     <Content Include="LICENSE" />
     <Content Include="New_Release_Instructions.txt" />
     <Content Include="README.md" />

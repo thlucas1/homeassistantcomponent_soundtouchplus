@@ -3,6 +3,12 @@ Support for interface with a Bose SoundTouch.
 """
 from __future__ import annotations
 
+# external package imports.
+from bosesoundtouchapi import *
+from bosesoundtouchapi.uri import *
+from bosesoundtouchapi.models import *
+from bosesoundtouchapi.ws import SoundTouchWebSocket
+
 import datetime as dt
 from functools import partial
 import logging
@@ -11,13 +17,11 @@ from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 from typing import Any
 
-from bosesoundtouchapi import *
-from bosesoundtouchapi.uri import *
-from bosesoundtouchapi.models import *
-from bosesoundtouchapi.ws import SoundTouchWebSocket
-
 from homeassistant.components import media_source
 from homeassistant.components.media_player import (
+    ATTR_INPUT_SOURCE,
+    ATTR_MEDIA_ANNOUNCE,
+    ATTR_MEDIA_EXTRA,
     BrowseMedia,
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
@@ -25,11 +29,11 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
     MediaType,
     RepeatMode,
-    async_process_play_media_url,
+    async_process_play_media_url
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_START
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
@@ -38,12 +42,14 @@ from homeassistant.helpers.device_registry import (
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.dt import utcnow
 
+# our package imports.
+from .browse_media import async_browse_media_library_index, browse_media_node, deserialize_object, CONTENT_ITEM_BASE64
 from .const import DOMAIN, CONF_OPTION_SOURCE_LIST
-from .entity_init_parms import EntityInitParms
+from .instancedata_soundtouchplus import InstanceDataSoundTouchPlus
 from .stappmessages import STAppMessages
 
 # get smartinspect logger reference; create a new session for this module name.
-from smartinspectpython.siauto import SIAuto, SILevel, SISession, SIColors
+from smartinspectpython.siauto import SIAuto, SILevel, SISession, SIColors, SIMethodParmListContext
 _logsi:SISession = SIAuto.Si.GetSession(__name__)
 if (_logsi == None):
     _logsi = SIAuto.Si.AddSession(__name__, True)
@@ -61,27 +67,46 @@ ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL_RANGE = "soundtouchplus_tone_treble_level_
 ATTRVALUE_NOT_CAPABLE = "not capable"
 
 
-async def async_setup_entry(hass:HomeAssistant, configEntry:ConfigEntry, async_add_entities:AddEntitiesCallback) -> None:
+async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry, async_add_entities:AddEntitiesCallback) -> None:
     """
     Set up the Bose SoundTouch media player based on a config entry.
 
     This function is called as part of the __init__.async_setup_entry event flow,
     which was initiated via the `hass.config_entries.async_forward_entry_setup` call.
     """
-    # get media player entity initialization parameters (e.g. EntityInitParms).
-    initParms:EntityInitParms = hass.data[DOMAIN][configEntry.entry_id]
+    try:
 
-    # create the platform instance, passing our initialiation parameters.
-    _logsi.LogVerbose("'%s': media_player.py - async_setup_entry is creating the SoundTouchMediaPlayer instance" % configEntry.entry_id)
-    media_player = SoundTouchMediaPlayer(initParms)
+        # trace.
+        _logsi.EnterMethod(SILevel.Debug)
+        _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer async_setup_entry is starting - entry (ConfigEntry) object" % entry.title, entry)
 
-    # add all entities to Home Assistant.
-    _logsi.LogVerbose("'%s': media_player.py - async_setup_entry is adding the SoundTouchMediaPlayer instance entities to Home Assistant" % configEntry.entry_id)
-    async_add_entities([media_player], True)
+        # get integration instance data from HA datastore.
+        data:InstanceDataSoundTouchPlus = hass.data[DOMAIN][entry.entry_id]
 
-    # store the reference to the media player object.
-    _logsi.LogVerbose("'%s': media_player.py - async_setup_entry is storing the SoundTouchMediaPlayer reference to hass.data[DOMAIN]" % configEntry.entry_id)
-    hass.data[DOMAIN][configEntry.entry_id].media_player = media_player
+        # create the platform instance, passing our initialization parameters.
+        _logsi.LogVerbose("'%s': MediaPlayer async_setup_entry is creating the SoundTouchMediaPlayer instance" % entry.title)
+        media_player = SoundTouchMediaPlayer(data)
+
+        # add all entities to Home Assistant.
+        _logsi.LogVerbose("'%s': MediaPlayer async_setup_entry is adding SoundTouchMediaPlayer instance entities to Home Assistant" % entry.title)
+        async_add_entities([media_player], True)
+
+        # store the reference to the media player object.
+        _logsi.LogVerbose("'%s': MediaPlayer async_setup_entry is storing the SoundTouchMediaPlayer reference to hass.data[DOMAIN]" % entry.title)
+        hass.data[DOMAIN][entry.entry_id].media_player = media_player
+
+        _logsi.LogVerbose("'%s': MediaPlayer async_setup_entry complete" % entry.title)
+
+    except Exception as ex:
+        
+        # trace.
+        _logsi.LogException("'%s': MediaPlayer async_setup_entry exception" % entry.title, ex, logToSystemLogger=False)
+        raise
+
+    finally:
+
+        # trace.
+        _logsi.LeaveMethod(SILevel.Debug)
 
 
 class SoundTouchMediaPlayer(MediaPlayerEntity):
@@ -89,215 +114,107 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     Representation of a Bose SoundTouch device.
     """
 
-    def __init__(self, initParms:EntityInitParms) -> None:
+    def __init__(self, data:InstanceDataSoundTouchPlus) -> None:
         """
         Initializes a new instance of the SoundTouch media player entity class.
         
         Args:
-            initParms (EntityInitParms):
+            data (InstanceDataSoundTouchPlus):
                 The media player entity initialization parameters that were created
                 in the `__init__.async_setup_entry` method.
         """
-        # initialize storage.
-        self._client:SoundTouchClient = initParms.client
-        self._socket:SoundTouchWebSocket = initParms.socket
-        self.soundtouchplus_presets_lastupdated:int = 0
-        self.soundtouchplus_recents_lastupdated:int = 0
-
-        # A unique_id for this entity within this domain.
-        # Note: This is NOT used to generate the user visible Entity ID used in automations.
-        self._attr_unique_id = self._client.Device.DeviceId
-
-        # This is the name for this *entity*, the "name" attribute from "device_info"
-        # is used as the device name for device screens in the UI. This name is used on
-        # entity screens, and used to build the Entity ID that's used in automations etc.
-        self._attr_name = self._client.Device.DeviceName
+        methodParms:SIMethodParmListContext = None
         
-        # we will (by default) set polling to false, as the SoundTouch device should be
-        # sending us updates as they happen if it supports websocket notificationss.  
-        self._attr_should_poll = False
+        try:
+
+            # trace.
+            methodParms = _logsi.EnterMethodParmList(SILevel.Debug)
+            methodParms.AppendKeyValue("data.client", str(data.client))
+            methodParms.AppendKeyValue("data.socket", str(data.socket))
+            methodParms.AppendKeyValue("data.media_player", str(data.media_player))
+            _logsi.LogMethodParmList(SILevel.Verbose, "'%s': MediaPlayer is initializing - arguments" % data.client.Device.DeviceName, methodParms)
+
+            # initialize storage.
+            self._client:SoundTouchClient = data.client
+            self._socket:SoundTouchWebSocket = data.socket
+            self.soundtouchplus_presets_lastupdated:int = 0
+            self.soundtouchplus_recents_lastupdated:int = 0
+
+            # A unique_id for this entity within this domain.
+            # Note: This is NOT used to generate the user visible Entity ID used in automations.
+            self._attr_unique_id = self._client.Device.DeviceId
+
+            # This is the name for this *entity*, the "name" attribute from "device_info"
+            # is used as the device name for device screens in the UI. This name is used on
+            # entity screens, and used to build the Entity ID that's used in automations etc.
+            self._attr_name = self._client.Device.DeviceName
         
-        # if websockets are not supported, then we need to enable device polling.
-        if self._socket is None:
-            _logsi.LogVerbose("'%s': _attr_should_poll is being enabled, as the device does not support websockets" % (self.name))
-            self._attr_should_poll = True
+            # set device information.
+            # this contains information about the device that is partially visible in the UI.
+            # for more information see: https://developers.home-assistant.io/docs/device_registry_index/#device-properties
+            self._attr_device_info = DeviceInfo(
+                identifiers={ (DOMAIN, self._client.Device.DeviceId) },
+                connections={ (CONNECTION_NETWORK_MAC, format_mac(self._client.Device.MacAddress)) },
+                hw_version=self._client.Device.ModuleType,
+                manufacturer="Bose Corporation",
+                model=self._client.Device.DeviceType,
+                name=self._client.Device.DeviceName
+            )
+            _logsi.LogDictionary(SILevel.Verbose, "'%s': MediaPlayer device information dictionary" % self.name, self._attr_device_info, prettyPrint=True)
+
+            # set features supported by this media player.
+            # supporting methods and properties of these features are implemented below.
+            self._attr_supported_features = MediaPlayerEntityFeature.BROWSE_MEDIA \
+                                          | MediaPlayerEntityFeature.GROUPING \
+                                          | MediaPlayerEntityFeature.NEXT_TRACK \
+                                          | MediaPlayerEntityFeature.PAUSE \
+                                          | MediaPlayerEntityFeature.PLAY \
+                                          | MediaPlayerEntityFeature.PLAY_MEDIA \
+                                          | MediaPlayerEntityFeature.PREVIOUS_TRACK \
+                                          | MediaPlayerEntityFeature.REPEAT_SET \
+                                          | MediaPlayerEntityFeature.SEEK \
+                                          | MediaPlayerEntityFeature.SELECT_SOUND_MODE \
+                                          | MediaPlayerEntityFeature.SELECT_SOURCE \
+                                          | MediaPlayerEntityFeature.SHUFFLE_SET \
+                                          | MediaPlayerEntityFeature.STOP \
+                                          | MediaPlayerEntityFeature.TURN_OFF \
+                                          | MediaPlayerEntityFeature.TURN_ON \
+                                          | MediaPlayerEntityFeature.VOLUME_MUTE \
+                                          | MediaPlayerEntityFeature.VOLUME_SET \
+                                          | MediaPlayerEntityFeature.VOLUME_STEP \
+        
+            # we will (by default) set polling to false, as the SoundTouch device should be
+            # sending us updates as they happen if it supports websocket notificationss.  
+            self._attr_should_poll = False
+        
+            # if websockets are not supported, then we need to enable device polling.
+            if self._socket is None:
+                _logsi.LogVerbose("'%s': MediaPlayer device polling is being enabled, as the device does not support websockets" % self.name)
+                self._attr_should_poll = True
             
-        # load option: source_list - list of supported sources.
-        if CONF_OPTION_SOURCE_LIST in initParms.configEntry.options.keys():
-            self._attr_source_list = initParms.configEntry.options[CONF_OPTION_SOURCE_LIST]
-            _logsi.LogArray(SILevel.Verbose, "'%s': config option: '%s' = '%s'" % (self.name, CONF_OPTION_SOURCE_LIST, str(self._attr_source_list)), self._attr_source_list)
+            # load option: source_list - list of supported sources.
+            self._attr_source_list = data.options.get(CONF_OPTION_SOURCE_LIST, None)
+            _logsi.LogArray(SILevel.Verbose, "'%s': MediaPlayer configuration option: '%s' = '%s'" % (self.name, CONF_OPTION_SOURCE_LIST, str(self._attr_source_list)), self._attr_source_list)
 
-        _logsi.LogObject(SILevel.Verbose, "'%s': initialized" % (self.name), self._client)
-        _logsi.LogObject(SILevel.Verbose, "'%s': initialized - media_player" % (self.name), self)
-        return
-
-
-    async def async_added_to_hass(self) -> None:
-        """
-        Run when this Entity has been added to HA.
-
-        Importantly for a push integration, the module that will be getting updates
-        needs to notify HA of changes.  In our case, we created a SoundTouchWebSocket
-        instance that will inform us when something on the device has changed.  We
-        will register some callback methods here so that we can forward the change
-        notifications on to Home Assistant (e.g. a call to `self.async_write_ha_state`).
-
-        The call back registration is done once this entity is registered with Home
-        Assistant (rather than in the `__init__` method).
-        """
-        _logsi.LogVerbose("'%s': async_added_to_hass is starting" % (self.name))
-        
-        # load list of supported sources.
-        _logsi.LogVerbose("'%s': async_added_to_hass loading list of ALL sources that the device supports" % (self.name))
-        config:SourceList = await self.hass.async_add_executor_job(self._client.GetSourceList, True)
-
-        if self._attr_source_list is None or len(self._attr_source_list) == 0:
-            _logsi.LogVerbose("'%s': source_list not defined in config options; defaulting to ALL sources" % (self.name))
-            self._attr_source_list = config.ToSourceTitleArray()
-            
-        _logsi.LogVerbose("'%s': async_added_to_hass source_list = %s" % (self.name, str(self._attr_source_list)))
-        _logsi.LogVerbose("'%s': async_added_to_hass current source = %s" % (self.name, str(self.source)))
-
-        # load list of supported sound modes.
-        if SoundTouchNodes.audiodspcontrols.Path in self._client.Device.SupportedUris:
-            _logsi.LogVerbose("'%s': async_added_to_hass loading list of sound modes (audiodspcontrols) that the device supports" % (self.name))
-            dspconfig:AudioDspControls = await self.hass.async_add_executor_job(self._client.GetAudioDspControls, True)
-
-            if self._attr_sound_mode_list is None or len(self._attr_sound_mode_list) == 0:
-                self._attr_sound_mode_list = dspconfig.ToSupportedAudioModeTitlesArray()
-                
-            # load current sound mode.
-            self._attr_sound_mode = AudioDspAudioModes.GetNameByValue(dspconfig.AudioMode)
-
-            _logsi.LogVerbose("'%s': async_added_to_hass sound_mode_list = %s" % (self.name, str(self._attr_sound_mode_list)))
-            _logsi.LogVerbose("'%s': async_added_to_hass current sound_mode = %s" % (self.name, str(self._attr_sound_mode)))
-        else:
-            _logsi.LogVerbose("'%s': async_added_to_hass device does not support sound modes (audiodspcontrols)" % (self.name))
-        
-        # load list of supported tone levels.
-        if SoundTouchNodes.audioproducttonecontrols.Path in self._client.Device.SupportedUris:
-            _logsi.LogVerbose("'%s': async_added_to_hass loading bass tone range levels (audioproducttonecontrols) that the device supports" % (self.name))
-            await self.hass.async_add_executor_job(self._client.GetAudioProductToneControls, True)
-        else:
-            _logsi.LogVerbose("'%s': async_added_to_hass device does not support tone level adjustments (audioproducttonecontrols)" % (self.name))
-
-        # load zone configuration.
-        if SoundTouchNodes.getZone.Path in self._client.Device.SupportedUris:
-            _logsi.LogVerbose("'%s': async_added_to_hass loading zone configuration" % (self.name))
-            config:Zone = await self.hass.async_add_executor_job(self._client.GetZoneStatus, True)
-            self._attr_group_members = self._BuildZoneMemberEntityIdList(config)
-
-        # if websocket support is disabled then we are done at this point.
-        if self._socket is None:
+            _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer SoundTouchClient object" % self.name, self._client)
+            _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer initialization complete" % self.name, self)
             return
+
+        except Exception as ex:
         
-        _logsi.LogVerbose("'%s': async_added_to_hass is adding notification event listeners" % (self.name))
+            # trace.
+            _logsi.LogException("'%s': MediaPlayer initialization exception" % self.name, ex, logToSystemLogger=False)
+            raise
 
-        # add our listener(s) that will handle SoundTouch device status updates.
-        self._socket.AddListener(SoundTouchNotifyCategorys.audiodspcontrols, self._OnSoundTouchUpdateEvent_audiodspcontrols)
-        self._socket.AddListener(SoundTouchNotifyCategorys.audioproducttonecontrols, self._OnSoundTouchUpdateEvent_audioproducttonecontrols)
-        self._socket.AddListener(SoundTouchNotifyCategorys.nowPlayingUpdated, self._OnSoundTouchUpdateEvent_nowPlayingUpdated)
-        self._socket.AddListener(SoundTouchNotifyCategorys.presetsUpdated, self._OnSoundTouchUpdateEvent_presetsUpdated)
-        self._socket.AddListener(SoundTouchNotifyCategorys.recentsUpdated, self._OnSoundTouchUpdateEvent_recentsUpdated)
-        self._socket.AddListener(SoundTouchNotifyCategorys.sourcesUpdated, self._OnSoundTouchUpdateEvent_sourcesUpdated)
-        self._socket.AddListener(SoundTouchNotifyCategorys.volumeUpdated, self._OnSoundTouchUpdateEvent_volumeUpdated)
-        self._socket.AddListener(SoundTouchNotifyCategorys.zoneUpdated, self._OnSoundTouchUpdateEvent_zoneUpdated)
+        finally:
 
-        # add our listener(s) that will handle SoundTouch device informational events.
-        self._socket.AddListener(SoundTouchNotifyCategorys.SoundTouchSdkInfo, self._OnSoundTouchInfoEvent)
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
-        # add our listener(s) that will handle SoundTouch websocket related events.
-        self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketClose, self._OnSoundTouchWebSocketCloseEvent)
-        self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketOpen, self._OnSoundTouchWebSocketConnectionEvent)
-        self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketError, self._OnSoundTouchWebSocketErrorEvent)
-        self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketPong, self._OnSoundTouchWebSocketPongEvent)
-
-        # start receiving device event notifications.
-        _logsi.LogVerbose("'%s': async_added_to_hass is starting websocket notifications" % (self.name))
-        self._socket.StartNotification()
-
-        # list various details
-        _logsi.LogObject(SILevel.Verbose, "'%s': async_added_to_hass identifiers: name=%s, unique_id=%s, entity_id=%s" % (self.name, self.name, self.unique_id, self.entity_id), self)
-        _logsi.LogVerbose("'%s': async_added_to_hass is ending" % (self.name))
-
-
-    async def async_will_remove_from_hass(self) -> None:
-        """
-        Entity being removed from hass (the opposite of async_added_to_hass).
-
-        Remove any registered call backs here.
-        """
-        # stop receiving device event notifications.
-        if self._socket is not None:
-            _logsi.LogVerbose("'%s': async_will_remove_from_hass is stopping websocket notifications" % (self.name))
-            self._socket.StopNotification()
-            self._socket.ClearListeners()
-            self._socket = None
-
-
-    # Information about the devices that is partially visible in the UI.
-    # The most critical thing here is to give this entity a name so it is displayed
-    # as a "device" in the HA UI. This name is used on the Devices overview table,
-    # and the initial screen when the device is added (rather than the entity name
-    # property below). You can then associate other Entities (eg: a battery
-    # sensor) with this device, so it shows more like a unified element in the UI.
-    # For example, an associated battery sensor will be displayed in the right most
-    # column in the Configuration > Devices view for a device.
-    # To associate an entity with this device, the device_info must also return an
-    # identical "identifiers" attribute, but not return a name attribute.
-    # See the sensors.py file for the corresponding example setup.
-    # Additional meta data can also be returned here, including sw_version (displayed
-    # as Firmware), model and manufacturer (displayed as <model> by <manufacturer>)
-    # shown on the device info screen. The Manufacturer and model also have their
-    # respective columns on the Devices overview table. Note: Many of these must be
-    # set when the device is first added, and they are not always automatically
-    # refreshed by HA from it's internal cache.
-    # For more information see:
-    # https://developers.home-assistant.io/docs/device_registry_index/#device-properties
-    @property
-    def device_info(self) -> DeviceInfo:
-        """
-        Information about this entity/device.
-        """
-        return {
-            "identifiers": {(DOMAIN, self._client.Device.DeviceId)},
-            "connections": {(CONNECTION_NETWORK_MAC, format_mac(self._client.Device.MacAddress))},
-            "manufacturer": "Bose Corporation",
-            "model": self._client.Device.DeviceType,
-            "name": self._client.Device.DeviceName,
-            "hw_version": self._client.Device.ModuleType,
-            #"sw_version": self._client.Device.???,
-        }
 
     # -----------------------------------------------------------------------------------
     # Implement MediaPlayerEntity Properties
     # -----------------------------------------------------------------------------------
-    @property
-    def supported_features(self) -> MediaPlayerEntityFeature:
-        """
-        Flag media player features that are supported.
-        Supporting methods and properties of these features are implemented below.
-        """
-        return MediaPlayerEntityFeature.BROWSE_MEDIA \
-            | MediaPlayerEntityFeature.GROUPING \
-            | MediaPlayerEntityFeature.NEXT_TRACK \
-            | MediaPlayerEntityFeature.PAUSE \
-            | MediaPlayerEntityFeature.PLAY \
-            | MediaPlayerEntityFeature.PLAY_MEDIA \
-            | MediaPlayerEntityFeature.PREVIOUS_TRACK \
-            | MediaPlayerEntityFeature.REPEAT_SET \
-            | MediaPlayerEntityFeature.SEEK \
-            | MediaPlayerEntityFeature.SELECT_SOUND_MODE \
-            | MediaPlayerEntityFeature.SELECT_SOURCE \
-            | MediaPlayerEntityFeature.SHUFFLE_SET \
-            | MediaPlayerEntityFeature.STOP \
-            | MediaPlayerEntityFeature.TURN_OFF \
-            | MediaPlayerEntityFeature.TURN_ON \
-            | MediaPlayerEntityFeature.VOLUME_MUTE \
-            | MediaPlayerEntityFeature.VOLUME_SET \
-            | MediaPlayerEntityFeature.VOLUME_STEP \
-
-
     @property
     def device_class(self) -> MediaPlayerDeviceClass | None:
         """
@@ -500,6 +417,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
     def media_seek(self, position: float) -> None:
         """ Send seek command. """
+        if _logsi.IsOn(SILevel.Verbose):
+            parms:dict = {}
+            parms['position'] = position
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "media_seek", str(parms)), parms)
+
         # is seek supported for the currently playing media?
         if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
             config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
@@ -517,41 +439,53 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
     def media_next_track(self) -> None:
         """ Send next track command. """
+        _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "media_next_track")
         self._client.MediaNextTrack()
 
 
     def media_pause(self) -> None:
         """ Send media pause command to media player. """
+        _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "media_pause")
         self._client.MediaPause()
 
 
     def media_play(self) -> None:
         """ Send play command. """
+        _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "media_play")
         self._client.MediaPlay()
 
 
     def media_play_pause(self) -> None:
         """ Simulate play pause media player. """
+        _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "media_play_pause")
         self._client.MediaPlayPause()
 
 
     def media_previous_track(self) -> None:
         """ Send the previous track command. """
+        _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "media_previous_track")
         self._client.MediaPreviousTrack()
 
 
     def media_stop(self) -> None:
         """ Send stop command. """
+        _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "media_stop")
         self._client.MediaStop()
 
 
     def mute_volume(self, mute:bool) -> None:
         """ Send mute command. """
+        _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "mute_volume")
         self._client.Mute()
 
 
     def set_repeat(self, repeat:RepeatMode) -> None:
         """ Set repeat mode. """
+        if _logsi.IsOn(SILevel.Verbose):
+            parms:dict = {}
+            parms['repeat'] = repeat
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "set_repeat", str(parms)), parms)
+
         _logsi.LogVerbose("set_repeat - repeat = '%s'" % (str(repeat)))
         if repeat == RepeatMode.ALL.value:
             self._client.MediaRepeatAll()
@@ -563,7 +497,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
     def set_shuffle(self, shuffle:bool) -> None:
         """ Enable/disable shuffle mode. """
-        _logsi.LogVerbose("set_shuffle - repeat = '%s'" % (str(shuffle)))
+        if _logsi.IsOn(SILevel.Verbose):
+            parms:dict = {}
+            parms['shuffle'] = shuffle
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "set_shuffle", str(parms)), parms)
+
         if shuffle:
             self._client.MediaShuffleOn()
         else:
@@ -572,95 +510,122 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
     def set_volume_level(self, volume:float) -> None:
         """ Set volume level, range 0..1. """
+        if _logsi.IsOn(SILevel.Verbose):
+            parms:dict = {}
+            parms['volume'] = volume
+            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "set_volume_level", str(parms)), parms)
+            
         self._client.SetVolumeLevel(int(volume * 100))
 
 
     def turn_off(self) -> None:
         """ Turn off media player. """ 
+        _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "turn_off")
         self._client.PowerOff()
 
 
     def turn_on(self) -> None:
         """ Turn on media player. """
+        _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "turn_on")
         self._client.PowerOn()
 
 
     def update(self) -> None:
         """ Retrieve the latest data. """
-        _logsi.LogVerbose("'%s': update method (_attr_should_poll=%s)" % (self.name, self._attr_should_poll))
+        try:
+            
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose("'%s': MediaPlayer update (_attr_should_poll=%s)" % (self.name, self._attr_should_poll))
 
-        # if `_attr_should_poll` is True, then cache values are refreshed every 10 seconds for each configuration type.
-        # otherwise, the cache updates are performed in the websocket event processing when we get updates from the device.
+            # if `_attr_should_poll` is True, then cache values are refreshed every 10 seconds for each configuration type.
+            # otherwise, the cache updates are performed in the websocket event processing when we get updates from the device.
 
-        # get now playing status.
-        _logsi.LogVerbose("'%s': update method - getting nowPlaying status" % (self.name))
-        config:NowPlayingStatus = self._client.GetNowPlayingStatus(self._attr_should_poll)
-        self._UpdateNowPlayingData(config)
+            # get now playing status.
+            _logsi.LogVerbose("'%s': MediaPlayer is getting nowPlaying status" % self.name)
+            config:NowPlayingStatus = self._client.GetNowPlayingStatus(self._attr_should_poll)
+            self._UpdateNowPlayingData(config)
         
-        # get volume status.
-        _logsi.LogVerbose("'%s': update method - getting volume status" % (self.name))
-        self._client.GetVolume(self._attr_should_poll)
+            # get volume status.
+            _logsi.LogVerbose("'%s': MediaPlayer is getting volume status" % self.name)
+            self._client.GetVolume(self._attr_should_poll)
 
-        # get zone status.
-        _logsi.LogVerbose("'%s': update method - getting zone status" % (self.name))
-        config:Zone = self._client.GetZoneStatus(self._attr_should_poll)
+            # get zone status.
+            _logsi.LogVerbose("'%s': MediaPlayer is getting zone status" % self.name)
+            config:Zone = self._client.GetZoneStatus(self._attr_should_poll)
 
-        # if we are polling, then we need to rebuild the group_members in case it changes;
-        # otherwise, the group_members are rebuilt in the zoneupdated event.
-        if self._attr_should_poll == True:
-            self._attr_group_members = self._BuildZoneMemberEntityIdList(config)
-        
-        # does this device support audiodspcontrols?
-        if SoundTouchNodes.audiodspcontrols.Path in self._client.Device.SupportedUris:
-            _logsi.LogVerbose("'%s': update method - getting audio dsp controls (e.g. sound_mode)" % (self.name))
-            self._client.GetAudioDspControls(self._attr_should_poll)
-                    
-        # does this device support audioproducttonecontrols?
-        if SoundTouchNodes.audioproducttonecontrols.Path in self._client.Device.SupportedUris:
-            _logsi.LogVerbose("'%s': update method - getting audio product tone controls (e.g. bass, treble levels)" % (self.name))
-            self._client.GetAudioProductToneControls(self._attr_should_poll)
-                    
-        # does this device support websocket notifications?
-        # note - if socket is None, it denotes that websocket notifications are NOT
-        # supported for the device (or are disabled), and we should not try to restart.
-        if self._socket is not None:
-                      
-            # is polling enabled?  if so it should NOT be since websockets are supported.
-            # this denotes that a websocket error previously occured which broke the connection.
-            # this can happen if the SoundTouch device loses power and drops the connection.
+            # if we are polling, then we need to rebuild the group_members in case it changes;
+            # otherwise, the group_members are rebuilt in the zoneupdated event.
             if self._attr_should_poll == True:
-                
-                _logsi.LogVerbose("'%s': update method - checking _socket.IsThreadRunForeverActive status" % (self.name))
-                
-                # if device notification events thread is stopped, then restart it if possible.
-                if self._socket.IsThreadRunForeverActive == False:
-                    _logsi.LogVerbose("'%s': update is re-starting websocket notifications" % (self.name))
-                    self._socket.StopNotification()
-                    self._socket.StartNotification()
-                    _logsi.LogVerbose("'%s': update is setting _attr_should_poll=False since event notifications are active again" % (self.name))
-                    self._attr_should_poll = False
+                self._attr_group_members = self._BuildZoneMemberEntityIdList(config)
+        
+            # does this device support audiodspcontrols?
+            if SoundTouchNodes.audiodspcontrols.Path in self._client.Device.SupportedUris:
+                _logsi.LogVerbose("'%s': MediaPlayer is getting audio dsp controls (e.g. sound_mode)" % self.name)
+                self._client.GetAudioDspControls(self._attr_should_poll)
                     
+            # does this device support audioproducttonecontrols?
+            if SoundTouchNodes.audioproducttonecontrols.Path in self._client.Device.SupportedUris:
+                _logsi.LogVerbose("'%s': MediaPlayer is getting audio product tone controls (e.g. bass, treble levels)" % self.name)
+                self._client.GetAudioProductToneControls(self._attr_should_poll)
+                    
+            # does this device support websocket notifications?
+            # note - if socket is None, it denotes that websocket notifications are NOT
+            # supported for the device (or are disabled), and we should not try to restart.
+            if self._socket is not None:
+                      
+                # is polling enabled?  if so it should NOT be since websockets are supported.
+                # this denotes that a websocket error previously occured which broke the connection.
+                # this can happen if the SoundTouch device loses power and drops the connection.
+                if self._attr_should_poll == True:
+                
+                    _logsi.LogVerbose("'%s': MediaPlayer is checking _socket.IsThreadRunForeverActive status" % self.name)
+                
+                    # if device notification events thread is stopped, then restart it if possible.
+                    if self._socket.IsThreadRunForeverActive == False:
+                        _logsi.LogVerbose("'%s': MediaPlayer is re-starting websocket notifications" % self.name)
+                        self._socket.StopNotification()
+                        self._socket.StartNotification()
+                        _logsi.LogVerbose("'%s': MediaPlayer is setting _attr_should_poll=False since event notifications are active again" % self.name)
+                        self._attr_should_poll = False
+                    
+        except Exception as ex:
+            
+            # trace.
+            _logsi.LogException("'%s': MediaPlayer update exception: %s" % (self.name, str(ex)), ex, logToSystemLogger=False)
+            raise HomeAssistantError(str(ex)) from ex
+        
+        finally:
+            
+            # trace.
+            _logsi.LeaveMethod(SILevel.Verbose)
+
 
     def volume_down(self) -> None:
         """ Volume down media player. """
+        _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "volume_down")
         self._client.VolumeDown()
 
 
     def volume_up(self) -> None:
         """ Volume up the media player. """
+        _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "volume_up")
         self._client.VolumeUp()
 
 
     def join_players(self, group_members: list[str]) -> None:
         """ Join `group_members` as a player group with the current player. """
+        serviceName:str = "join_players"
+        
         try:
-            serviceName:str = "join_players"
-            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, serviceName, self.name, self.entity_id)
+            
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS, self.name, serviceName, "group_members='%s'" % str(group_members))
             _logsi.LogArray(SILevel.Verbose, "group_members argument", group_members)
 
             if group_members is None or len(group_members) == 0:
-                _logsi.LogError(STAppMessages.MSG_ARGUMENT_NULL, "group_members", serviceName)
-                return
+                raise ValueError(STAppMessages.MSG_ARGUMENT_NULL, "group_members", serviceName)
 
             # we will let the zoneUpdated event take care of updating HA state, as ALL
             # players receive a zoneUpdated event when zone members change.
@@ -680,9 +645,16 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             # create a new master zone configuration on the device.
             self._client.CreateZone(masterZone)
 
-        except SoundTouchWarning as ex:
-            _logsi.LogWarning(ex.Message)
-            raise
+        except Exception as ex:
+            
+            # trace.
+            _logsi.LogException("'%s': MediaPlayer join_players exception: %s" % (self.name, str(ex)), ex, logToSystemLogger=False)
+            raise HomeAssistantError(str(ex)) from ex
+        
+        finally:
+            
+            # trace.
+            _logsi.LeaveMethod(SILevel.Verbose)
 
 
     async def async_join_players(self, group_members: list[str]) -> None:
@@ -693,7 +665,10 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     def unjoin_player(self) -> None:
         """ Remove this player from any group. """
         try:
-            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "Unjoin Player", self.name, self.entity_id)
+            
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "Unjoin Player")
 
             # we will let the zoneUpdated event take care of updating HA state, as ALL
             # players receive a zoneUpdated event when zone members change.
@@ -704,18 +679,25 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # if we are the master, then we will remove the zone.
             if masterZone.MasterDeviceId == self._client.Device.DeviceId:
-                _logsi.LogVerbose("We are the Master zone (%s) - removing zone" % self.entity_id)
+                _logsi.LogVerbose("'%s': MediaPlayer is the Master zone - removing zone" % self.name)
                 self._client.RemoveZone()
             else:
                 # otherwise, just remove ourselves from the zone member list.
-                _logsi.LogVerbose("We are a zone member (%s) - removing zone member" % self.entity_id)
+                _logsi.LogVerbose("'%s': MediaPlayer is a zone member - removing zone member" % self.name)
                 zoneMember:ZoneMember = ZoneMember(self._client.Device.Host, self._client.Device.DeviceId)
                 self._client.RemoveZoneMembers([zoneMember])
 
-        except SoundTouchWarning as ex:
-            _logsi.LogWarning(ex.Message)
-            raise
-
+        except Exception as ex:
+            
+            # trace.
+            _logsi.LogException("'%s': MediaPlayer unjoin_player exception: %s" % (self.name, str(ex)), ex, logToSystemLogger=False)
+            raise HomeAssistantError(str(ex)) from ex
+        
+        finally:
+            
+            # trace.
+            _logsi.LeaveMethod(SILevel.Verbose)
+        
 
     async def async_unjoin_player(self) -> None:
         """ Remove this player from any group. """
@@ -724,15 +706,35 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
     async def async_play_media(self, media_type:MediaType|str, media_id:str, **kwargs: Any) -> None:
         """Play a piece of media."""
-        if media_source.is_media_source_id(media_id):
-            play_item = await media_source.async_resolve_media(
-                self.hass, media_id, self.name
-            )
-            media_id = async_process_play_media_url(self.hass, play_item.url)
+        try:
+            
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS, self.name, "async_play_media", "media_type='%s', media_id='%s', kwargs='%s'" % (str(media_type), media_id, str(kwargs)))
 
-        await self.hass.async_add_executor_job(
-            partial(self.play_media, media_type, media_id, **kwargs)
+            if media_source.is_media_source_id(media_id):
+                _logsi.LogVerbose("'%s': MediaPlayer detected that media_id '%s' is a media-source item" % (self.name, media_id))
+                play_item = await media_source.async_resolve_media(
+                    self.hass, media_id, self.entity_id
+                )
+                _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer resolved media_id to a PlayItem object: '%s'" % (self.name, play_item.url), play_item)
+                media_id = async_process_play_media_url(self.hass, play_item.url)
+
+            _logsi.LogVerbose("'%s': MediaPlayer is calling play_media to play content: %s" % (self.name, "media_type='%s', media_id='%s', kwargs='%s'" % (str(media_type), media_id, str(kwargs))))
+            await self.hass.async_add_executor_job(
+                partial(self.play_media, media_type, media_id, **kwargs)
         )
+
+        except Exception as ex:
+            
+            # trace.
+            _logsi.LogException("'%s': MediaPlayer async_play_media exception: %s" % (self.name, str(ex)), ex, logToSystemLogger=False)
+            raise HomeAssistantError(str(ex)) from ex
+        
+        finally:
+            
+            # trace.
+            _logsi.LeaveMethod(SILevel.Verbose)
 
 
     def play_media(self, media_type:MediaType|str, media_id:str, **kwargs: Any) -> None:
@@ -748,25 +750,86 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 first queried to validate that the preset is correctly set with
                 a valid source; if so, then the preset is selected.
             **kwargs (Any):
-                Keyword arguments.
+                Keyword arguments.  
+                Extra arguments supported are:  
+                `announce` - set to true if the request is coming from a tts service; otherwise not supplied.  
+                `source`   - source title to select for playing the content; must exactly match (case-sensitive) a source title in the source list.  
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Media=%s ('%s')", "Play Media", self.name, self.entity_id, str(media_type), media_id)
+        try:
+            
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS, self.name, "play_media", "media_type='%s', media_id='%s', kwargs='%s'" % (str(media_type), media_id, str(kwargs)))
 
-        # is the media an http or https url?
-        if re.match(r"http[s]?://", str(media_id)):
-            # yes - use PlayUrl method to play the content.
-            _logsi.LogVerbose("Executing Play Url command: '%s' ('%s')", str(media_type), media_id)
-            self._client.PlayUrl(str(media_id), getMetaDataFromUrlFile=True, volumeLevel=0)
-        else:
-            # no - treat it as a preset selection.
-            _logsi.LogVerbose("Executing Play Preset command - Preset ID = '%s'", media_id)
-            presets = self._client.GetPresetList()
-            preset:Preset
-            for preset in presets:
-                if (str(preset.PresetId) == str(media_id)):
-                    _logsi.LogVerbose("Playing Preset: '%s'", preset.Name)
-                    self._client.SelectPreset(preset)
-                    break
+            # get keyword arguments (if any).
+            # these are in the form of a {"extra:" {} } dictionary.
+            extra_options:str = kwargs.get(ATTR_MEDIA_EXTRA, None)
+            source:str = None
+            announce:bool = False
+            announceValue:str = None
+            if extra_options is not None:
+
+                _logsi.LogVerbose("'%s': MediaPlayer play media detected keyword arguments" % self.name)
+                source = extra_options.get(ATTR_INPUT_SOURCE, None)
+                announce = bool(extra_options.get(ATTR_MEDIA_ANNOUNCE, False))
+
+                # if this is an announcement (e.g. say text) then set arguments to reflect this.
+                if announce:
+                    announceValue = "Announcement"
+
+            # was a content item in base64 encoded format supplied?  
+            # this would be coming from a browse media selection.
+            if media_id is not None and media_id.startswith(CONTENT_ITEM_BASE64):
+
+                # drop the eye-ctacher prefix before we deserialize.
+                media_id = media_id[len(CONTENT_ITEM_BASE64):]
+                contentItem:ContentItem = deserialize_object(media_id)
+                _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer is playing media from %s" % (self.name, contentItem.ToString()), contentItem)
+                self._client.PlayContentItem(contentItem)
+                
+            # is the media an http or https url?
+            elif re.match(r"http[s]?://", media_id):
+                
+                _logsi.LogVerbose("'%s': MediaPlayer play_media detected URL media: Url='%s'", self.name, media_id)
+                self._client.PlayUrl(media_id, artist=announceValue, album=announceValue, getMetaDataFromUrlFile=True, volumeLevel=0)
+            
+            # is the media a spotify uri?
+            elif re.match(r"spotify:", media_id):
+            
+                _logsi.LogVerbose("'%s': MediaPlayer play_media detected spotify uri media: Uri='%s', Source='%s'", self.name, media_id, source)
+                sourceItem:SourceItem = self._GetSourceItemByTitle(source)
+                if sourceItem is None:
+                    raise ValueError("'%s': MediaPlayer play_media did not find source '%s' in the source list" % (self.name, source))
+                else:
+                    if self.source != sourceItem.SourceTitle:
+                        _logsi.LogVerbose("'%s': MediaPlayer is selecting spotify source: '%s'", self.name, source)
+                        self._client.SelectSource(sourceItem.Source, sourceItem.SourceAccount)
+                    ci:ContentItem = ContentItem(sourceItem.Source, "uri", media_id, sourceItem.SourceAccount, True)
+                    self._client.PlayContentItem(ci)
+                
+            # otherwise treat it as a preset selection.
+            else:
+            
+                _logsi.LogVerbose("'%s': MediaPlayer play_media detected Preset selection: Preset='%s'", self.name, media_id)
+                presets = self._client.GetPresetList()
+                preset:Preset
+                for preset in presets:
+                    if (str(preset.PresetId) == media_id):
+                        _logsi.LogVerbose("'%s': MediaPlayer play_media found matching Preset Name '%s' - selecting preset", self.name, preset.Name)
+                        self._client.SelectPreset(preset)
+                        return
+                raise ValueError("'%s': MediaPlayer play_media did not find a matching Preset ID '%s'" % (self.name, preset.Name))
+
+        except Exception as ex:
+            
+            # trace.
+            _logsi.LogException("'%s': MediaPlayer play_media exception: %s" % (self.name, str(ex)), ex, logToSystemLogger=False)
+            raise HomeAssistantError(str(ex)) from ex
+        
+        finally:
+            
+            # trace.
+            _logsi.LeaveMethod(SILevel.Verbose)
 
 
     def select_sound_mode(self, sound_mode: str) -> None:
@@ -782,27 +845,42 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         The sound_mode argument must be one of the audio modes supported by the device.
         Be aware that some devices do not support audiodspcontrols (e.g. sound modes).
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - SoundMode='%s'", "Select Sound Mode", self.name, self.entity_id, sound_mode)
-
-        # does device support audio dsp controls?
-        if SoundTouchNodes.audiodspcontrols.Path in self._client.ConfigurationCache:
+        try:
             
-            # is sound_mode an audio mode name?  if so, then we need the value.
-            audioDspAudioMode:str = AudioDspAudioModes.GetValueByName(sound_mode)
-            if audioDspAudioMode is not None:
-                sound_mode = audioDspAudioMode
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS, self.name, "select_sound_mode", "sound_mode='%s'" % (sound_mode))
 
-            # does sound mode list contain the specified sound_mode?
-            # if so, then change the sound mode; otherwise log an error message.
-            config:AudioDspControls = self._client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path]
-            if sound_mode in config.SupportedAudioModes:
-                cfgUpdate:AudioDspControls = AudioDspControls(audioMode=sound_mode)
-                self._client.SetAudioDspControls(cfgUpdate)
+            # does device support audio dsp controls?
+            if SoundTouchNodes.audiodspcontrols.Path in self._client.ConfigurationCache:
+            
+                # is sound_mode an audio mode name?  if so, then we need the value.
+                audioDspAudioMode:str = AudioDspAudioModes.GetValueByName(sound_mode)
+                if audioDspAudioMode is not None:
+                    sound_mode = audioDspAudioMode
+
+                # does sound mode list contain the specified sound_mode?
+                # if so, then change the sound mode; otherwise log an error message.
+                config:AudioDspControls = self._client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path]
+                if sound_mode in config.SupportedAudioModes:
+                    cfgUpdate:AudioDspControls = AudioDspControls(audioMode=sound_mode)
+                    self._client.SetAudioDspControls(cfgUpdate)
+                else:
+                    _logsi.LogError("'%s': Specified sound_mode value '%s' is not a supported audio mode; check the sound_mode_list state value for valid audio modes" % (self.name, sound_mode))
             else:
-                _logsi.LogError("'%s': Specified sound_mode value '%s' is not a supported audio mode; check the sound_mode_list state value for valid audio modes" % (self.name, sound_mode))
-        else:
-            _logsi.LogWarning("'%s': Device does not support AudioDspControls; cannot change the sound mode" % (self.name))
+                _logsi.LogWarning("'%s': Device does not support AudioDspControls; cannot change the sound mode" % self.name)
                     
+        except Exception as ex:
+            
+            # trace.
+            _logsi.LogException("'%s': MediaPlayer select_sound_mode exception: %s" % (self.name, str(ex)), ex, logToSystemLogger=False)
+            raise HomeAssistantError(str(ex)) from ex
+        
+        finally:
+            
+            # trace.
+            _logsi.LeaveMethod(SILevel.Verbose)
+
 
     def select_source(self, source:str) -> None:
         """
@@ -815,76 +893,83 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 - source and account string (e.g. "PANDORA:yourpandorauserid")  
                 - source title string (e.g. "My NAS Music")  
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Source='%s'", "Select Source", self.name, self.entity_id, source)
+        try:
+            
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS, self.name, "select_source", "source='%s'" % (source))
         
-        sourceAccount:str = None
+            sourceAccount:str = None
 
-        # is source a SourceTitle value?
-        sourceItem = self._GetSourceItemByTitle(source)
-        if sourceItem is not None:
+            # is source a SourceTitle value?
+            sourceItem = self._GetSourceItemByTitle(source)
+            if sourceItem is not None:
             
-            source = sourceItem.Source
-            sourceAccount = sourceItem.SourceAccount
+                source = sourceItem.Source
+                sourceAccount = sourceItem.SourceAccount
             
-        else:
+            else:
 
-            # does source contain the source and account name (delimited by ":")?
-            dlmidx:int = source.find(":")
-            if dlmidx > -1:
-                sourceAccount:str = source[dlmidx + 1:]
-                source:str = source[0:dlmidx]
+                # does source contain the source and account name (delimited by ":")?
+                dlmidx:int = source.find(":")
+                if dlmidx > -1:
+                    sourceAccount:str = source[dlmidx + 1:]
+                    source:str = source[0:dlmidx]
 
-        # is the LOCAL source specified? if so, then use the SelectLocalSource() method to select the 
-        # source, as this is the only way to select the LOCAL source for some SoundTouch devices.
-        if source == 'LOCAL':
-            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLocalSource", self.name, self.entity_id)
-            self._client.SelectLocalSource()
+            # is the LOCAL source specified? if so, then use the SelectLocalSource() method to select the 
+            # source, as this is the only way to select the LOCAL source for some SoundTouch devices.
+            if source == 'LOCAL':
+                _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "SelectLocalSource")
+                self._client.SelectLocalSource()
             
-        elif source == 'LASTSOURCE':
-            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLastSource", self.name, self.entity_id)
-            self._client.SelectLastSource()
+            elif source == 'LASTSOURCE':
+                _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "SelectLastSource")
+                self._client.SelectLastSource()
             
-        elif source == 'LASTSOUNDTOUCHSOURCE':
-            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLastSoundTouchSource", self.name, self.entity_id)
-            self._client.SelectLastSoundTouchSource()
+            elif source == 'LASTSOUNDTOUCHSOURCE':
+                _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "SelectLastSoundTouchSource")
+                self._client.SelectLastSoundTouchSource()
             
-        elif source == 'LASTWIFISOURCE':
-            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectLastWifiSource", self.name, self.entity_id)
-            self._client.SelectLastWifiSource()
+            elif source == 'LASTWIFISOURCE':
+                _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "SelectLastWifiSource")
+                self._client.SelectLastWifiSource()
 
-        elif source in ['AUX','AIRPLAY']: # AUX requires both source and source account.
-            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectSource", self.name, self.entity_id)
-            self._client.SelectSource(source, sourceAccount)
+            elif source in ['AUX','AIRPLAY']: # AUX requires both source and source account.
+                _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "SelectSource")
+                self._client.SelectSource(source, sourceAccount)
             
-        elif source in ['BLUETOOTH']:
-            _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "SelectSource", self.name, self.entity_id)
-            self._client.SelectSource(source)
+            elif source in ['BLUETOOTH']:
+                _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "SelectSource")
+                self._client.SelectSource(source)
             
-        else:
+            else:
             
-            # if source is for a music service, then the select source requires a location
-            # variable.  since we cannot supply that on this method, we will perform a 
-            # lookup in the recently played items to retrieve the last station played for the source.
-            _logsi.LogVerbose("'%s': retrieving recently played content for source '%s (%s)' ..." % (self.name, source, sourceAccount))
-            recentList:RecentList = self._client.GetRecentList(False)
-            recent:Recent
-            for recent in recentList.Recents:
-                if recent.Source == source:
-                    _logsi.LogObject(SILevel.Verbose, "'%s': recently played contentItem found for source '%s (%s)'" % (self.name, source, sourceAccount), recent.ContentItem, excludeNonPublic=True)
-                    self._client.PlayContentItem(recent.ContentItem)
-                    return
+                # if source is for a music service, then the select source requires a location
+                # variable.  since we cannot supply that on this method, we will perform a 
+                # lookup in the recently played items to retrieve the last station played for the source.
+                _logsi.LogVerbose("'%s': retrieving recently played content for source '%s (%s)' ..." % (self.name, source, sourceAccount))
+                recentList:RecentList = self._client.GetRecentList(False)
+                recent:Recent
+                for recent in recentList.Recents:
+                    if recent.Source == source:
+                        _logsi.LogObject(SILevel.Verbose, "'%s': recently played contentItem found for source '%s (%s)'" % (self.name, source, sourceAccount), recent.ContentItem, excludeNonPublic=True)
+                        self._client.PlayContentItem(recent.ContentItem)
+                        return
                 
-            # if no recent was found, then just try to select the source (with source account).
-            self._client.SelectSource(source, sourceAccount)
+                # if no recent was found, then just try to select the source (with source account).
+                self._client.SelectSource(source, sourceAccount)
 
+        except Exception as ex:
+            
+            # trace.
+            _logsi.LogException("'%s': MediaPlayer select_source exception: %s" % (self.name, str(ex)), ex, logToSystemLogger=False)
+            raise HomeAssistantError(str(ex)) from ex
+        
+        finally:
+            
+            # trace.
+            _logsi.LeaveMethod(SILevel.Verbose)
 
-    async def async_browse_media(
-        self,
-        media_content_type: MediaType | str | None = None,
-        media_content_id: str | None = None,
-    ) -> BrowseMedia:
-        """Implement the websocket media browsing helper."""
-        return await media_source.async_browse_media(self.hass, media_content_id)
 
     # -----------------------------------------------------------------------------------
     # SoundTouch Event Notification Handlers
@@ -898,37 +983,37 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     @callback
     def _OnSoundTouchWebSocketConnectionEvent(self, client:SoundTouchClient, args:str) -> None:
         if (args != None):
-            _logsi.LogVerbose("SoundTouch device websocket connection event: %s" % (str(args)), colorValue=SIColors.Coral)
+            _logsi.LogVerbose("'%s': MediaPlayer client device websocket connection event: %s" % (self.name, str(args)), colorValue=SIColors.Coral)
 
 
     @callback
     def _OnSoundTouchWebSocketCloseEvent(self, client:SoundTouchClient, statCode=None, args:str=None) -> None:
         if (args != None):
-            _logsi.LogVerbose("SoundTouch device websocket close event: (%s) %s" % (str(statCode), str(args)), colorValue=SIColors.Coral)
+            _logsi.LogVerbose("'%s': MediaPlayer client device websocket close event: (%s) %s" % (self.name, str(statCode), str(args)), colorValue=SIColors.Coral)
 
 
     @callback
     def _OnSoundTouchWebSocketErrorEvent(self, client:SoundTouchClient, ex:Exception) -> None:
         if (ex != None):
-            _logsi.LogError("SoundTouch device websocket error event: (%s) %s" % (str(type(ex)), str(ex)), colorValue=SIColors.Coral)
-            _logsi.LogVerbose("'%s': Setting _attr_should_poll=True due to websocket error event" % (client.Device.DeviceName), colorValue=SIColors.Coral)
+            _logsi.LogError("'%s': MediaPlayer client device websocket error event: (%s) %s" % (self.name, str(type(ex)), str(ex)), colorValue=SIColors.Coral)
+            _logsi.LogVerbose("'%s': MediaPlayer is setting _attr_should_poll=True due to websocket error event" % self.name, colorValue=SIColors.Coral)
             self._attr_should_poll = True
             
             # at this point we will assume that the device lost power since it lost the websocket connection.
             # reset nowPlayingStatus, which will drive a MediaPlayerState.OFF state.
-            _logsi.LogVerbose("'%s': Setting _nowPlayingStatus to None to simulate a MediaPlayerState.OFF state" % (client.Device.DeviceName), colorValue=SIColors.Coral)
+            _logsi.LogVerbose("'%s': MediaPlayer is setting _nowPlayingStatus to null to simulate a MediaPlayerState.OFF state" % self.name, colorValue=SIColors.Coral)
             if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
                 self._client.ConfigurationCache.pop(SoundTouchNodes.nowPlaying.Path)
             
             # inform Home Assistant of the status update.
             # this will turn the player off in the Home Assistant UI.
-            _logsi.LogVerbose("'%s': Calling async_write_ha_state to update player status" % (client.Device.DeviceName), colorValue=SIColors.Coral)          
+            _logsi.LogVerbose("'%s': MediaPlayer is calling async_write_ha_state to update player status" % self.name, colorValue=SIColors.Coral)          
             self.async_write_ha_state()
             
 
     @callback
     def _OnSoundTouchWebSocketPongEvent(self, client:SoundTouchClient, args:bytes) -> None:
-        _logsi.LogVerbose("SoundTouch device websocket pong event: (%s)" % (str(args)), colorValue=SIColors.Coral)
+        _logsi.LogVerbose("'%s': MediaPlayer client device websocket pong event: (%s)" % (self.name, str(args)), colorValue=SIColors.Coral)
             
 
     @callback
@@ -938,7 +1023,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             if (_logsi.IsOn(SILevel.Verbose)):
                 ElementTree.indent(args)  # for pretty printing
                 argsEncoded = ElementTree.tostring(args, encoding="unicode")
-                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
+                _logsi.LogXml(SILevel.Verbose, "'%s': MediaPlayer client device event notification - %s" % (self.name, args.tag), argsEncoded)
 
             # inform Home Assistant of the status update.
             self.update()
@@ -954,12 +1039,12 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             if (_logsi.IsOn(SILevel.Verbose)):
                 ElementTree.indent(args)  # for pretty printing
                 argsEncoded = ElementTree.tostring(args, encoding="unicode")
-                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
+                _logsi.LogXml(SILevel.Verbose, "'%s': MediaPlayer client device event notification - %s" % (self.name, args.tag), argsEncoded)
 
             # create configuration model from update event argument and update the cache.
             config:AudioDspControls = AudioDspControls(root=args[0])
             client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path] = config
-            _logsi.LogVerbose("'%s': audiodspcontrols (sound_mode_list) updated = %s" % (self.name, config.ToString()))
+            _logsi.LogVerbose("'%s': MediaPlayer audiodspcontrols (sound_mode_list) updated: %s" % (self.name, config.ToString()))
             
             # inform Home Assistant of the status update.
             self.async_write_ha_state()
@@ -975,12 +1060,12 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             if (_logsi.IsOn(SILevel.Verbose)):
                 ElementTree.indent(args)  # for pretty printing
                 argsEncoded = ElementTree.tostring(args, encoding="unicode")
-                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
+                _logsi.LogXml(SILevel.Verbose, "'%s': MediaPlayer client device event notification - %s" % (self.name, args.tag), argsEncoded)
 
             # create configuration model from update event argument and update the cache.
             config:AudioProductToneControls = AudioProductToneControls(root=args[0])
             client.ConfigurationCache[SoundTouchNodes.audioproducttonecontrols.Path] = config
-            _logsi.LogVerbose("'%s': audioproducttonecontrols updated = %s" % (self.name, config.ToString()))
+            _logsi.LogVerbose("'%s': MediaPlayer audioproducttonecontrols updated: %s" % (self.name, config.ToString()))
             
             # inform Home Assistant of the status update.
             self.async_write_ha_state()
@@ -996,13 +1081,13 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             if (_logsi.IsOn(SILevel.Verbose)):
                 ElementTree.indent(args)  # for pretty printing
                 argsEncoded = ElementTree.tostring(args, encoding="unicode")
-                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
+                _logsi.LogXml(SILevel.Verbose, "'%s': MediaPlayer client device event notification - %s" % (self.name, args.tag), argsEncoded)
 
             # create configuration model from update event argument and update the cache.
             if len(args) > 0:
                 config:NowPlayingStatus = NowPlayingStatus(root=args[0])
                 client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path] = config
-                _logsi.LogVerbose("'%s': NowPlayingStatus updated = %s" % (self.name, config.ToString()))
+                _logsi.LogVerbose("'%s': MediaPlayer NowPlayingStatus updated: %s" % (self.name, config.ToString()))
                 
                 # update nowplaying attributes.
                 self._UpdateNowPlayingData(config)
@@ -1021,7 +1106,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             if (_logsi.IsOn(SILevel.Verbose)):
                 ElementTree.indent(args)  # for pretty printing
                 argsEncoded = ElementTree.tostring(args, encoding="unicode")
-                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
+                _logsi.LogXml(SILevel.Verbose, "'%s': MediaPlayer client device event notification - %s" % (self.name, args.tag), argsEncoded)
 
             # create configuration model from update event argument and update the cache.
             if len(args) > 0:
@@ -1045,7 +1130,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             if (_logsi.IsOn(SILevel.Verbose)):
                 ElementTree.indent(args)  # for pretty printing
                 argsEncoded = ElementTree.tostring(args, encoding="unicode")
-                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
+                _logsi.LogXml(SILevel.Verbose, "'%s': MediaPlayer client device event notification - %s" % (self.name, args.tag), argsEncoded)
 
             # create configuration model from update event argument and update the cache.
             if len(args) > 0:
@@ -1069,7 +1154,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             if (_logsi.IsOn(SILevel.Verbose)):
                 ElementTree.indent(args)  # for pretty printing
                 argsEncoded = ElementTree.tostring(args, encoding="unicode")
-                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
+                _logsi.LogXml(SILevel.Verbose, "'%s': MediaPlayer client device event notification - %s" % (self.name, args.tag), argsEncoded)
 
             # refresh the list of sources since the sourcesUpdated event does not supply them.
             config:SourceList = self._client.GetSourceList(True)
@@ -1089,12 +1174,12 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             if (_logsi.IsOn(SILevel.Verbose)):
                 ElementTree.indent(args)  # for pretty printing
                 argsEncoded = ElementTree.tostring(args, encoding="unicode")
-                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
+                _logsi.LogXml(SILevel.Verbose, "'%s': MediaPlayer client device event notification - %s" % (self.name, args.tag), argsEncoded)
 
             # create configuration model from update event argument and update the cache.
             config:Volume = Volume(root=args[0])
             client.ConfigurationCache[SoundTouchNodes.volume.Path] = config
-            _logsi.LogVerbose("'%s': volume updated = %s" % (self.name, config.ToString()))
+            _logsi.LogVerbose("'%s': MediaPlayer volume updated: %s" % (self.name, config.ToString()))
 
             # inform Home Assistant of the status update.
             self.async_write_ha_state()
@@ -1110,7 +1195,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             if (_logsi.IsOn(SILevel.Verbose)):
                 ElementTree.indent(args)  # for pretty printing
                 argsEncoded = ElementTree.tostring(args, encoding="unicode")
-                _logsi.LogXml(SILevel.Verbose, "'%s': event notification - %s" % (client.Device.DeviceName, args.tag), argsEncoded)
+                _logsi.LogXml(SILevel.Verbose, "'%s': MediaPlayer client device event notification - %s" % (self.name, args.tag), argsEncoded)
 
             # create configuration model from update event argument and update the cache.
             config:Zone = Zone(root=args[0])
@@ -1118,7 +1203,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # update group_members state.
             self._attr_group_members = self._BuildZoneMemberEntityIdList(config)
-            _logsi.LogArray(SILevel.Verbose, "zone updated - group_members list (%s)" % (client.Device.DeviceName), self._attr_group_members)
+            _logsi.LogArray(SILevel.Verbose, "'%s': MediaPlayer zone updated - group_members list" % self.name, self._attr_group_members)
 
             # inform Home Assistant of the status update.
             self.async_write_ha_state()
@@ -1147,7 +1232,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             if (entity_id is not None):
                 members.append(entity_id)
                 
-        _logsi.LogArray(SILevel.Verbose, "'%s' - zone group_members entity list was refreshed" % self._client.Device.DeviceName, members)
+        _logsi.LogArray(SILevel.Verbose, "'%s': MediaPlayer zone group_members entity list was refreshed" % self.name, members)
         return members
 
 
@@ -1172,7 +1257,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         # search all media_player instances for the specified entity_id.
         # if found, then return the SoundTouchClient assigned to the media_player instance.
         client:SoundTouchClient = None
-        data:EntityInitParms = None
+        data:InstanceDataSoundTouchPlus = None
         for data in self.hass.data[DOMAIN].values():
             if data.media_player.entity_id == entity_id:
                 client = data.client
@@ -1180,11 +1265,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
         # did we resolve it? if not, then log a message.
         if client is None:
-            _logsi.LogError("Entity id value of '%s' could not be resolved to a SoundTouch client instance for the '%s' method call" % (str(entity_id), serviceName))
+            _logsi.LogError("'%s': MediaPlayer could not resolve entity id value of '%s' to a SoundTouch client instance for the '%s' method call" % (self.name, str(entity_id), serviceName))
             return None
 
         # return the client instance.
-        _logsi.LogVerbose("Entity id value of '%s' was resolved to SoundTouch client instance '%s' ('%s') for the '%s' method call" % (str(entity_id), client.Device.DeviceName, client.Device.DeviceId, serviceName))
+        _logsi.LogVerbose("'%s': MediaPlayer resolved entity id value of '%s' to SoundTouch client instance '%s' for the '%s' method call" % (self.name, str(entity_id), client.Device.DeviceName, serviceName))
         return client
     
 
@@ -1209,7 +1294,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         # search all media_player instances for the specified deviceId.
         # if found, then return the entity_id assigned to the media_player instance.
         entity_id:str = None
-        data:EntityInitParms = None
+        data:InstanceDataSoundTouchPlus = None
         for data in self.hass.data[DOMAIN].values():
             if data.client.Device.DeviceId == deviceId:
                 entity_id = data.media_player.entity_id
@@ -1217,11 +1302,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
         # did we resolve it? if not, then log a message.
         if entity_id is None:
-            _logsi.LogError("DeviceId value of '%s' could not be resolved to a media_player entity_id for the '%s' method call" % (str(deviceId), serviceName))
+            _logsi.LogError("'%s': MediaPlayer could not resolve DeviceId value of '%s' to a media_player entity_id for the '%s' method call" % (self.name, str(deviceId), serviceName))
             return None
 
         # return the client instance.
-        _logsi.LogVerbose("DeviceId value of '%s' was resolved to media_player entity_id '%s' for the '%s' method call" % (str(deviceId), entity_id, serviceName))
+        _logsi.LogVerbose("'%s': MediaPlayer resolved DeviceId value of '%s' to media_player entity_id '%s' for the '%s' method call" % (self.name, str(deviceId), entity_id, serviceName))
         return entity_id
     
 
@@ -1243,9 +1328,9 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         sourceList:SourceList = self._client.GetSourceList(False)
         sourceItem:SourceItem = sourceList.GetSourceItemByTitle(title)
         if sourceItem is None:
-            _logsi.LogVerbose("Source title '%s' was NOT resolved for SoundTouch device '%s' (id=%s)" % (title, self.name, self.entity_id))
+            _logsi.LogVerbose("'%s': MediaPlayer source title '%s' was NOT resolved" % (self.name, title))
         else:
-            _logsi.LogObject(SILevel.Verbose, "Source title '%s' was resolved for SoundTouch device '%s' (id=%s) - Source Item" % (title, self.name, self.entity_id), sourceItem, excludeNonPublic=True)
+            _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer source title '%s' was resolved to %s" % (self.name, title, str(sourceItem)), sourceItem, excludeNonPublic=True)
         return sourceItem
 
 
@@ -1304,24 +1389,33 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             trebleLevel (int):
                 The treble level to set; if None, then the level is not adjusted.
         """
-        if _logsi.IsOn(SILevel.Verbose):
-            parms:dict = {}
-            parms['bassLevel'] = bassLevel
-            parms['trebleLevel'] = trebleLevel
-            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("service_audio_tone_levels", self.name, self.entity_id), parms)
+        try:
 
-        # if not supported then log a warning.
-        if SoundTouchNodes.audioproducttonecontrols.Path not in self._client.ConfigurationCache:
-            _logsi.LogWarning("'%s': Device does not support AudioProductToneControls; cannot change the tone levels" % (self.name))
-            return
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            if _logsi.IsOn(SILevel.Verbose):
+                parms:dict = {}
+                parms['bassLevel'] = bassLevel
+                parms['trebleLevel'] = trebleLevel
+                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_audio_tone_levels", str(parms)), parms)
 
-        # get current tone levels.
-        config:AudioProductToneControls = self._client.GetAudioProductToneControls()
+            # if not supported then log a warning.
+            if SoundTouchNodes.audioproducttonecontrols.Path not in self._client.ConfigurationCache:
+                _logsi.LogWarning("'%s': MediaPlayer device does not support AudioProductToneControls; cannot change the tone levels" % self.name)
+                return
+
+            # get current tone levels.
+            config:AudioProductToneControls = self._client.GetAudioProductToneControls()
         
-        # set new tone control values.
-        config.Bass.Value = bassLevel
-        config.Treble.Value = bassLevel
-        self._client.SetAudioProductToneControls(config)
+            # set new tone control values.
+            config.Bass.Value = bassLevel
+            config.Treble.Value = bassLevel
+            self._client.SetAudioProductToneControls(config)
+
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
         
     def service_musicservice_station_list(self, source:str, sourceAccount:str, sortType:str) -> NavigateResponse:
@@ -1343,21 +1437,30 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         Returns:
             A `NavigateResponse` instance that contain the results.
         """
-        if _logsi.IsOn(SILevel.Verbose):
-            parms:dict = {}
-            parms['source'] = source
-            parms['sourceAccount'] = sourceAccount
-            parms['sortType'] = sortType
-            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("service_musicservice_station_list", self.name, self.entity_id), parms)
+        try:
 
-        # is source argument a source title value?
-        sourceItem = self._GetSourceItemByTitle(source)
-        if sourceItem is not None:
-            source = sourceItem.Source
-            sourceAccount = sourceItem.SourceAccount
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            if _logsi.IsOn(SILevel.Verbose):
+                parms:dict = {}
+                parms['source'] = source
+                parms['sourceAccount'] = sourceAccount
+                parms['sortType'] = sortType
+                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_musicservice_station_list", str(parms)), parms)
 
-        criteria:Navigate = Navigate(source, sourceAccount, sortType=sortType)
-        return self._client.GetMusicServiceStations(criteria)
+            # is source argument a source title value?
+            sourceItem = self._GetSourceItemByTitle(source)
+            if sourceItem is not None:
+                source = sourceItem.Source
+                sourceAccount = sourceItem.SourceAccount
+
+            criteria:Navigate = Navigate(source, sourceAccount, sortType=sortType)
+            return self._client.GetMusicServiceStations(criteria)
+
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
 
     def service_play_contentitem(self, name:str, source:str, sourceAccount:str, itemType:str, location:str, containerArt:str, isPresetable:bool):
@@ -1385,31 +1488,40 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             isPresetable (bool):
                 True if this item can be saved as a Preset; otherwise, False.
         """
-        if _logsi.IsOn(SILevel.Verbose):
-            parms:dict = {}
-            parms['name'] = name
-            parms['source'] = source
-            parms['sourceAccount'] = sourceAccount
-            parms['itemType'] = itemType
-            parms['location'] = location
-            parms['containerArt'] = containerArt
-            parms['isPresetable'] = isPresetable
-            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("service_play_contentitem", self.name, self.entity_id), parms)
+        try:
 
-        # is source argument a source title value?
-        sourceItem:SourceItem = self._GetSourceItemByTitle(source)
-        if sourceItem is not None:
-            source = sourceItem.Source
-            sourceAccount = sourceItem.SourceAccount
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            if _logsi.IsOn(SILevel.Verbose):
+                parms:dict = {}
+                parms['name'] = name
+                parms['source'] = source
+                parms['sourceAccount'] = sourceAccount
+                parms['itemType'] = itemType
+                parms['location'] = location
+                parms['containerArt'] = containerArt
+                parms['isPresetable'] = isPresetable
+                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_play_contentitem", str(parms)), parms)
 
-        # is this a LOCAL source?
-        if source is not None and len(source) > 0 and source == 'LOCAL':
-            _logsi.LogVerbose("LOCAL source detected - calling SelectLocalSource for player '%s'", self.entity_id)
-            self._client.SelectLocalSource()
+            # is source argument a source title value?
+            sourceItem:SourceItem = self._GetSourceItemByTitle(source)
+            if sourceItem is not None:
+                source = sourceItem.Source
+                sourceAccount = sourceItem.SourceAccount
+
+            # is this a LOCAL source?
+            if source is not None and len(source) > 0 and source == 'LOCAL':
+                _logsi.LogVerbose("LOCAL source detected - calling SelectLocalSource for player '%s'", self.entity_id)
+                self._client.SelectLocalSource()
             
-        # set content item to play, and play it.
-        contentItem:ContentItem = ContentItem(source, itemType, location, sourceAccount, isPresetable, name, containerArt)
-        self._client.PlayContentItem(contentItem)
+            # set content item to play, and play it.
+            contentItem:ContentItem = ContentItem(source, itemType, location, sourceAccount, isPresetable, name, containerArt)
+            self._client.PlayContentItem(contentItem)
+
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
 
     def service_play_handoff(self, to_player:MediaPlayerEntity, restore_volume:bool, snapshot_only:bool) -> None:
@@ -1427,36 +1539,51 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 power off; False (default) to handoff the snapshot, restore it, 
                 and power off the FROM player.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_play_handoff", self.name, self.entity_id)
+        try:
 
-        if not to_player:
-            _logsi.LogWarning("Unable to find SoundTouchPlus TO player")
-            return
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            if _logsi.IsOn(SILevel.Verbose):
+                parms:dict = {}
+                if to_player is not None:
+                    parms['to_player'] = to_player.name
+                parms['restore_volume'] = restore_volume
+                parms['snapshot_only'] = snapshot_only
+                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_play_handoff", str(parms)), parms)
         
-        # take a snapshot of what we are currently playing.
-        _logsi.LogVerbose("FROM player '%s' is taking a snapshot", self.entity_id)
-        self._client.StoreSnapshot()
-
-        # copy our snapshot settings to the TO player snapshot settings.
-        _logsi.LogVerbose("Copying snapshot settings from player '%s' to player '%s'", self.entity_id, to_player.entity_id)
-        to_player._client.SnapshotSettings.clear()
-        for key in self._client.SnapshotSettings.keys():
-            to_player._client.SnapshotSettings[key] = self._client.SnapshotSettings[key]
-
-        # if only taking a snapshot then we are done.
-        if snapshot_only:
-            _logsi.LogVerbose("Snapshot copy only selected - play handoff complete")
-            return
+            if to_player is None:
+                _logsi.LogWarning("'%s': MediaPlayer service 'service_play_handoff' argument 'to_player' cannot be null")
+                return
         
-        # restore snapshot on TO player.
-        _logsi.LogVerbose("TO player '%s' is restoring snapshot settings", to_player.entity_id)
-        to_player._client.RestoreSnapshot(restore_volume)
+            # take a snapshot of what we are currently playing.
+            _logsi.LogVerbose("'%s': MediaPlayer is taking a snapshot", self.name)
+            self._client.StoreSnapshot()
 
-        # turn FROM player off.
-        _logsi.LogVerbose("FROM player '%s' is being powered off", self.entity_id)
-        self.turn_off()
+            # copy our snapshot settings to the TO player snapshot settings.
+            _logsi.LogVerbose("'%s': MediaPlayer is copying snapshot settings TO player '%s'", self.name, to_player.name)
+            to_player._client.SnapshotSettings.clear()
+            for key in self._client.SnapshotSettings.keys():
+                to_player._client.SnapshotSettings[key] = self._client.SnapshotSettings[key]
 
-        _logsi.LogVerbose("Play handoff from player '%s' to player '%s' complete", self.entity_id, to_player.entity_id)
+            # if only taking a snapshot then we are done.
+            if snapshot_only:
+                _logsi.LogVerbose("'%s': MediaPlayer snapshot copy only selected - play handoff complete", self.name)
+                return
+        
+            # restore snapshot on TO player.
+            _logsi.LogVerbose("'%s': MediaPlayer TO player '%s' is restoring snapshot settings", self.name, to_player.name)
+            to_player._client.RestoreSnapshot(restore_volume)
+
+            # turn FROM player off.
+            _logsi.LogVerbose("'%s': MediaPlayer is being powered off", self.name)
+            self.turn_off()
+
+            _logsi.LogVerbose("'%s': MediaPlayer play handoff to player '%s' is complete", self.name, to_player.name)
+
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
 
     def service_play_tts(self, message:str, artist:str, album:str, track:str, ttsUrl:str, volumeLevel:int, appKey:str):
@@ -1482,18 +1609,27 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             appKey (str):
                 Bose Developer API application key.
         """
-        if _logsi.IsOn(SILevel.Verbose):
-            parms:dict = {}
-            parms['message'] = message
-            parms['artist'] = artist
-            parms['album'] = album
-            parms['track'] = track
-            parms['ttsUrl'] = ttsUrl
-            parms['volumeLevel'] = volumeLevel
-            parms['appKey'] = appKey
-            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("service_play_tts", self.name, self.entity_id), parms)
+        try:
 
-        self._client.PlayNotificationTTS(message, ttsUrl, artist, album, track, volumeLevel, appKey)
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            if _logsi.IsOn(SILevel.Verbose):
+                parms:dict = {}
+                parms['message'] = message
+                parms['artist'] = artist
+                parms['album'] = album
+                parms['track'] = track
+                parms['ttsUrl'] = ttsUrl
+                parms['volumeLevel'] = volumeLevel
+                parms['appKey'] = appKey
+                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_play_tts", str(parms)), parms)
+        
+            self._client.PlayNotificationTTS(message, ttsUrl, artist, album, track, volumeLevel, appKey)
+
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
 
     def service_play_url(self, url:str, artist:str, album:str, track:str, volumeLevel:int, appKey:str, getMetadataFromUrlFile:bool):
@@ -1519,18 +1655,27 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 The Text-To-Speech url used to translate the message.  The value should contain a "{saytext}" format parameter, 
                 that will be used to insert the encoded message text.
         """
-        if _logsi.IsOn(SILevel.Verbose):
-            parms:dict = {}
-            parms['url'] = url
-            parms['artist'] = artist
-            parms['album'] = album
-            parms['track'] = track
-            parms['volumeLevel'] = volumeLevel
-            parms['appKey'] = appKey
-            parms['getMetadataFromUrlFile'] = getMetadataFromUrlFile
-            _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_PLAYER_COMMAND % ("service_play_url", self.name, self.entity_id), parms)
+        try:
 
-        self._client.PlayUrl(url, artist, album, track, volumeLevel, appKey, getMetadataFromUrlFile)
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            if _logsi.IsOn(SILevel.Verbose):
+                parms:dict = {}
+                parms['url'] = url
+                parms['artist'] = artist
+                parms['album'] = album
+                parms['track'] = track
+                parms['volumeLevel'] = volumeLevel
+                parms['appKey'] = appKey
+                parms['getMetadataFromUrlFile'] = getMetadataFromUrlFile
+                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_play_url", str(parms)), parms)
+
+            self._client.PlayUrl(url, artist, album, track, volumeLevel, appKey, getMetadataFromUrlFile)
+
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
 
     def service_preset_list(self) -> PresetList:
@@ -1540,8 +1685,18 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         Returns:
             A `PresetList` instance that contains defined presets.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_preset_list", self.name, self.entity_id)
-        return self._client.GetPresetList(True, resolveSourceTitles=True)
+        try:
+
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "service_preset_list")
+            
+            return self._client.GetPresetList(True, resolveSourceTitles=True)
+
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
 
     def service_reboot_device(self, sshPort:int):
@@ -1565,8 +1720,21 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         device is rebooting. SoundTouch web-services API connectivity should be 
         restored within 30 - 45 seconds if the reboot is successful.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_reboot_device", self.name, self.entity_id)
-        self._client.Device.RebootDevice(sshPort)
+        try:
+
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            if _logsi.IsOn(SILevel.Verbose):
+                parms:dict = {}
+                parms['sshPort'] = sshPort
+                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_reboot_device", str(parms)), parms)
+
+            self._client.Device.RebootDevice(sshPort)
+
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
 
     def service_recent_list(self) -> RecentList:
@@ -1576,8 +1744,18 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         Returns:
             A `RecentList` instance that contains defined recently played items.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_recent_list", self.name, self.entity_id)
-        return self._client.GetRecentList(True, resolveSourceTitles=True)
+        try:
+
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "service_recent_list")
+            
+            return self._client.GetRecentList(True, resolveSourceTitles=True)
+
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
 
     def service_remote_keypress(self, key_id:str, key_state:str):
@@ -1594,14 +1772,28 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         allow it to be used for keys defined in the future that are not currently 
         defined.
         """
-        if key_state is None:
-            key_state = KeyStates.Both.value
-            if key_id is not None and key_id.startswith('PRESET_'):
-                key_state = KeyStates.Release.value
-        key_state = key_state.lower()
+        try:
 
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Key='%s', State='%s'", "service_remote_keypress", self.name, self.entity_id, str(key_id), str(key_state))
-        self._client.Action(key_id, key_state)
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            if _logsi.IsOn(SILevel.Verbose):
+                parms:dict = {}
+                parms['key_id'] = key_id
+                parms['key_state'] = key_state
+                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_remote_keypress", str(parms)), parms)
+
+            if key_state is None:
+                key_state = KeyStates.Both.value
+                if key_id is not None and key_id.startswith('PRESET_'):
+                    key_state = KeyStates.Release.value
+            key_state = key_state.lower()
+
+            self._client.Action(key_id, key_state)
+
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
 
     def service_snapshot_restore(self, restore_volume:bool) -> None:
@@ -1613,14 +1805,26 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             restore_volume (bool):
                 True to restore volume setting; otherwise, False to not change volume.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND + " - Restore Volume='%s'", "service_snapshot_restore", self.name, self.entity_id, str(restore_volume))
+        try:
 
-        # if not restoring volume then remove it from the snapshot settings.
-        if not restore_volume:
-            if SoundTouchNodes.volume.Path in self._client.SnapshotSettings:
-                self._client.SnapshotSettings.pop(SoundTouchNodes.volume.Path)
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            if _logsi.IsOn(SILevel.Verbose):
+                parms:dict = {}
+                parms['restore_volume'] = restore_volume
+                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_snapshot_restore", str(parms)), parms)
 
-        self._client.RestoreSnapshot()
+            # if not restoring volume then remove it from the snapshot settings.
+            if not restore_volume:
+                if SoundTouchNodes.volume.Path in self._client.SnapshotSettings:
+                    self._client.SnapshotSettings.pop(SoundTouchNodes.volume.Path)
+
+            self._client.RestoreSnapshot()
+
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
 
     def service_snapshot_store(self) -> None:
@@ -1628,8 +1832,18 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         Store now playing settings to a snapshot, which can be restored later via
         the service_snapshot_restore method.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_snapshot_store", self.name, self.entity_id)
-        self._client.StoreSnapshot()
+        try:
+
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "service_snapshot_store")
+            
+            self._client.StoreSnapshot()
+
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
 
     def service_zone_toggle_member(self, zone_member_player:MediaPlayerEntity) -> None:
@@ -1641,13 +1855,237 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             zone_member_player (MediaPlayerEntity):
                 A SoundTouch MediaPlayerEntity that will be toggled in the master zone.
         """
-        _logsi.LogVerbose(STAppMessages.MSG_PLAYER_COMMAND, "service_zone_toggle_member", self.name, self.entity_id)
+        try:
 
-        if zone_member_player is None:
-            _logsi.LogWarning("Unable to find SoundTouchPlus zone member player")
-            return
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            if _logsi.IsOn(SILevel.Verbose):
+                parms:dict = {}
+                if zone_member_player is not None:
+                    parms['zone_member_player'] = zone_member_player.name
+                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_zone_toggle_member", str(parms)), parms)
         
-        # toggle the 
-        _logsi.LogVerbose("Master Zone player '%s' is toggling zone member '%s'", self.entity_id, zone_member_player.entity_id)
-        zoneMember:ZoneMember = ZoneMember(zone_member_player._client.Device.Host, zone_member_player._client.Device.DeviceId)
-        self._client.ToggleZoneMember(zoneMember)
+            if zone_member_player is None:
+                _logsi.LogWarning("'%s': MediaPlayer service 'service_zone_toggle_member' argument 'zone_member_player' cannot be null")
+                return
+
+            # toggle the zone member.
+            _logsi.LogVerbose("Master Zone player '%s' is toggling zone member '%s'", self.entity_id, zone_member_player.entity_id)
+            zoneMember:ZoneMember = ZoneMember(zone_member_player._client.Device.Host, zone_member_player._client.Device.DeviceId)
+            self._client.ToggleZoneMember(zoneMember)
+
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
+
+
+    async def async_added_to_hass(self) -> None:
+        """
+        Run when this Entity has been added to HA.
+
+        Importantly for a push integration, the module that will be getting updates
+        needs to notify HA of changes.  In our case, we created a SoundTouchWebSocket
+        instance that will inform us when something on the device has changed.  We
+        will register some callback methods here so that we can forward the change
+        notifications on to Home Assistant (e.g. a call to `self.async_write_ha_state`).
+
+        The call back registration is done once this entity is registered with Home
+        Assistant (rather than in the `__init__` method).
+        """
+        try:
+
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose("'%s': MediaPlayer async_added_to_hass is starting" % self.name)
+        
+            # call base class method.
+            await super().async_added_to_hass()
+        
+            # load list of supported sources.
+            _logsi.LogVerbose("'%s': MediaPlayer is loading list of ALL sources that the device supports" % self.name)
+            config:SourceList = await self.hass.async_add_executor_job(self._client.GetSourceList, True)
+
+            if self._attr_source_list is None or len(self._attr_source_list) == 0:
+                _logsi.LogVerbose("'%s': MediaPlayer source_list is not defined in configuration options; defaulting to ALL sources" % self.name)
+                self._attr_source_list = config.ToSourceTitleArray()
+            
+            _logsi.LogVerbose("'%s': MediaPlayer source_list = %s" % (self.name, str(self._attr_source_list)))
+            _logsi.LogVerbose("'%s': MediaPlayer current source = %s" % (self.name, str(self.source)))
+
+            # load list of supported sound modes.
+            if SoundTouchNodes.audiodspcontrols.Path in self._client.Device.SupportedUris:
+                _logsi.LogVerbose("'%s': MediaPlayer is loading list of sound modes (audiodspcontrols) that the device supports" % self.name)
+                dspconfig:AudioDspControls = await self.hass.async_add_executor_job(self._client.GetAudioDspControls, True)
+
+                if self._attr_sound_mode_list is None or len(self._attr_sound_mode_list) == 0:
+                    self._attr_sound_mode_list = dspconfig.ToSupportedAudioModeTitlesArray()
+                
+                # load current sound mode.
+                self._attr_sound_mode = AudioDspAudioModes.GetNameByValue(dspconfig.AudioMode)
+
+                _logsi.LogVerbose("'%s': MediaPlayer sound_mode_list = %s" % (self.name, str(self._attr_sound_mode_list)))
+                _logsi.LogVerbose("'%s': MediaPlayer current sound_mode = %s" % (self.name, str(self._attr_sound_mode)))
+            else:
+                _logsi.LogVerbose("'%s': MediaPlayer device does not support sound modes (audiodspcontrols)" % self.name)
+        
+            # load list of supported tone levels.
+            if SoundTouchNodes.audioproducttonecontrols.Path in self._client.Device.SupportedUris:
+                _logsi.LogVerbose("'%s': MediaPlayer is loading bass tone range levels (audioproducttonecontrols) that the device supports" % self.name)
+                await self.hass.async_add_executor_job(self._client.GetAudioProductToneControls, True)
+            else:
+                _logsi.LogVerbose("'%s': MediaPlayer device does not support tone level adjustments (audioproducttonecontrols)" % self.name)
+
+            # load zone configuration.
+            if SoundTouchNodes.getZone.Path in self._client.Device.SupportedUris:
+                _logsi.LogVerbose("'%s': MediaPlayer is loading zone configuration" % self.name)
+                config:Zone = await self.hass.async_add_executor_job(self._client.GetZoneStatus, True)
+                self._attr_group_members = self._BuildZoneMemberEntityIdList(config)
+
+            # if websocket support is disabled then we are done at this point.
+            if self._socket is None:
+                return
+        
+            _logsi.LogVerbose("'%s': MediaPlayer is adding notification event listeners" % self.name)
+
+            # add our listener(s) that will handle SoundTouch device status updates.
+            self._socket.AddListener(SoundTouchNotifyCategorys.audiodspcontrols, self._OnSoundTouchUpdateEvent_audiodspcontrols)
+            self._socket.AddListener(SoundTouchNotifyCategorys.audioproducttonecontrols, self._OnSoundTouchUpdateEvent_audioproducttonecontrols)
+            self._socket.AddListener(SoundTouchNotifyCategorys.nowPlayingUpdated, self._OnSoundTouchUpdateEvent_nowPlayingUpdated)
+            self._socket.AddListener(SoundTouchNotifyCategorys.presetsUpdated, self._OnSoundTouchUpdateEvent_presetsUpdated)
+            self._socket.AddListener(SoundTouchNotifyCategorys.recentsUpdated, self._OnSoundTouchUpdateEvent_recentsUpdated)
+            self._socket.AddListener(SoundTouchNotifyCategorys.sourcesUpdated, self._OnSoundTouchUpdateEvent_sourcesUpdated)
+            self._socket.AddListener(SoundTouchNotifyCategorys.volumeUpdated, self._OnSoundTouchUpdateEvent_volumeUpdated)
+            self._socket.AddListener(SoundTouchNotifyCategorys.zoneUpdated, self._OnSoundTouchUpdateEvent_zoneUpdated)
+
+            # add our listener(s) that will handle SoundTouch device informational events.
+            self._socket.AddListener(SoundTouchNotifyCategorys.SoundTouchSdkInfo, self._OnSoundTouchInfoEvent)
+
+            # add our listener(s) that will handle SoundTouch websocket related events.
+            self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketClose, self._OnSoundTouchWebSocketCloseEvent)
+            self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketOpen, self._OnSoundTouchWebSocketConnectionEvent)
+            self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketError, self._OnSoundTouchWebSocketErrorEvent)
+            self._socket.AddListener(SoundTouchNotifyCategorys.WebSocketPong, self._OnSoundTouchWebSocketPongEvent)
+
+            # start receiving device event notifications.
+            _logsi.LogVerbose("'%s': MediaPlayer is starting websocket notifications" % self.name)
+            self._socket.StartNotification()
+
+            # trace.
+            _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer is now fully initialized and added to HAAS: name=%s, unique_id=%s, entity_id=%s" % (self.name, self.name, self.unique_id, self.entity_id), self)
+            _logsi.LogVerbose("'%s': MediaPlayer async_added_to_hass is complete" % self.name)
+
+        finally:
+                
+            _logsi.LeaveMethod(SILevel.Debug)
+
+
+    async def async_will_remove_from_hass(self) -> None:
+        """
+        Entity being removed from hass (the opposite of async_added_to_hass).
+
+        Remove any registered call backs here.
+        """
+        try:
+
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+       
+            # stop receiving device event notifications.
+            if self._socket is not None:
+                _logsi.LogVerbose("'%s': MediaPlayer is stopping websocket notifications" % self.name)
+                self._socket.StopNotification()
+                self._socket.ClearListeners()
+                self._socket = None
+
+        except Exception as ex:
+            
+            # trace.
+            _logsi.LogException("'%s': MediaPlayer async_will_remove_from_hass exception: %s" % (self.name, str(ex)), ex, logToSystemLogger=False)
+            raise HomeAssistantError(str(ex)) from ex
+        
+        finally:
+
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
+
+
+    async def async_browse_media(self, media_content_type:MediaType|str|None=None, media_content_id:str|None=None) -> BrowseMedia:
+        """
+        Implement the websocket media browsing helper.
+        
+        Args:
+            media_content_type (MediaType):
+                The type of media to browse for.
+            media_content_id (str):
+                The media content id root node to start browsing at.
+                
+        Returns:
+            A `BrowseMedia` object.
+        """
+        methodParms:SIMethodParmListContext = None
+        
+        try:
+
+            # trace.
+            methodParms = _logsi.EnterMethodParmList(SILevel.Debug)
+            methodParms.AppendKeyValue("media_content_type", media_content_type)
+            methodParms.AppendKeyValue("media_content_id", media_content_id)
+            _logsi.LogMethodParmList(SILevel.Verbose, "'%s': MediaPlayer is browsing for media" % self.name, methodParms)
+
+            # leaving this here, in case we need to test the stock media library browser functionality.
+            # _logsi.LogWarning("TODO TEST - calling stock media browser!", colorValue=SIColors.Gold)
+            # return await media_source.async_browse_media(
+            #     self.hass,
+            #     media_content_id
+            # )
+
+            # browse soundtouch device media.
+            if media_content_type is None and media_content_id is None:
+
+                # handle initial media browser selection (e.g. show the starting index).
+                return await async_browse_media_library_index(
+                    self.hass,
+                    self._client,
+                    self.name,
+                    self.source,
+                    media_content_type,
+                    media_content_id
+                )
+
+            elif media_content_id is not None and media_content_id.startswith('media-source://'):
+
+                _logsi.LogVerbose("'%s': MediaPlayer is browsing for media-source content id '%s'" % (self.name, media_content_id))
+                
+                # handle base media library item selection.
+                return await media_source.async_browse_media(
+                    self.hass,
+                    media_content_id
+                )
+
+            else:
+                
+                # handle soundtouchplus media library selection.
+                # note that this is NOT async, as SoundTouchClient is not async!
+                return await self.hass.async_add_executor_job(
+                    browse_media_node,
+                    self.hass,
+                    self._client,
+                    self.name,
+                    self.source,
+                    media_content_type,
+                    media_content_id
+                )
+
+        except Exception as ex:
+            
+            # trace.
+            _logsi.LogException("'%s': MediaPlayer async_browse_media exception: %s" % (self.name, str(ex)), ex, logToSystemLogger=False)
+            raise HomeAssistantError(str(ex)) from ex
+        
+        finally:
+
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
+
+

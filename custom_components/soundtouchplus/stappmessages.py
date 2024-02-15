@@ -52,7 +52,12 @@ class STAppMessages:
     Service request '%s' was not recognized by the '%s' method
     """
 
-    MSG_PLAYER_COMMAND:str = "Executing '%s' command for SoundTouch device '%s' (id=%s)"
+    MSG_MEDIAPLAYER_SERVICE:str = "'%s': MediaPlayer is executing service '%s'"
     """
-    Executing '%s' command for SoundTouch device '%s' (id=%s)
+    '%s': MediaPlayer is executing service '%s'
+    """
+
+    MSG_MEDIAPLAYER_SERVICE_WITH_PARMS:str = "'%s': MediaPlayer is executing service '%s' - parameters: %s"
+    """
+    '%s': MediaPlayer is executing service '%s' - parameters: %s
     """

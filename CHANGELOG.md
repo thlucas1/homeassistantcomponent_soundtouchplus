@@ -6,6 +6,13 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.27 ] - 2024/02/14
+
+  * Added browse media support that allows the user to play Pandora Stations, SoundTouch Presets, and SoundTouch Recently played items from the media browser.  See the [SoundTouchPlus Wiki](https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/wiki/Media-Library-Browser) for details on how to customize it.
+  * Added Spotify URI support to the stock `play_media` service.
+  * Updated `media_player.py` with better tracing support.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.53.
+
 ###### [ 1.0.26 ] - 2023/12/29
 
   * Added "set_repeat()" support, which allows track play to be repeated (one, all, off).

@@ -21,13 +21,12 @@ import logging
 
 from bosesoundtouchapi import SoundTouchDevice, SoundTouchClient
 from bosesoundtouchapi.models import SourceList, SourceItem
-from requests import RequestException
 from typing import Any
 import voluptuous as vol
 
-from homeassistant import config_entries, core, exceptions
+from homeassistant import config_entries, exceptions
 from homeassistant.components import zeroconf
-from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
+from homeassistant.config_entries import ConfigEntry, OptionsFlow
 from homeassistant.const import (
     CONF_HOST,
     CONF_NAME,
@@ -267,7 +266,7 @@ class SoundTouchPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._device_id = deviceInfo[CONF_DEVICE_ID]
 
         # one final check to see if a configuration entry already exists for the device.
-        # If it IS already configured, then we will send an "already_configured" message 
+        # if it IS already configured, then we will send an "already_configured" message 
         # to the user and halt the flow to prevent a duplicate configuration entry.
         _logsi.LogVerbose("ConfigFlow is verifying ZeroConf discovered device details have not already been configured: IP=%s, port=%s, name=%s, id=%s" % (self._host, self._port, self._name, self._device_id))
         await self.async_set_unique_id(self._name)
