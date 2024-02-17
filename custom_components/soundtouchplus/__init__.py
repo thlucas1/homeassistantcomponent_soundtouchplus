@@ -43,8 +43,6 @@ from .const import (
     SERVICE_ZONE_TOGGLE_MEMBER
 )
 
-OPTIONS_UPDATE_LISTENER_REMOVE = "options_update_listener_remove"
-
 _LOGGER = logging.getLogger(__name__)
 
 try:
@@ -220,8 +218,6 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
 
         # trace.
         _logsi.EnterMethod(SILevel.Debug)
-    
-        # trace the ConfigType dictionary for debugging purposes.
         if _logsi.IsOn(SILevel.Verbose):
 
             _logsi.LogObject(SILevel.Verbose, "Component async_setup for configuration type", config)
@@ -666,9 +662,9 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
 
         # trace.
         _logsi.EnterMethod(SILevel.Debug)
-        _logsi.LogObject(SILevel.Verbose, "'%s': Component async_setup_entry is starting - entry (ConfigEntry) object" % entry.unique_id, entry)
-        _logsi.LogDictionary(SILevel.Verbose, "'%s': Component async_setup_entry entry.data dictionary" % entry.unique_id, entry.data)
-        _logsi.LogDictionary(SILevel.Verbose, "'%s': Component async_setup_entry entry.options dictionary" % entry.unique_id, entry.options)
+        _logsi.LogObject(SILevel.Verbose, "'%s': Component async_setup_entry is starting - entry (ConfigEntry) object" % entry.title, entry)
+        _logsi.LogDictionary(SILevel.Verbose, "'%s': Component async_setup_entry entry.data dictionary" % entry.title, entry.data)
+        _logsi.LogDictionary(SILevel.Verbose, "'%s': Component async_setup_entry entry.options dictionary" % entry.title, entry.options)
 
         # load config entry base parameters.
         host:str = entry.data[CONF_HOST]
@@ -684,22 +680,22 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
         socket:SoundTouchWebSocket = None
     
         # create the SoundTouchDevice object.
-        _logsi.LogVerbose("'%s': Component async_setup_entry is creating SoundTouchDevice instance: IP Address=%s, Port=%s" % (entry.unique_id, host, str(port)))
+        _logsi.LogVerbose("'%s': Component async_setup_entry is creating SoundTouchDevice instance: IP Address=%s, Port=%s" % (entry.title, host, str(port)))
         device:SoundTouchDevice = await hass.async_add_executor_job(SoundTouchDevice, host, 30, None, port)
-        _logsi.LogVerbose("'%s': Device Info: Name='%s', ID='%s', Type='%s', Country='%s', Region='%s'" % (entry.unique_id, device.DeviceName, device.DeviceId, device.DeviceType, device.CountryCode, device.RegionCode))
-        _logsi.LogVerbose("'%s': Device does NOT support the following URL services: %s" % (entry.unique_id, device.UnSupportedUrlNames))
+        _logsi.LogVerbose("'%s': Device Info: Name='%s', ID='%s', Type='%s', Country='%s', Region='%s'" % (entry.title, device.DeviceName, device.DeviceId, device.DeviceType, device.CountryCode, device.RegionCode))
+        _logsi.LogVerbose("'%s': Device does NOT support the following URL services: %s" % (entry.title, device.UnSupportedUrlNames))
         if len(device.UnknownUrlNames) > 0:
-            _logsi.LogVerbose("'%s': Device contains URL services that are not known by the API: %s" % (entry.unique_id, device.UnknownUrlNames))
+            _logsi.LogVerbose("'%s': Device contains URL services that are not known by the API: %s" % (entry.title, device.UnknownUrlNames))
     
         # create the SoundTouchClient object, which contains all of the methods used to control the actual device.
-        _logsi.LogVerbose("'%s': Component async_setup_entry is creating SoundTouchClient instance: IP Address=%s, Port=%s" % (entry.unique_id, host, str(port)))
+        _logsi.LogVerbose("'%s': Component async_setup_entry is creating SoundTouchClient instance: IP Address=%s, Port=%s" % (entry.title, host, str(port)))
         client:SoundTouchClient = await hass.async_add_executor_job(SoundTouchClient, device)
         
         # handle websocket failures. if it fails, the configuration can still function but polling
         # will be used instead of websocket notifications from the SoundTouch device.
         try:
 
-            _logsi.LogVerbose("'%s': Component async_setup_entry is verifying SoundTouch WebSocket connectivity" % entry.unique_id)
+            _logsi.LogVerbose("'%s': Component async_setup_entry is verifying SoundTouch WebSocket connectivity" % entry.title)
 
             # get device capabilities - must have IsWebSocketApiProxyCapable=True 
             # in order to support notifications.
@@ -707,14 +703,14 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
             if (port_websocket == 0):
 
                 # SoundTouch device websocket notifications were disabled by user - device will be polled.
-                _logsi.LogMessage("'%s': Component async_setup_entry - device websocket notifications were disabled by the user; polling will be enabled" % entry.unique_id)
+                _logsi.LogMessage("'%s': Component async_setup_entry - device websocket notifications were disabled by the user; polling will be enabled" % entry.title)
             
             elif (capabilities.IsWebSocketApiProxyCapable == True):
 
-                _logsi.LogVerbose("'%s': Component async_setup_entry has verified device is capable of websocket notifications" % entry.unique_id)
+                _logsi.LogVerbose("'%s': Component async_setup_entry has verified device is capable of websocket notifications" % entry.title)
 
                 # create a websocket to receive notifications from the device.
-                _logsi.LogVerbose("'%s': Component async_setup_entry is creating SoundTouchWebSocket instance: port=%s, pingInterval=%s" % (entry.unique_id, str(port_websocket), str(ping_websocket_interval)))
+                _logsi.LogVerbose("'%s': Component async_setup_entry is creating SoundTouchWebSocket instance: port=%s, pingInterval=%s" % (entry.title, str(port_websocket), str(ping_websocket_interval)))
                 socket = await hass.async_add_executor_job(SoundTouchWebSocket, client, port_websocket, ping_websocket_interval)
 
                 # we cannot start listening for notifications just yet, as the entity has not been
@@ -723,12 +719,12 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
             else:
 
                 # SoundTouch device does not support websocket notifications!
-                _logsi.LogWarning("'%s': Component async_setup_entry - device does not support websocket notifications; polling will be enabled" % entry.unique_id)
+                _logsi.LogWarning("'%s': Component async_setup_entry - device does not support websocket notifications; polling will be enabled" % entry.title)
 
         except Exception as ex:
         
             # log failure.
-            _logsi.LogError("'%s': Component async_setup_entry - SoundTouchWebSocket instance could not be created; polling will be enabled: %s" % (entry.unique_id, str(ex)))
+            _logsi.LogError("'%s': Component async_setup_entry - SoundTouchWebSocket instance could not be created; polling will be enabled: %s" % (entry.title, str(ex)))
             socket = None
 
         # create media player entity instance data.
@@ -739,23 +735,30 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
             media_player=None,
             options=entry.options
         )
-        _logsi.LogObject(SILevel.Verbose, "'%s': Component async_setup_entry media_player instance data object" % entry.unique_id, hass.data[DOMAIN][entry.entry_id])
+        _logsi.LogObject(SILevel.Verbose, "'%s': Component async_setup_entry media_player instance data object" % entry.title, hass.data[DOMAIN][entry.entry_id])
 
         # we are now ready for HA to create individual objects for each platform that
         # our device requires; in our case, it's just a media_player platform.
         # we initiate this by calling the `async_forward_entry_setups`, which 
-        # calls the `async_setup_entry` function in each platform module (e.g. media_player.py)
-        # for each device instance.
-        _logsi.LogVerbose("'%s': Component async_setup_entry is forwarding config entry setups to create the individual media player platforms" % entry.unique_id)
+        # calls the `async_setup_entry` function in each platform module (e.g.
+        # media_player.py) for each device instance.
+        _logsi.LogVerbose("'%s': Component async_setup_entry is forwarding configuration entry setups to create the individual media player platforms" % entry.title)
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-        # register an update listener to update config entry when options are updated.
-        # we also store a reference to the unsubscribe function to cleanup if an entry is unloaded.
-        _logsi.LogVerbose("'%s': Component async_setup_entry registering options update listener"  % entry.unique_id)
-        entry.async_on_unload(entry.add_update_listener(options_update_listener))
+        # register an update listener to reload configuration entry when options are updated.
+        # this will return an "unlisten" function, which will be added to the configuration
+        # "on_unload" event handler to automatically unregister the update listener when
+        # the configuration is unloaded.
+        listenerRemovePtr = entry.add_update_listener(options_update_listener)
+        _logsi.LogArray(SILevel.Verbose, "'%s': Component update listener has been registered and added to update listeners array (%d array items)" % (entry.title, len(entry.update_listeners)), entry.update_listeners)
+
+        entry.async_on_unload(listenerRemovePtr)
+        _logsi.LogArray(SILevel.Verbose, "'%s': Component update listener auto-unregister method has been added to on_unload event handlers array (%d array items)" % (entry.title, len(entry._on_unload)), entry._on_unload)
+
+        # trace.
+        _logsi.LogVerbose("'%s': Component async_setup_entry is complete" % entry.title)
 
         # indicate success.
-        _logsi.LogVerbose("'%s': Component async_setup_entry is complete"  % entry.unique_id)
         return True
 
     except Exception as ex:
@@ -765,7 +768,7 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
         # if it's a permanent error (e.g. ip address change), then the user needs to correct the configuration.
         
         # trace.
-        _logsi.LogException("'%s': Component async_setup_entry exception" % entry.unique_id, ex, logToSystemLogger=False)
+        _logsi.LogException("'%s': Component async_setup_entry exception" % entry.title, ex, logToSystemLogger=False)
         
         # reset 
         device = None
@@ -782,7 +785,7 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
 
 async def async_unload_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
     """
-    Unload config entry.
+    Unloads a configuration entry.
 
     Args:
         hass (HomeAssistant):
@@ -792,35 +795,39 @@ async def async_unload_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
 
     The __init__.py module "async_unload_entry" unloads a configuration entry.
             
-    This method is called when an entry/configured device is to be removed. The class
-    needs to unload itself, and remove callbacks.
+    This method is called when a configuration entry is to be removed. The class
+    needs to unload itself, and remove any callbacks.  
+    
+    Note that any options update listeners (added via "add_update_listener") do not need 
+    to be removed, as they are already removed by the time this method is called.
+    This is accomplished by the "entry.async_on_unload(listener)" call in async_setup_entry,
+    which removes them from the configuration entry just before it is unloaded.
     """
     try:
 
         # trace.
         _logsi.EnterMethod(SILevel.Debug)
-        _logsi.LogObject(SILevel.Verbose, "'%s': Component async_unload_entry configuration entry" % entry.unique_id, entry)
+        _logsi.LogObject(SILevel.Verbose, "'%s': Component async_unload_entry configuration entry" % entry.title, entry)
 
         # unload any platforms this device supports.
-        _logsi.LogVerbose("'%s':Component async_unload_entry is unloading our device instance from the domain" % entry.unique_id)
+        _logsi.LogVerbose("'%s': Component async_unload_entry is unloading our device instance from the domain" % entry.title)
         unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
         # if unload was successful, then remove data associated with the device.
         if unload_ok:
 
             # remove instance data from domain.
-            _logsi.LogVerbose("'%s':Component async_unload_entry is removing our device instance data from the domain" % entry.unique_id)
+            _logsi.LogVerbose("'%s':Component async_unload_entry is removing our device instance data from the domain" % entry.title)
             data:InstanceDataSoundTouchPlus = hass.data[DOMAIN].pop(entry.entry_id)
+            _logsi.LogObject(SILevel.Verbose, "'%s': Component async_unload_entry unloaded configuration entry instance data" % entry.title, data)
 
-            # remove options_update_listener.
-            # not sure if this code is needed, but left it in just in case.
-            if OPTIONS_UPDATE_LISTENER_REMOVE in entry.update_listeners:
-                _logsi.LogVerbose("'%s': Component async_unload_entry options update listener remove is starting" % entry.unique_id)
-                entry.update_listeners[OPTIONS_UPDATE_LISTENER_REMOVE]()
-                _logsi.LogVerbose("'%s': Component async_unload_entry options update listener remove complete" % entry.unique_id)
+            # a quick check to make sure all update listeners were removed (see method doc notes above).
+            if len(entry.update_listeners) > 0:
+                _logsi.LogArray(SILevel.Warning, "'%s': Component configuration update_listener(s) did not get removed before configuration unload (%d items - should be 0)" % (entry.title, len(entry.update_listeners)), entry.update_listeners)
+                entry.update_listeners.clear()
 
         # return status to caller.
-        _logsi.LogVerbose("'%s': Component async_unload_entry completed" % entry.unique_id)
+        _logsi.LogVerbose("'%s': Component async_unload_entry completed" % entry.title)
         return unload_ok
 
     finally:
@@ -848,18 +855,18 @@ async def async_reload_entry(hass:HomeAssistant, entry:ConfigEntry) -> None:
 
         # trace.
         _logsi.EnterMethod(SILevel.Debug)
-        _logsi.LogObject(SILevel.Verbose, "'%s': Component async_reload_entry configuration entry" % entry.unique_id, entry)
+        _logsi.LogObject(SILevel.Verbose, "'%s': Component async_reload_entry configuration entry" % entry.title, entry)
 
         # unload the configuration entry.
-        _logsi.LogVerbose("'%s': Component async_reload_entry is unloading the configuration entry" % entry.unique_id)
+        _logsi.LogVerbose("'%s': Component async_reload_entry is unloading the configuration entry" % entry.title)
         await async_unload_entry(hass, entry)
 
         # reload (setup) the configuration entry.
-        _logsi.LogVerbose("'%s': Component async_reload_entry is reloading the configuration entry" % entry.unique_id)
+        _logsi.LogVerbose("'%s': Component async_reload_entry is reloading the configuration entry" % entry.title)
         await async_setup_entry(hass, entry)
 
         # trace.
-        _logsi.LogVerbose("'%s': Component async_reload_entry completed" % entry.unique_id)
+        _logsi.LogVerbose("'%s': Component async_reload_entry completed" % entry.title)
 
     finally:
 
@@ -869,29 +876,30 @@ async def async_reload_entry(hass:HomeAssistant, entry:ConfigEntry) -> None:
 
 async def options_update_listener(hass:HomeAssistant, entry:ConfigEntry) -> None:
     """
-    Handle options update.
+    Configuration entry update event handler.
     
     Args:
         hass (HomeAssistant):
             HomeAssistant instance.
         entry (ConfigEntry):
             HomeAssistant configuration entry object.
+    
+    Reloads the config entry after updates have been applied to a configuration entry.
 
-    Reloads the config entry so that we can act on updated options data that was saved.
-
-    This method is called when a user has updated configuration options via the UI.
+    This method is called when a user has updated configuration options via the UI, or
+    when a call is made to async_update_entry with changed configuration data.
     """
     try:
 
         # trace.
         _logsi.EnterMethod(SILevel.Debug)
-        _logsi.LogObject(SILevel.Verbose, "'%s': Component options update for configuration entry" % entry.unique_id, entry)
+        _logsi.LogObject(SILevel.Verbose, "'%s': Component detected configuration entry options update" % entry.title, entry)
         
         # reload the configuration entry.
         await hass.config_entries.async_reload(entry.entry_id)
 
         # trace.
-        _logsi.LogVerbose("'%s': Component options_update_listener completed" % entry.unique_id)
+        _logsi.LogVerbose("'%s': Component options_update_listener completed" % entry.title)
 
     finally:
 

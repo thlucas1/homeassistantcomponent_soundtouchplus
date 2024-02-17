@@ -69,7 +69,16 @@ ATTRVALUE_NOT_CAPABLE = "not capable"
 
 async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry, async_add_entities:AddEntitiesCallback) -> None:
     """
-    Set up the Bose SoundTouch media player based on a config entry.
+    Set up the media player based on a config entry.
+
+    Args:
+        hass (HomeAssistant):
+            HomeAssistant instance.
+        entry (ConfigEntry):
+            HomeAssistant configuration entry dictionary.  This contains configuration
+            settings for the specific component device entry.
+        async_add_entities (AddEntitiesCallback):
+            Callback function to add all entities to Home Assistant for this platform.
 
     This function is called as part of the __init__.async_setup_entry event flow,
     which was initiated via the `hass.config_entries.async_forward_entry_setup` call.
@@ -111,16 +120,16 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry, async_add_ent
 
 class SoundTouchMediaPlayer(MediaPlayerEntity):
     """
-    Representation of a Bose SoundTouch device.
+    Representation of a SoundTouchPlus media player device.
     """
 
     def __init__(self, data:InstanceDataSoundTouchPlus) -> None:
         """
-        Initializes a new instance of the SoundTouch media player entity class.
+        Initializes a new instance of the SoundTouchPlus media player entity class.
         
         Args:
             data (InstanceDataSoundTouchPlus):
-                The media player entity initialization parameters that were created
+                The media player entity instance data parameters that were created
                 in the `__init__.async_setup_entry` method.
         """
         methodParms:SIMethodParmListContext = None
@@ -134,21 +143,28 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             methodParms.AppendKeyValue("data.media_player", str(data.media_player))
             _logsi.LogMethodParmList(SILevel.Verbose, "'%s': MediaPlayer is initializing - arguments" % data.client.Device.DeviceName, methodParms)
 
-            # initialize storage.
+            # initialize instance storage.
             self._client:SoundTouchClient = data.client
             self._socket:SoundTouchWebSocket = data.socket
             self.soundtouchplus_presets_lastupdated:int = 0
             self.soundtouchplus_recents_lastupdated:int = 0
+            self.websocket_error_count:int = 0
 
+            # initialize base class attributes (MediaPlayerEntity).
+            self._attr_icon = "mdi:speaker"
+            self._attr_media_image_remotely_accessible = False
+            self._attr_state = MediaPlayerState.IDLE
+            
             # A unique_id for this entity within this domain.
             # Note: This is NOT used to generate the user visible Entity ID used in automations.
             self._attr_unique_id = self._client.Device.DeviceId
 
-            # This is the name for this *entity*, the "name" attribute from "device_info"
-            # is used as the device name for device screens in the UI. This name is used on
-            # entity screens, and used to build the Entity ID that's used in automations etc.
+            # we will set "self._attr_has_entity_name = False", which causes the "self._attr_name"
+            # to be used as-is.  use "self._attr_has_entity_name = True", to append the "self._attr_name"
+            # value to the end of "DeviceInfo.name" value.
+            self._attr_has_entity_name = False
             self._attr_name = self._client.Device.DeviceName
-        
+
             # set device information.
             # this contains information about the device that is partially visible in the UI.
             # for more information see: https://developers.home-assistant.io/docs/device_registry_index/#device-properties
@@ -196,9 +212,9 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             self._attr_source_list = data.options.get(CONF_OPTION_SOURCE_LIST, None)
             _logsi.LogArray(SILevel.Verbose, "'%s': MediaPlayer configuration option: '%s' = '%s'" % (self.name, CONF_OPTION_SOURCE_LIST, str(self._attr_source_list)), self._attr_source_list)
 
+            # trace.
             _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer SoundTouchClient object" % self.name, self._client)
             _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer initialization complete" % self.name, self)
-            return
 
         except Exception as ex:
         
@@ -385,9 +401,9 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
             config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
             if config.Source == SoundTouchSources.STANDBY.value:
-                result = MediaPlayerState.OFF
+                result = MediaPlayerState.STANDBY
             elif config.Source == SoundTouchSources.INVALID:
-                result = None
+                result = MediaPlayerState.STANDBY
             elif config.PlayStatus == PlayStatusTypes.Playing.value:
                 result = MediaPlayerState.PLAYING
             elif config.PlayStatus == PlayStatusTypes.Buffering.value:
@@ -399,7 +415,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             elif config.PlayStatus == PlayStatusTypes.Invalid.value:
                 result = MediaPlayerState.PAUSED
         else:
-            result = None
+            result = MediaPlayerState.OFF
         return result
 
 
@@ -541,6 +557,35 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             # if `_attr_should_poll` is True, then cache values are refreshed every 10 seconds for each configuration type.
             # otherwise, the cache updates are performed in the websocket event processing when we get updates from the device.
 
+            # check for websocket restart due to previous error (if websockets are enabled). if socket is None, it denotes 
+            # that websocket notifications are NOT supported for the device (or are disabled), and we should NOT try to restart.
+
+            # does this device support websocket notifications?
+            if self._socket is not None:
+                      
+                # is polling enabled?  if so, it should NOT be since websockets are supported.
+                # this denotes that a websocket error previously occured which broke the connection.
+                # this can happen if the SoundTouch device loses power or drops off the network.
+                if self._attr_should_poll == True:
+                
+                    _logsi.LogVerbose("'%s': MediaPlayer will now try to recover from a previous websocket error (power loss, connection drop, etc)" % self.name)
+                
+                    # if device notification events thread is stopped, then restart it if possible.
+                    _logsi.LogVerbose("'%s': MediaPlayer websocket IsThreadRunForeverActive=%s" % (self.name, str(self._socket.IsThreadRunForeverActive)))
+                    if self._socket.IsThreadRunForeverActive == False:
+                        
+                        # restart websocket notifications.
+                        _logsi.LogVerbose("'%s': MediaPlayer is re-starting websocket notifications" % self.name)
+                        self._socket.StopNotification()
+                        self._socket.StartNotification()
+                        
+                        # reset polling and media player state.
+                        _logsi.LogVerbose("'%s': MediaPlayer will now disable polling of the device for updates going forward, as websocket processing is enabled" % self.name, colorValue=SIColors.Coral)
+                        self._attr_should_poll = False
+                        
+                        # exit update, as we will let the websocket events update the player.
+                        return
+                    
             # get now playing status.
             _logsi.LogVerbose("'%s': MediaPlayer is getting nowPlaying status" % self.name)
             config:NowPlayingStatus = self._client.GetNowPlayingStatus(self._attr_should_poll)
@@ -568,26 +613,6 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             if SoundTouchNodes.audioproducttonecontrols.Path in self._client.Device.SupportedUris:
                 _logsi.LogVerbose("'%s': MediaPlayer is getting audio product tone controls (e.g. bass, treble levels)" % self.name)
                 self._client.GetAudioProductToneControls(self._attr_should_poll)
-                    
-            # does this device support websocket notifications?
-            # note - if socket is None, it denotes that websocket notifications are NOT
-            # supported for the device (or are disabled), and we should not try to restart.
-            if self._socket is not None:
-                      
-                # is polling enabled?  if so it should NOT be since websockets are supported.
-                # this denotes that a websocket error previously occured which broke the connection.
-                # this can happen if the SoundTouch device loses power and drops the connection.
-                if self._attr_should_poll == True:
-                
-                    _logsi.LogVerbose("'%s': MediaPlayer is checking _socket.IsThreadRunForeverActive status" % self.name)
-                
-                    # if device notification events thread is stopped, then restart it if possible.
-                    if self._socket.IsThreadRunForeverActive == False:
-                        _logsi.LogVerbose("'%s': MediaPlayer is re-starting websocket notifications" % self.name)
-                        self._socket.StopNotification()
-                        self._socket.StartNotification()
-                        _logsi.LogVerbose("'%s': MediaPlayer is setting _attr_should_poll=False since event notifications are active again" % self.name)
-                        self._attr_should_poll = False
                     
         except Exception as ex:
             
@@ -983,7 +1008,10 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     @callback
     def _OnSoundTouchWebSocketConnectionEvent(self, client:SoundTouchClient, args:str) -> None:
         if (args != None):
-            _logsi.LogVerbose("'%s': MediaPlayer client device websocket connection event: %s" % (self.name, str(args)), colorValue=SIColors.Coral)
+            _logsi.LogVerbose("'%s': MediaPlayer client device websocket connection event: %s (websocket error count will be reset)" % (self.name, str(args)), colorValue=SIColors.Coral)
+
+        # reset websocket error count, as we know websockets are active again.
+        self.websocket_error_count = 0
 
 
     @callback
@@ -995,19 +1023,31 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     @callback
     def _OnSoundTouchWebSocketErrorEvent(self, client:SoundTouchClient, ex:Exception) -> None:
         if (ex != None):
-            _logsi.LogError("'%s': MediaPlayer client device websocket error event: (%s) %s" % (self.name, str(type(ex)), str(ex)), colorValue=SIColors.Coral)
-            _logsi.LogVerbose("'%s': MediaPlayer is setting _attr_should_poll=True due to websocket error event" % self.name, colorValue=SIColors.Coral)
+            
+            # suppress error logging after the first message, as this could quickly fill up the error log if we don't!
+            # we will log an error for every 60 times we get a message.
+            self.websocket_error_count = self.websocket_error_count + 1
+            if (self.websocket_error_count %60 == 0) or (self.websocket_error_count == 1):
+                _logsi.LogError("'%s': MediaPlayer client device websocket error event - count=%d: (%s) %s" % (self.name, self.websocket_error_count, str(type(ex)), str(ex)), colorValue=SIColors.Coral)
+
+            # at this point we will assume that the websocket connection is lost or in an unusable state.
+            # this can happen when the SoundTouch device loses power or network connectivity.
+            
+            # enable polling, so that the device is checked for updates periodically (every 10 seconds).
+            _logsi.LogVerbose("'%s': MediaPlayer will now enable polling of the device for updates going forward, until websocket processing can be restarted" % self.name, colorValue=SIColors.Coral)
             self._attr_should_poll = True
             
-            # at this point we will assume that the device lost power since it lost the websocket connection.
-            # reset nowPlayingStatus, which will drive a MediaPlayerState.OFF state.
-            _logsi.LogVerbose("'%s': MediaPlayer is setting _nowPlayingStatus to null to simulate a MediaPlayerState.OFF state" % self.name, colorValue=SIColors.Coral)
+            # reset nowPlayingStatus, which will drive a MediaPlayerState.IDLE state.
+            _logsi.LogVerbose("'%s': MediaPlayer is resetting nowPlayingStatus to force an IDLE state of the media player" % self.name, colorValue=SIColors.Coral)
             if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
                 self._client.ConfigurationCache.pop(SoundTouchNodes.nowPlaying.Path)
             
+            # stop the websocket notification thread.
+            # we will try to restart websocket notifications (in the update method) on the next polling update.
+            _logsi.LogVerbose("'%s': MediaPlayer is stopping websocket notification events thread; this will force a restart of the thread on the next device poll update" % self.name, colorValue=SIColors.Coral)
+            self._socket.StopNotification()
+            
             # inform Home Assistant of the status update.
-            # this will turn the player off in the Home Assistant UI.
-            _logsi.LogVerbose("'%s': MediaPlayer is calling async_write_ha_state to update player status" % self.name, colorValue=SIColors.Coral)          
             self.async_write_ha_state()
             
 
@@ -1094,6 +1134,9 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # inform Home Assistant of the status update.
             self.async_write_ha_state()
+            
+        # reset websocket error count, as we know websockets are active again.
+        self.websocket_error_count = 0
                 
 
     @callback
@@ -2087,5 +2130,3 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # trace.
             _logsi.LeaveMethod(SILevel.Debug)
-
-

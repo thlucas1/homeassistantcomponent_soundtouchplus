@@ -168,7 +168,7 @@ Home Assistant base media types.
 """
 
 CONTENT_ITEM_BASE64:str = "ci_base64::"
-""" eye-catcher used to denote a serialized ContentItem. """
+""" Eye-catcher used to denote a serialized ContentItem. """
 
 LOCAL_IMAGE_PREFIX:str = "/local/"
 """ Local image prefix value. """
@@ -179,15 +179,15 @@ PLAYABLE_MEDIA_TYPES = [
 
 
 class MediaSourceNotFoundError(BrowseError):
-    """ Source could not be found selected media type. """
+    """ Source could not be found for selected media type. """
 
 
 class MissingMediaInformation(BrowseError):
-    """Missing media required information."""
+    """ Missing required media information. """
 
 
 class UnknownMediaType(BrowseError):
-    """Unknown media type."""
+    """ Unknown media type. """
 
 
 async def async_browse_media_library_index(hass:HomeAssistant,
@@ -226,7 +226,7 @@ async def async_browse_media_library_index(hass:HomeAssistant,
         methodParms.AppendKeyValue("source", source)
         methodParms.AppendKeyValue("media_content_type", media_content_type)
         methodParms.AppendKeyValue("media_content_id", media_content_id)
-        _logsi.LogMethodParmList(SILevel.Verbose, "'%s': MediaPlayer is browsing for media - top level index" % playerName, methodParms)
+        _logsi.LogMethodParmList(SILevel.Verbose, "'%s': browsing for media - top level index" % playerName, methodParms)
         
         # validations.
         if source is None:
@@ -234,7 +234,7 @@ async def async_browse_media_library_index(hass:HomeAssistant,
             
         # set index media class based upon media content type.
         mediaClassMap:dict[str, Any] = CONTENT_TYPE_MEDIA_CLASS.get(BrowsableMedia.LIBRARY_INDEX.value, None)
-        _logsi.LogDictionary(SILevel.Verbose, "'%s': MediaPlayer BrowseMedia mediaClassMap Dictionary for media content type: '%s'" % (playerName, BrowsableMedia.LIBRARY_INDEX.value), mediaClassMap)
+        _logsi.LogDictionary(SILevel.Verbose, "'%s': BrowseMedia mediaClassMap Dictionary for media content type: '%s'" % (playerName, BrowsableMedia.LIBRARY_INDEX.value), mediaClassMap)
 
         # create the index.
         browseMedia:BrowseMedia = BrowseMedia(
@@ -260,7 +260,7 @@ async def async_browse_media_library_index(hass:HomeAssistant,
             if image is not None and image.startswith(LOCAL_IMAGE_PREFIX):
                 imagePath:str = "%s/www/%s" % (hass.config.config_dir, image[len(LOCAL_IMAGE_PREFIX):])
                 if not os.path.exists(imagePath):
-                    _logsi.LogVerbose("'%s': MediaPlayer could not find logo image path '%s'; image will be reset to null" % (playerName, imagePath))
+                    _logsi.LogVerbose("'%s': could not find logo image path '%s'; image will be reset to null" % (playerName, imagePath))
                     image = None
 
             browseMediaChild:BrowseMedia = BrowseMedia(
@@ -276,26 +276,25 @@ async def async_browse_media_library_index(hass:HomeAssistant,
                 )
             browseMedia.children.append(browseMediaChild)
                 
-            _logsi.LogObject(SILevel.Verbose, "BrowseMedia Child Object: Type='%s', Id='%s', Title='%s'" % (browseMediaChild.media_content_type, browseMediaChild.media_content_id, browseMediaChild.title), browseMediaChild)
+            _logsi.LogObject(SILevel.Verbose, "'%s': BrowseMedia Child Object: Type='%s', Id='%s', Title='%s'" % (playerName, browseMediaChild.media_content_type, browseMediaChild.media_content_id, browseMediaChild.title), browseMediaChild)
 
 
         # add base media library items to the index.
-        #_logsi.LogVerbose("'%s': MediaPlayer is adding base media library child items" % playerName)
         media:BrowseMedia = await media_source.async_browse_media(hass, media_content_id)
         mediaChild:BrowseMedia
         for mediaChild in media.children:
-            _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer is adding base media library child item: '%s'" % (playerName, mediaChild.title), mediaChild)
+            _logsi.LogObject(SILevel.Verbose, "'%s': adding base media library child item: '%s'" % (playerName, mediaChild.title), mediaChild)
             browseMedia.children.append(mediaChild)
                 
         # trace.
-        _logsi.LogObject(SILevel.Verbose, "BrowseMedia Parent Object: Type='%s', Id='%s', Title='%s'" % (browseMedia.media_content_type, browseMedia.media_content_id, browseMedia.title), browseMedia)
+        _logsi.LogObject(SILevel.Verbose, "'%s': BrowseMedia Parent Object: Type='%s', Id='%s', Title='%s'" % (playerName, browseMedia.media_content_type, browseMedia.media_content_id, browseMedia.title), browseMedia)
 
         return browseMedia
 
     except Exception as ex:
             
         # trace.
-        _logsi.LogException("'%s': MediaPlayer async_browse_media exception: %s" % (playerName, str(ex)), ex, logToSystemLogger=False)
+        _logsi.LogException("'%s': BrowseMedia async_browse_media_library_index exception: %s" % (playerName, str(ex)), ex, logToSystemLogger=False)
         raise HomeAssistantError(str(ex)) from ex
         
     finally:
@@ -340,7 +339,7 @@ def browse_media_node(hass:HomeAssistant,
         methodParms.AppendKeyValue("source", source)
         methodParms.AppendKeyValue("media_content_type", media_content_type)
         methodParms.AppendKeyValue("media_content_id", media_content_id)
-        _logsi.LogMethodParmList(SILevel.Verbose, "'%s': MediaPlayer is browsing for media - selected node" % playerName, methodParms)
+        _logsi.LogMethodParmList(SILevel.Verbose, "'%s': browsing for media - selected node" % playerName, methodParms)
         
         # validations.
         if source is None:
@@ -362,7 +361,7 @@ def browse_media_node(hass:HomeAssistant,
         # - title: the title to display in the media browser.
         # - image: the image (if any) to display in the media browser (can be none).
         if media_content_type == BrowsableMedia.SOUNDTOUCH_PRESETS:
-            _logsi.LogVerbose("'%s': MediaPlayer is querying client device for SoundTouch presets" % playerName)
+            _logsi.LogVerbose("'%s': querying client device for SoundTouch presets" % playerName)
             media:PresetList = client.GetPresetList(refresh=True, resolveSourceTitles=True)
             items = media.Presets
             title = "SoundTouch Presets"
@@ -371,7 +370,7 @@ def browse_media_node(hass:HomeAssistant,
             mediaClassMapChild:dict[str, Any] = CONTENT_TYPE_MEDIA_CLASS.get(media_content_type, None)
             
         elif media_content_type == BrowsableMedia.SOUNDTOUCH_RECENTLY_PLAYED:
-            _logsi.LogVerbose("'%s': MediaPlayer is querying client device for SoundTouch recently played items" % playerName)
+            _logsi.LogVerbose("'%s': querying client device for SoundTouch recently played items" % playerName)
             media:RecentList = client.GetRecentList(True, resolveSourceTitles=True)
             items = media.Recents
             title = "SoundTouch Recently Played"
@@ -380,7 +379,7 @@ def browse_media_node(hass:HomeAssistant,
             mediaClassMapChild:dict[str, Any] = CONTENT_TYPE_MEDIA_CLASS.get(media_content_type, None)
             
         elif media_content_type == BrowsableMedia.PANDORA_STATIONS:
-            _logsi.LogVerbose("'%s': MediaPlayer is querying client device for Pandora stations" % playerName)
+            _logsi.LogVerbose("'%s': querying client device for Pandora stations" % playerName)
             sourceItems:SourceList = client.GetSourceList(refresh=False)
             sourceItem:SourceItem
             for sourceItem in sourceItems:
@@ -393,15 +392,15 @@ def browse_media_node(hass:HomeAssistant,
                     mediaClassMapChild:dict[str, Any] = CONTENT_TYPE_MEDIA_CLASS.get(media_content_type, None)
                     break
             if media is None:
-                raise MediaSourceNotFoundError("'%s': MediaPlayer could not find SoundTouch Source for '%s' content" % (playerName, media_content_type))
+                raise MediaSourceNotFoundError("'%s': could not find SoundTouch Source for '%s' content" % (playerName, media_content_type))
             
         # if media was not set then we are done.
         if media is None:
-            raise ValueError("'%s': MediaPlayer could not find media items for content type '%s'" % (playerName, media_content_type))
+            raise ValueError("'%s': could not find media items for content type '%s'" % (playerName, media_content_type))
 
         # set index media class based upon media content type.
         mediaClassMap:dict[str, Any] = CONTENT_TYPE_MEDIA_CLASS.get(media_content_type, None)
-        _logsi.LogDictionary(SILevel.Verbose, "'%s': MediaPlayer BrowseMedia mediaClassMap Dictionary for media content type: '%s'" % (playerName, media_content_type), mediaClassMap)
+        _logsi.LogDictionary(SILevel.Verbose, "'%s': BrowseMedia mediaClassMap Dictionary for media content type: '%s'" % (playerName, media_content_type), mediaClassMap)
 
         # set index flag indicating if index media can be played or not.
         canPlay:bool = media_content_type in PLAYABLE_MEDIA_TYPES
@@ -418,7 +417,7 @@ def browse_media_node(hass:HomeAssistant,
         if image is not None and image.startswith(LOCAL_IMAGE_PREFIX):
             imagePath:str = "%s/www/%s" % (hass.config.config_dir, image[len(LOCAL_IMAGE_PREFIX):])
             if not os.path.exists(imagePath):
-                _logsi.LogVerbose("'%s': MediaPlayer could not find logo image path '%s'; image will be reset to null" % (playerName, imagePath))
+                _logsi.LogVerbose("'%s': could not find logo image path '%s'; image will be reset to null" % (playerName, imagePath))
                 image = None
 
         # create the index.
@@ -470,17 +469,17 @@ def browse_media_node(hass:HomeAssistant,
                 )
             browseMedia.children.append(browseMediaChild)
                 
-            _logsi.LogObject(SILevel.Verbose, "BrowseMedia Child Object: Type='%s', Id='%s', Title='%s'" % (browseMediaChild.media_content_type, browseMediaChild.media_content_id, browseMediaChild.title), browseMediaChild)
+            _logsi.LogObject(SILevel.Verbose, "'%s': BrowseMedia Child Object: Type='%s', Id='%s', Title='%s'" % (playerName, browseMediaChild.media_content_type, browseMediaChild.media_content_id, browseMediaChild.title), browseMediaChild)
 
         # trace.
-        _logsi.LogObject(SILevel.Verbose, "BrowseMedia Parent Object: Type='%s', Id='%s', Title='%s'" % (browseMedia.media_content_type, browseMedia.media_content_id, browseMedia.title), browseMedia)
+        _logsi.LogObject(SILevel.Verbose, "'%s': BrowseMedia Parent Object: Type='%s', Id='%s', Title='%s'" % (playerName, browseMedia.media_content_type, browseMedia.media_content_id, browseMedia.title), browseMedia)
 
         return browseMedia
 
     except Exception as ex:
             
         # trace.
-        _logsi.LogException("'%s': MediaPlayer async_browse_media exception: %s" % (playerName, str(ex)), ex, logToSystemLogger=False)
+        _logsi.LogException("'%s': BrowseMedia browse_media_node exception: %s" % (playerName, str(ex)), ex, logToSystemLogger=False)
         raise HomeAssistantError(str(ex)) from ex
         
     finally:

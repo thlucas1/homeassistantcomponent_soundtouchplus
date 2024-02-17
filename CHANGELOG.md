@@ -6,6 +6,13 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.28 ] - 2024/02/14
+
+  * Updated `media_player.py` to properly restart websocket event listener when connectivity to a device is lost.  Prior to this fix, HA would need to be restarted in order to receive status notifications after a device lost connectivity.  It will now gracefully reconnect to the device within 30 seconds.
+  * Updated `__init__.py` with proper support for options update processing.
+  * Updated all modules with better tracing support.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.55.
+
 ###### [ 1.0.27 ] - 2024/02/14
 
   * Added browse media support that allows the user to play Pandora Stations, SoundTouch Presets, and SoundTouch Recently played items from the media browser.  See the [SoundTouchPlus Wiki](https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/wiki/Media-Library-Browser) for details on how to customize it.
