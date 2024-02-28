@@ -10,8 +10,9 @@
   "loggers": [ "bosesoundtouchapi" ],
   "requirements": [
     "bosesoundtouchapi==1.0.55",
-    "smartinspectPython>=3.0.33"
+    "smartinspectPython>=3.0.33",
+    "spotifywebapiPython==1.0.31"
   ],
-  "version": "1.0.28",
+  "version": "1.0.29",
   "zeroconf": [ "_soundtouch._tcp.local." ]
 }

@@ -6,6 +6,10 @@ from homeassistant.components.media_player import MediaPlayerEntity
 from types import MappingProxyType
 from typing import Any
 
+from .const import (
+    CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID,
+)
+
 
 @dataclass
 class InstanceDataSoundTouchPlus:
@@ -37,4 +41,15 @@ class InstanceDataSoundTouchPlus:
     SoundTouchWebSocket instance that receieves real-time updates from the SoundTouch device
     if websocket processing is enabled.
     """
+
+    @property
+    def OptionSpotifyMediaPlayerEntityId(self) -> str | None:
+        """
+        Spotify media_player entity_id to use for calls to the SpotifyPlus integration.
+        Only used by the Spotify calls in media browser.
+        """
+        result:str = self.options.get(CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID, None)
+        # if result is None:
+        #     result = "media_player.spotifyplus_todd_l" # <- TODO TEST make this configurable - hardcoded for testing
+        return result
     

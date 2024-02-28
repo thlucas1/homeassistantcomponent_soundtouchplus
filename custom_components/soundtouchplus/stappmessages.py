@@ -61,3 +61,34 @@ class STAppMessages:
     """
     '%s': MediaPlayer is executing service '%s' - parameters: %s
     """
+
+    MSG_SPOTIFYPLUS_USERPROFILE:str = "'%s': spotifyplus integration service userProfile (partial)"
+    """
+    '%s': spotifyplus integration service userProfile (partial)
+    """
+
+    MSG_SPOTIFYPLUS_USERPROFILE_FORMAT_ERROR:str = "'%s': spotifyPlus integration did not return a properly formatted userProfile for content type '%s'"
+    """
+    '%s': spotifyPlus integration did not return a properly formatted userProfile for content type '%s'
+    """
+    
+    MSG_SPOTIFYPLUS_RESULT_ITEMS:str = "'%s': spotifyplus integration service result items"
+    """
+    '%s': spotifyplus integration service result items
+    """
+
+    MSG_SPOTIFYPLUS_RESULT_ITEMS_FORMAT_ERROR:str = "'%s': spotifyPlus integration did not return a properly formatted result for content type '%s'"
+    """
+    '%s': spotifyPlus integration did not return a properly formatted result for content type '%s'
+    """
+    
+    MSG_SPOTIFYPLUS_RESULT_DICTIONARY:str = "'%s': result from spotifyplus integration service - dictionary"
+    """
+    '%s': result from spotifyplus integration service - dictionary
+    """
+    
+    MSG_SPOTIFYPLUS_SERVICE_EXECUTE:str = "'%s': executing %s integration service for media content: '%s'"
+    """
+    '%s': executing %s integration service for media content: '%s'
+    """
+    

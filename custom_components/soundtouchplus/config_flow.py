@@ -17,10 +17,9 @@ dependencies and install the requirements of the component.
 """
 from __future__ import annotations
 
-import logging
-
 from bosesoundtouchapi import SoundTouchDevice, SoundTouchClient
 from bosesoundtouchapi.models import SourceList, SourceItem
+import logging
 from typing import Any
 import voluptuous as vol
 
@@ -32,16 +31,19 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_PORT,
     CONF_TIMEOUT,
+    Platform
 )
 from homeassistant.core import callback, HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import config_validation as cv, selector
 
 from .const import (
     DOMAIN,
+    DOMAIN_SPOTIFYPLUS,
     CONF_DEVICE_NAME,
     CONF_DEVICE_ID,
     CONF_OPTION_SOURCE_LIST,
+    CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID,
     CONF_PING_WEBSOCKET_INTERVAL,
     CONF_PORT_WEBSOCKET,
     DEFAULT_PING_WEBSOCKET_INTERVAL,
@@ -51,7 +53,7 @@ from .const import (
 )
 
 # get smartinspect logger reference; create a new session for this module name.
-from smartinspectpython.siauto import SIAuto, SILevel, SISession
+from smartinspectpython.siauto import SIAuto, SILevel, SISession, SIColors
 _logsi:SISession = SIAuto.Si.GetSession(__name__)
 if (_logsi == None):
     _logsi = SIAuto.Si.AddSession(__name__, True)
@@ -361,35 +363,45 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
     required to make the component function.
     """
 
-    def __init__(self, configEntry:ConfigEntry) -> None:
+    def __init__(self, entry:ConfigEntry) -> None:
         """
         Initialize options flow.
         """
-        if _logsi.IsOn(SILevel.Verbose):
-            _logsi.LogVerbose("OptionsFlow is initializing")
-            _logsi.LogObject(SILevel.Verbose, "OptionsFlow config_entry object", configEntry)
-            _logsi.LogDictionary(SILevel.Verbose, "OptionsFlow config_entry.data dictionary", configEntry.data)
-            _logsi.LogDictionary(SILevel.Verbose, "OptionsFlow config_entry.options dictionary", configEntry.options)
+        try:
 
-        # initialize storage.
-        self._name:str = None
-        self._host:str = None
-        self._port:int = DEFAULT_PORT
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogObject(SILevel.Verbose, "'%s': OptionsFlow is initializing - entry (ConfigEntry) object" % entry.title, entry)
+            _logsi.LogDictionary(SILevel.Verbose, "'%s': OptionsFlow entry.data dictionary" % entry.title, entry.data)
+            _logsi.LogDictionary(SILevel.Verbose, "'%s': OptionsFlow entry.options dictionary" % entry.title, entry.options)
+       
+            # initialize storage.
+            self._name:str = None
+            self._host:str = None
+            self._port:int = DEFAULT_PORT
 
-        # always check for keys, in case of an upgrade that contains a new key
-        # that is not present in a previous version.           
+            # always use a ".get()" for keys, in case of an upgrade that contains a new key
+            # that is not present in a previous version.           
 
-        # load config entry base values.
-        self._ConfigEntry = configEntry
-        if CONF_NAME in configEntry.data.keys():
-            self._name = configEntry.data[CONF_NAME]
-        if CONF_HOST in configEntry.data.keys():
-            self._host = configEntry.data[CONF_HOST]
-        if CONF_PORT in configEntry.data.keys():
-            self._port = configEntry.data[CONF_PORT]
+            # load config entry base values.
+            self._ConfigEntry = entry
+            self._name = entry.data.get(CONF_NAME, None)
+            self._host = entry.data.get(CONF_HOST, None)
+            self._port = entry.data.get(CONF_PORT, DEFAULT_PORT)
 
-        # load config entry options values.
-        self._Options = dict(configEntry.options)
+            # load config entry options values.
+            self._Options = dict(entry.options)
+
+        except Exception as ex:
+            
+            # trace.
+            _logsi.LogException(None, ex, logToSystemLogger=False)
+            raise
+        
+        finally:
+
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
 
 
     async def async_step_init(self, user_input:dict[str,Any]=None) -> FlowResult:
@@ -397,76 +409,115 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
         Manage the options for the custom component.
         
         For a good example, look at HA demo source code:
-            \home-assistant-core\homeassistant\components\demo\config_flow.py
+            /home-assistant-core/homeassistant/components/demo/config_flow.py
         """
         errors: dict[str, str] = {}
         
-        # the user_input variable defaults to None when this step is first called. 
-        # when the user clicks the submit button on the form, the user_input variable will be 
-        # a dictionary containing the data that was entered.  Home Assistant will do some basic 
-        # validation on your behalf based on the data schema that you defined (e.g. required field,
-        # port number is within a numeric range, etc). 
-        if user_input is not None:
+        try:
+
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogDictionary(SILevel.Verbose, "'%s': OptionsFlow async_step_init is starting - user_input" % self._name, user_input)
+
+            # the user_input variable defaults to None when this step is first called. 
+            # when the user clicks the submit button on the form, the user_input variable will be 
+            # a dictionary containing the data that was entered.  Home Assistant will do some basic 
+            # validation on your behalf based on the data schema that you defined (e.g. required field,
+            # port number is within a numeric range, etc). 
+            if user_input is not None:
             
-            # sort updated config entry options.
-            if CONF_OPTION_SOURCE_LIST in user_input:
-                user_input[CONF_OPTION_SOURCE_LIST].sort()
+                # sort updated config entry options.
+                if CONF_OPTION_SOURCE_LIST in user_input:
+                    user_input[CONF_OPTION_SOURCE_LIST].sort()
 
-            # store the updated config entry options.
-            self._Options.update(user_input)
-            return await self._update_options()
+                # update config entry options from user input values.
+                self._Options[CONF_OPTION_SOURCE_LIST] = user_input.get(CONF_OPTION_SOURCE_LIST, None)
+                self._Options[CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID] = user_input.get(CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID, None)
+                
+                # store the updated config entry options.
+                return await self._update_options(self._Options)
 
-        # load available sources from the device.
-        source_list_all:dict = await self.hass.async_add_executor_job(self._GetSourceTitleList, self._host, self._port, self._name)
-        if source_list_all is None:
-            errors["base"] = "getsourcelist_empty"
-            return
+            # load available sources from the device.
+            source_list_all:dict = await self.hass.async_add_executor_job(self._GetSourceTitleList, self._host, self._port)
+            if source_list_all is None:
+                errors["base"] = "getsourcelist_empty"
+                return
 
-        # log sources that are currently selected.
-        source_list_selected:list[str] = self._Options.get(CONF_OPTION_SOURCE_LIST, [])
-        _logsi.LogArray(SILevel.Verbose, "(%s): %s - OptionsFlow currently SELECTED '%s' items for device" % (self._host, self._name, CONF_OPTION_SOURCE_LIST), source_list_selected)
+            # log sources that are currently selected.
+            source_list_selected:list[str] = self._Options.get(CONF_OPTION_SOURCE_LIST, [])
+            _logsi.LogArray(SILevel.Verbose, "'%s': OptionsFlow currently SELECTED '%s' items for device" % (self._name, CONF_OPTION_SOURCE_LIST), source_list_selected)
                    
-        # create validation schema; default source list to empty array, which will cause the
-        schema = vol.Schema(
-            {
-                vol.Optional(CONF_OPTION_SOURCE_LIST, default=self._Options.get(CONF_OPTION_SOURCE_LIST, [])): cv.multi_select(source_list_all),
-            }
-        )
+            # create validation schema.
+            # default source list to empty array, which will cause the entire list to be displayed in the media player.
+            schema = vol.Schema(
+                {
+                    vol.Optional(CONF_OPTION_SOURCE_LIST, default=self._Options.get(CONF_OPTION_SOURCE_LIST, [])): cv.multi_select(source_list_all),
+                    # note - DO NOT use "default" argument on the following - use "suggested_value" instead.
+                    # using "default=" does not allow a null entity_id to be selected!
+                    vol.Optional(CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID, 
+                                 description={"suggested_value": self._Options.get(CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID)},
+                                ): selector.EntitySelector(selector.EntitySelectorConfig(integration=DOMAIN_SPOTIFYPLUS, 
+                                                           domain=Platform.MEDIA_PLAYER, 
+                                                           multiple=False),
+                    ),
+                }
+            )
+            
+            _logsi.LogVerbose("'%s': OptionsFlow is showing the init configuration options form" % self._name)
+            return self.async_show_form(
+                step_id="init", 
+                data_schema=schema, 
+                description_placeholders={CONF_NAME: self._name},
+                errors=errors or {}
+            )
+        
+        except Exception as ex:
+            
+            # trace.
+            _logsi.LogException(None, ex, logToSystemLogger=False)
+            raise
+        
+        finally:
 
-        _logsi.LogVerbose("(%s): %s - OptionsFlow is showing the init configuration options form" % (self._host, self._name))
-        return self.async_show_form(
-            step_id="init", 
-            data_schema=schema, 
-            description_placeholders={CONF_NAME: self._name},
-            errors=errors or {}
-        )
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
+
     
-    
-    async def _update_options(self) -> FlowResult:
+    async def _update_options(self, options:dict[str,Any]=None) -> FlowResult:
         """
         Update config entry options.
         """
-        _logsi.LogDictionary(SILevel.Verbose, "(%s): %s - OptionsFlow UPDATED options dictionary for device" % (self._host, self._name), self._Options)
+        try:
 
-        return self.async_create_entry(
-            title="", 
-            data=self._Options
-        )
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogDictionary(SILevel.Verbose, "'%s': OptionsFlow is updating configuration options - options" % self._name, options)
+            
+            # update the configuration entry options.
+            return self.async_create_entry(
+                title="", 
+                data=options
+            )
     
+        finally:
 
-    def _GetSourceTitleList(self, host:str, port:int, name:str) -> dict:
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
+
+
+    def _GetSourceTitleList(self, host:str, port:int) -> dict:
         """
         Retrieves SourceList object from the SoundTouch device.
         """
         try:
 
-            _logsi.LogVerbose("(%s): %s - OptionsFlow is creating SoundTouchDevice instance (port=%s)" % (host, name, port))
+            _logsi.LogVerbose("'%s': OptionsFlow is creating SoundTouchDevice instance (port=%s)" % (self._name, port))
             device:SoundTouchDevice = SoundTouchDevice(host, 30, None, port)
 
-            _logsi.LogVerbose("(%s): %s - OptionsFlow is creating SoundTouchClient instance" % (host, name))
+            _logsi.LogVerbose("'%s': OptionsFlow is creating SoundTouchClient instance" % self._name)
             client:SoundTouchClient = SoundTouchClient(device)
 
-            _logsi.LogVerbose("(%s): %s - OptionsFlow is retrieving SourceList configuration for device" % (host, name))
+            _logsi.LogVerbose("'%s': OptionsFlow is retrieving SourceList configuration for device" % self._name)
             sourceList:SourceList = client.GetSourceList()
             
             # sort the results (in place) by SourceTitle, ascending order.
@@ -479,11 +530,11 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
                 if item.SourceTitle not in result:
                     result[item.SourceTitle] = item.SourceTitle
 
-            _logsi.LogDictionary(SILevel.Verbose, "(%s): %s - OptionsFlow ALL available '%s' items for device" % (host, name, CONF_OPTION_SOURCE_LIST), result)
+            _logsi.LogDictionary(SILevel.Verbose, "'%s': OptionsFlow ALL available '%s' items for device" % (self._name, CONF_OPTION_SOURCE_LIST), result)
             
             return result
             
         except Exception as ex:
             
-            _logsi.LogError("(%s): %s - OptionsFlow could not retrieve source list for device: %s" % (host, name, str(ex)))
+            _logsi.LogError("'%s': OptionsFlow could not retrieve source list for device: %s" % (self._name, str(ex)))
             return None

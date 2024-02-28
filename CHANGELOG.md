@@ -6,6 +6,11 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.29 ] - 2024/02/27
+
+  * Added Spotify music service support.  See the [SoundTouchPlus Wiki](https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/wiki/Media-Library-Browser) for details on how to customize it.
+  * Updated `browse_media.py` to add options for SpotifyPlus integration support.  Also reorganized the library map structure to easily support more music services in the future.
+
 ###### [ 1.0.28 ] - 2024/02/14
 
   * Updated `media_player.py` to properly restart websocket event listener when connectivity to a device is lost.  Prior to this fix, HA would need to be restarted in order to receive status notifications after a device lost connectivity.  It will now gracefully reconnect to the device within 30 seconds.

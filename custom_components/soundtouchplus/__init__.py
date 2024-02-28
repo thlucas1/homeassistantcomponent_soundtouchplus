@@ -14,7 +14,7 @@ from homeassistant.components.media_player import MediaPlayerEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
@@ -323,9 +323,9 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     _logsi.LogError(STAppMessages.MSG_SERVICE_REQUEST_UNKNOWN, service.service, "service_handle_entity")
                     return
             
-            except SoundTouchWarning as ex:  pass   # should already be logged
-            except SoundTouchError as ex:  pass     # should already be logged
+            except HomeAssistantError: raise    # pass handled exception on through.
             except Exception as ex:
+
                 # log exception, but not to system logger as HA will take care of it.
                 _logsi.LogException(STAppMessages.MSG_SERVICE_REQUEST_EXCEPTION % (service.service, "service_handle_entity"), ex, logToSystemLogger=False)
                 raise
@@ -399,8 +399,7 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     _logsi.LogError(STAppMessages.MSG_SERVICE_REQUEST_UNKNOWN, service.service, "service_handle_entityfromto")
                     return
             
-            except SoundTouchWarning as ex:  pass   # should already be logged
-            except SoundTouchError as ex:  pass     # should already be logged
+            except HomeAssistantError: raise    # pass handled exception on through.
             except Exception as ex:
             
                 # log exception, but not to system logger as HA will take care of it.
@@ -465,9 +464,9 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                 _logsi.LogDictionary(SILevel.Verbose, "Service Response data: '%s'" % (service.service), response, prettyPrint=True)
                 return response 
 
-            except SoundTouchWarning as ex:  pass   # should already be logged
-            except SoundTouchError as ex:  pass     # should already be logged
+            except HomeAssistantError: raise    # pass handled exception on through.
             except Exception as ex:
+                
                 # log exception, but not to system logger as HA will take care of it.
                 _logsi.LogException(STAppMessages.MSG_SERVICE_REQUEST_EXCEPTION % (service.service, "service_handle_getlist"), ex, logToSystemLogger=False)
                 raise

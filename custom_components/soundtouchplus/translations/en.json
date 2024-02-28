@@ -35,19 +35,20 @@
   },
   "device_automation": {},
   "options": {
-    "error": {
-      "getsourcelist_empty": "Could not retrieve source list from the device; please ensure that the device is powered on and reachable via the network. Check System Log for more details.",
-      "no_sources_selected": "No sources were selected; ALL sources will be displayed in media players that support source selection."
-    },
     "step": {
       "init": {
         "title": "{name} Options",
-        "description": "Manage sources that will be displayed in the user-interface for media players that support source selection.",
+        "description": "Configure SoundTouch Plus integration options that control the selected device.",
         "data": {
-          "source_list": "Source list selections; check to show, uncheck to hide."
+          "source_list": "Source list selections; check to show, uncheck to hide.",
+          "spotify_mediaplayer_entity_id": "SpotifyPlus integration media player entity id used to query Spotify API for data."
         },
         "submit": "Save"
       }
+    },
+    "error": {
+      "getsourcelist_empty": "Could not retrieve source list from the device; please ensure that the device is powered on and reachable via the network. Check System Log for more details.",
+      "no_sources_selected": "No sources were selected; ALL sources will be displayed in media players that support source selection."
     }
   },
   "services": {

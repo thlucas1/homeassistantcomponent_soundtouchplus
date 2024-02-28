@@ -34,17 +34,33 @@ from homeassistant.components.media_player import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
     DeviceInfo,
     format_mac,
 )
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity import entity_sources
+from homeassistant.helpers.entity_registry import EntityRegistry, RegistryEntry
 from homeassistant.util.dt import utcnow
 
 # our package imports.
-from .browse_media import async_browse_media_library_index, browse_media_node, deserialize_object, CONTENT_ITEM_BASE64
-from .const import DOMAIN, CONF_OPTION_SOURCE_LIST
+from .browse_media import (
+    async_browse_media_library_index, 
+    BrowsableMedia,
+    browse_media_node, 
+    deserialize_object, 
+    CONTENT_ITEM_BASE64, 
+    LIBRARY_MAP,
+    SPOTIFY_LIBRARY_MAP,
+)
+from .const import (
+    CONF_OPTION_SOURCE_LIST, 
+    CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID, 
+    DOMAIN, 
+    DOMAIN_SPOTIFYPLUS
+)
 from .instancedata_soundtouchplus import InstanceDataSoundTouchPlus
 from .stappmessages import STAppMessages
 
@@ -142,10 +158,12 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             methodParms.AppendKeyValue("data.socket", str(data.socket))
             methodParms.AppendKeyValue("data.media_player", str(data.media_player))
             _logsi.LogMethodParmList(SILevel.Verbose, "'%s': MediaPlayer is initializing - arguments" % data.client.Device.DeviceName, methodParms)
+            _logsi.LogDictionary(SILevel.Verbose, "'%s': MediaPlayer configuration options" % data.client.Device.DeviceName, data.options, prettyPrint=True)
 
             # initialize instance storage.
             self._client:SoundTouchClient = data.client
             self._socket:SoundTouchWebSocket = data.socket
+            self.data:InstanceDataSoundTouchPlus = data
             self.soundtouchplus_presets_lastupdated:int = 0
             self.soundtouchplus_recents_lastupdated:int = 0
             self.websocket_error_count:int = 0
@@ -794,7 +812,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             announceValue:str = None
             if extra_options is not None:
 
-                _logsi.LogVerbose("'%s': MediaPlayer play media detected keyword arguments" % self.name)
+                _logsi.LogDictionary(SILevel.Verbose, "'%s': MediaPlayer play media detected keyword arguments" % self.name, extra_options, prettyPrint=True)
                 source = extra_options.get(ATTR_INPUT_SOURCE, None)
                 announce = bool(extra_options.get(ATTR_MEDIA_ANNOUNCE, False))
 
@@ -809,7 +827,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 # drop the eye-ctacher prefix before we deserialize.
                 media_id = media_id[len(CONTENT_ITEM_BASE64):]
                 contentItem:ContentItem = deserialize_object(media_id)
-                _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer is playing media from %s" % (self.name, contentItem.ToString()), contentItem)
+                _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer is playing media from %s" % (self.name, contentItem.ToString()), contentItem, excludeNonPublic=True)
                 self._client.PlayContentItem(contentItem)
                 
             # is the media an http or https url?
@@ -1455,6 +1473,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             config.Treble.Value = bassLevel
             self._client.SetAudioProductToneControls(config)
 
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
         finally:
                 
             # trace.
@@ -1500,6 +1523,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             criteria:Navigate = Navigate(source, sourceAccount, sortType=sortType)
             return self._client.GetMusicServiceStations(criteria)
 
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+                
         finally:
                 
             # trace.
@@ -1561,6 +1589,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             contentItem:ContentItem = ContentItem(source, itemType, location, sourceAccount, isPresetable, name, containerArt)
             self._client.PlayContentItem(contentItem)
 
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
         finally:
                 
             # trace.
@@ -1623,6 +1656,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             _logsi.LogVerbose("'%s': MediaPlayer play handoff to player '%s' is complete", self.name, to_player.name)
 
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
         finally:
                 
             # trace.
@@ -1669,6 +1707,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         
             self._client.PlayNotificationTTS(message, ttsUrl, artist, album, track, volumeLevel, appKey)
 
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
         finally:
                 
             # trace.
@@ -1715,6 +1758,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             self._client.PlayUrl(url, artist, album, track, volumeLevel, appKey, getMetadataFromUrlFile)
 
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
         finally:
                 
             # trace.
@@ -1736,6 +1784,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             
             return self._client.GetPresetList(True, resolveSourceTitles=True)
 
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
         finally:
                 
             # trace.
@@ -1774,6 +1827,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             self._client.Device.RebootDevice(sshPort)
 
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
         finally:
                 
             # trace.
@@ -1795,6 +1853,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             
             return self._client.GetRecentList(True, resolveSourceTitles=True)
 
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
         finally:
                 
             # trace.
@@ -1833,6 +1896,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             self._client.Action(key_id, key_state)
 
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
         finally:
                 
             # trace.
@@ -1864,6 +1932,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             self._client.RestoreSnapshot()
 
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
         finally:
                 
             # trace.
@@ -1883,6 +1956,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             
             self._client.StoreSnapshot()
 
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
         finally:
                 
             # trace.
@@ -1917,6 +1995,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             zoneMember:ZoneMember = ZoneMember(zone_member_player._client.Device.Host, zone_member_player._client.Device.DeviceId)
             self._client.ToggleZoneMember(zoneMember)
 
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
         finally:
                 
             # trace.
@@ -2074,33 +2157,50 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             methodParms = _logsi.EnterMethodParmList(SILevel.Debug)
             methodParms.AppendKeyValue("media_content_type", media_content_type)
             methodParms.AppendKeyValue("media_content_id", media_content_id)
-            _logsi.LogMethodParmList(SILevel.Verbose, "'%s': MediaPlayer is browsing for media" % self.name, methodParms)
-
-            # leaving this here, in case we need to test the stock media library browser functionality.
-            # _logsi.LogWarning("TODO TEST - calling stock media browser!", colorValue=SIColors.Gold)
-            # return await media_source.async_browse_media(
-            #     self.hass,
-            #     media_content_id
-            # )
+            _logsi.LogMethodParmList(SILevel.Verbose, "'%s': MediaPlayer is browsing for media content type '%s'" % (self.name, media_content_type), methodParms)
 
             # browse soundtouch device media.
             if media_content_type is None and media_content_id is None:
 
+                # if SpotifyPlus integration is not installed, then hide spotify icon.
+                isSpotifyPlusInstalled:bool = self._IsSpotifyPlusIntegrationInstalled()
+                LIBRARY_MAP[BrowsableMedia.SPOTIFY_LIBRARY_INDEX]["is_index_item"] = isSpotifyPlusInstalled
+
                 # handle initial media browser selection (e.g. show the starting index).
+                _logsi.LogVerbose("'%s': MediaPlayer is browsing main media library index content id '%s'" % (self.name, media_content_id))
                 return await async_browse_media_library_index(
                     self.hass,
-                    self._client,
+                    self.data,
                     self.name,
                     self.source,
+                    LIBRARY_MAP,
+                    BrowsableMedia.LIBRARY_INDEX,
                     media_content_type,
-                    media_content_id
+                    media_content_id,
+                )
+
+            elif media_content_type == BrowsableMedia.SPOTIFY_LIBRARY_INDEX.value:
+
+                # verify SpotifyPlus integration configuration.
+                self._VerifySpotifyPlusIntegrationSetup()
+
+                # handle spotify media browser selection (e.g. show the starting Spotify index).
+                _logsi.LogVerbose("'%s': MediaPlayer is browsing Spotify media library index content id '%s'" % (self.name, media_content_id))
+                return await async_browse_media_library_index(
+                    self.hass,
+                    self.data,
+                    self.name,
+                    self.source,
+                    SPOTIFY_LIBRARY_MAP,
+                    BrowsableMedia.SPOTIFY_LIBRARY_INDEX,
+                    media_content_type,
+                    media_content_id,
                 )
 
             elif media_content_id is not None and media_content_id.startswith('media-source://'):
 
-                _logsi.LogVerbose("'%s': MediaPlayer is browsing for media-source content id '%s'" % (self.name, media_content_id))
-                
                 # handle base media library item selection.
+                _logsi.LogVerbose("'%s': MediaPlayer is browsing media-source content id '%s'" % (self.name, media_content_id))
                 return await media_source.async_browse_media(
                     self.hass,
                     media_content_id
@@ -2108,16 +2208,23 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             else:
                 
+                # set library map based upon the content we are currently browsing.
+                library_map:dict = LIBRARY_MAP
+                if media_content_type.startswith('spotify_'):
+                    library_map:dict = SPOTIFY_LIBRARY_MAP
+                
                 # handle soundtouchplus media library selection.
                 # note that this is NOT async, as SoundTouchClient is not async!
+                _logsi.LogVerbose("'%s': MediaPlayer is browsing media node content id '%s'" % (self.name, media_content_id))
                 return await self.hass.async_add_executor_job(
                     browse_media_node,
                     self.hass,
-                    self._client,
+                    self.data,
                     self.name,
                     self.source,
+                    library_map,
                     media_content_type,
-                    media_content_id
+                    media_content_id,
                 )
 
         except Exception as ex:
@@ -2127,6 +2234,94 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             raise HomeAssistantError(str(ex)) from ex
         
         finally:
+
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
+
+
+    def _IsSpotifyPlusIntegrationInstalled(self) -> bool:
+        """
+        Returns a flag indicating if the SpotifyPlus integration is installed (True) or not (False).
+        """
+        try:
+
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose("'%s': MediaPlayer is verifying SpotifyPlus integration is installed" % self.name)
+
+            # SpotifyPlus integration common service name check.
+            # the service name will NOT exist if the integration is not installed.
+            # the service name will exist if the integration is installed, though it could
+            # be disabled (will check for that condition later).
+            checkServiceName:str = "get_playlist"
+            isSpotifyPlusInstalled:bool = self.hass.services.has_service(DOMAIN_SPOTIFYPLUS, checkServiceName)
+
+            # trace.
+            if _logsi.IsOn(SILevel.Verbose):
+                _logsi.LogVerbose("'%s': MediaPlayer SpotifyPlus service check: '%s' = '%s'" % (self.name, checkServiceName, str(isSpotifyPlusInstalled)))
+                if isSpotifyPlusInstalled:
+                    # if SpotifyPlus integration IS installed, then log its services list.
+                    service = self.hass.services.async_services().get(DOMAIN_SPOTIFYPLUS.lower(), [])
+                    _logsi.LogDictionary(SILevel.Verbose, "'%s': MediaPlayer SpotifyPlus service list" % self.name, service, prettyPrint=True)
+                else:
+                    # if SpotifyPlus integration is NOT installed, then log the services that ARE installed in case we need it.
+                    serviceAll = self.hass.services.async_services()
+                    _logsi.LogDictionary(SILevel.Verbose, "'%s': MediaPlayer ALL services list" % self.name, serviceAll, prettyPrint=True)
+
+            return isSpotifyPlusInstalled
+
+        finally:
+
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
+
+
+    def _VerifySpotifyPlusIntegrationSetup(self) -> None:
+        """
+        Verifies that the SpotifyPlus integration is installed, and the media player entity id
+        is valid and available (not disabled).
+        """
+        entity_registry:EntityRegistry = None
+        
+        try:
+
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose("'%s': MediaPlayer is verifying SpotifyPlus integration configuration" % self.name)
+
+            # is SpotifyPlus integration installed?
+            if not self._IsSpotifyPlusIntegrationInstalled():
+                raise HomeAssistantError("'%s': The SpotifyPlus integration is required in order to browse the Spotify media library" % self.name)
+
+            # get the spotify media player entity id from options.
+            # if one has not been configured, then it's a problem.
+            spotifyMPEntityId:str = self.data.OptionSpotifyMediaPlayerEntityId
+            if spotifyMPEntityId is None:
+                raise HomeAssistantError("'%s': A SpotifyPlus media player entity id has not been assigned in SoundTouchPlus configuration options" % self.name)
+
+            # is the specified entity id in the hass entity registry?
+            # it will NOT be in the entity registry if it's deleted.
+            # it WILL be in the entity registry if it is disabled, with disabled property = True.
+            entity_registry = er.async_get(self.hass)
+            registry_entry:RegistryEntry = entity_registry.async_get(spotifyMPEntityId)
+            _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer RegistryEntry for entity_id: '%s'" % (self.name, spotifyMPEntityId), registry_entry)
+
+            # raise exceptions if SpotifyPlus Entity is not configured or is disabled.
+            if registry_entry is None:
+                raise HomeAssistantError("'%s': The SpotifyPlus media player entity '%s' does not exist (recently deleted maybe?); update the SpotifyPlus media player in the SoundTouchPlus options configuration" % (self.name, spotifyMPEntityId))
+            if registry_entry.disabled:
+                raise HomeAssistantError("'%s': The SpotifyPlus media player entity '%s' is currently disabled; re-enable the SpotifyPlus media player, or choose another SpotifyPlus media player in the SoundTouchPlus options configuration" % (self.name, spotifyMPEntityId))
+
+            # modify spotify library map title to append the spotifyplus media
+            # player friendly name that will be used to query spotify for data.
+            titleWithName = SPOTIFY_LIBRARY_MAP[BrowsableMedia.SPOTIFY_LIBRARY_INDEX].get("title_with_name","")
+            titleWithName = titleWithName % (registry_entry.name or registry_entry.original_name)
+            SPOTIFY_LIBRARY_MAP[BrowsableMedia.SPOTIFY_LIBRARY_INDEX]["title"] = titleWithName
+
+        finally:
+
+            # free resources.
+            entity_registry = None
 
             # trace.
             _logsi.LeaveMethod(SILevel.Debug)
