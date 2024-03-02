@@ -407,9 +407,24 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
     async def async_step_init(self, user_input:dict[str,Any]=None) -> FlowResult:
         """
         Manage the options for the custom component.
-        
+
+        Args:
+            user_input (dict[str,Any]):
+                User input gathered from the input form.  
+                This argument defaults to None when this step is first called.  
+                When the user clicks the submit button on the form, the argument will contain
+                a dictionary of the data that was entered.  Home Assistant will do some basic 
+                # validation on your behalf based on the data schema that you defined (e.g. 
+                # required field, port number is within a numeric range, etc). 
+                
         For a good example, look at HA demo source code:
             /home-assistant-core/homeassistant/components/demo/config_flow.py
+            
+        Note that the "self.hass.data[DOMAIN][entry.entry_id]" object is present in the
+        OptionsFlow "async_step_init" step.  This allows you to access the client if one
+        is assigned to the data area.  All you need to do is assign a reference to the 
+        "entry:ConfigEntry" in the "__init__" in order to access it.  This saves you from
+        instantiating a new instance of the client to retrieve settings.  
         """
         errors: dict[str, str] = {}
         
@@ -419,11 +434,7 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
             _logsi.EnterMethod(SILevel.Debug)
             _logsi.LogDictionary(SILevel.Verbose, "'%s': OptionsFlow async_step_init is starting - user_input" % self._name, user_input)
 
-            # the user_input variable defaults to None when this step is first called. 
-            # when the user clicks the submit button on the form, the user_input variable will be 
-            # a dictionary containing the data that was entered.  Home Assistant will do some basic 
-            # validation on your behalf based on the data schema that you defined (e.g. required field,
-            # port number is within a numeric range, etc). 
+            # if not the initial entry, then save the entered options; otherwise, prepare the form.
             if user_input is not None:
             
                 # sort updated config entry options.

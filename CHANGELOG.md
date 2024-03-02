@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.30 ] - 2024/03/02
+
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.33.
+
 ###### [ 1.0.29 ] - 2024/02/27
 
   * Added Spotify music service support.  See the [SoundTouchPlus Wiki](https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/wiki/Media-Library-Browser) for details on how to customize it.

@@ -2233,7 +2233,6 @@ def _SpotifyPlusSearchPlaylists(hass:HomeAssistant,
                                 media_content_id:str|None,
                                 criteria:str,
                                 limitTotal:int,
-                                spotifyOwnedOnly:bool
                                 ) -> Tuple[PlaylistPageSimplified, list[NavigateItem]]:
     """
     Calls the spotifyPlus integration service "search_playlist", and returns the media and items results.
@@ -2259,8 +2258,6 @@ def _SpotifyPlusSearchPlaylists(hass:HomeAssistant,
             and paging is automatically used to retrieve all available items up to the
             maximum number specified.  
             Default: None (disabled)
-        spotifyOwnedOnly (bool):
-            True to return found items owned by spotify; False to return all items found.
 
     Returns:
         A tuple of 2 objects:  
@@ -2277,8 +2274,7 @@ def _SpotifyPlusSearchPlaylists(hass:HomeAssistant,
                 "entity_id": data.OptionSpotifyMediaPlayerEntityId,
                 "criteria": criteria,
                 "offset": 0,
-                "limit_total": limitTotal,
-                "spotify_owned_only": spotifyOwnedOnly,
+                "limit_total": limitTotal
             },      
             blocking=True,          # wait for service to complete before returning
             return_response=True    # returns service response data.

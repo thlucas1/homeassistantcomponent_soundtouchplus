@@ -48,8 +48,5 @@ class InstanceDataSoundTouchPlus:
         Spotify media_player entity_id to use for calls to the SpotifyPlus integration.
         Only used by the Spotify calls in media browser.
         """
-        result:str = self.options.get(CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID, None)
-        # if result is None:
-        #     result = "media_player.spotifyplus_todd_l" # <- TODO TEST make this configurable - hardcoded for testing
-        return result
+        return self.options.get(CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID, None)
     

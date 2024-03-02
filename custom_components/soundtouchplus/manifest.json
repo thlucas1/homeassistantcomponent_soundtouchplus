@@ -11,8 +11,8 @@
   "requirements": [
     "bosesoundtouchapi==1.0.55",
     "smartinspectPython>=3.0.33",
-    "spotifywebapiPython==1.0.31"
+    "spotifywebapiPython==1.0.33"
   ],
-  "version": "1.0.29",
+  "version": "1.0.30",
   "zeroconf": [ "_soundtouch._tcp.local." ]
 }

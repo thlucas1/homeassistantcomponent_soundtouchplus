@@ -72,6 +72,8 @@
     <Content Include="images\soundtouchplus_medialib_pandora_stations.png" />
     <Content Include="images\soundtouchplus_medialib_presets.png" />
     <Content Include="images\soundtouchplus_medialib_recently_played.png" />
+    <Content Include="images\soundtouchplus_medialib_spotify.png" />
+    <Content Include="images\spotify_icon.png" />
     <Content Include="LICENSE" />
     <Content Include="New_Release_Instructions.txt" />
     <Content Include="README.md" />
