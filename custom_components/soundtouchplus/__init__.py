@@ -29,6 +29,7 @@ from .const import (
     DEFAULT_PORT,
     DEFAULT_PORT_WEBSOCKET,
     SERVICE_AUDIO_TONE_LEVELS,
+    SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS,
     SERVICE_MUSICSERVICE_STATION_LIST,
     SERVICE_PLAY_CONTENTITEM,
     SERVICE_PLAY_HANDOFF,
@@ -40,6 +41,7 @@ from .const import (
     SERVICE_REMOTE_KEYPRESS,
     SERVICE_SNAPSHOT_RESTORE,
     SERVICE_SNAPSHOT_STORE,
+    SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS,
     SERVICE_ZONE_TOGGLE_MEMBER
 )
 
@@ -88,6 +90,13 @@ SERVICE_AUDIO_TONE_LEVELS_SCHEMA = vol.Schema(
         vol.Required("entity_id"): cv.entity_id,
         vol.Required("bass_level", default=0): vol.All(vol.Range(min=-100,max=100)),
         vol.Required("treble_level", default=0): vol.All(vol.Range(min=-100,max=100)),
+    }
+)
+
+SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("source_title"): cv.string,
     }
 )
 
@@ -189,6 +198,27 @@ SERVICE_SNAPSHOT_STORE_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("source_title"): cv.string,
+        vol.Optional("album"): cv.string,
+        vol.Optional("artist"): cv.string,
+        vol.Optional("artist_id"): cv.string,
+        vol.Optional("art_url"): cv.string,
+        vol.Optional("description"): cv.string,
+        vol.Optional("duration", default=0): vol.All(vol.Range(min=0,max=99999999)),
+        vol.Optional("genre"): cv.string,
+        vol.Optional("play_status"): cv.string,
+        vol.Optional("position", default=0): vol.All(vol.Range(min=0,max=99999999)),
+        vol.Optional("session_id"): cv.string,
+        vol.Optional("station_location"): cv.string,
+        vol.Optional("station_name"): cv.string,
+        vol.Optional("track"): cv.string,
+        vol.Optional("track_id"): cv.string,
+    }
+)
+
 SERVICE_ZONE_TOGGLE_MEMBER_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id_master"): cv.entity_id,
@@ -263,7 +293,31 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     return
 
                 # process service request.
-                if service.service == SERVICE_SNAPSHOT_STORE:
+                if service.service == SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS:
+                    source_title = service.data.get("source_title")
+                    await hass.async_add_executor_job(player.service_clear_source_nowplayingstatus, source_title)
+
+                elif service.service == SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS:
+                    source_title = service.data.get("source_title")
+                    album = service.data.get("album")
+                    artist = service.data.get("artist")
+                    artist_id = service.data.get("artist_id")
+                    art_url = service.data.get("art_url")
+                    description = service.data.get("description")
+                    duration = service.data.get("duration")
+                    genre = service.data.get("genre")
+                    play_status = service.data.get("play_status")
+                    position = service.data.get("position")
+                    session_id = service.data.get("session_id")
+                    station_location = service.data.get("station_location")
+                    station_name = service.data.get("station_name")
+                    track = service.data.get("track")
+                    track_id = service.data.get("track_id")
+                    await hass.async_add_executor_job(player.service_update_source_nowplayingstatus, source_title, 
+                                                      album, artist, artist_id, art_url, description, duration, genre, play_status, 
+                                                      position, session_id, station_location, station_name, track, track_id)
+
+                elif service.service == SERVICE_SNAPSHOT_STORE:
                     await hass.async_add_executor_job(player.service_snapshot_store)
 
                 elif service.service == SERVICE_SNAPSHOT_RESTORE:
@@ -323,7 +377,12 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     _logsi.LogError(STAppMessages.MSG_SERVICE_REQUEST_UNKNOWN, service.service, "service_handle_entity")
                     return
             
-            except HomeAssistantError: raise    # pass handled exception on through.
+            except HomeAssistantError as ex: 
+                
+                # log error, but not to system logger as HA will take care of it.
+                _logsi.LogError(str(ex), logToSystemLogger=False)
+                raise
+            
             except Exception as ex:
 
                 # log exception, but not to system logger as HA will take care of it.
@@ -399,7 +458,12 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     _logsi.LogError(STAppMessages.MSG_SERVICE_REQUEST_UNKNOWN, service.service, "service_handle_entityfromto")
                     return
             
-            except HomeAssistantError: raise    # pass handled exception on through.
+            except HomeAssistantError as ex: 
+                
+                # log error, but not to system logger as HA will take care of it.
+                _logsi.LogError(str(ex), logToSystemLogger=False)
+                raise
+            
             except Exception as ex:
             
                 # log exception, but not to system logger as HA will take care of it.
@@ -464,7 +528,12 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                 _logsi.LogDictionary(SILevel.Verbose, "Service Response data: '%s'" % (service.service), response, prettyPrint=True)
                 return response 
 
-            except HomeAssistantError: raise    # pass handled exception on through.
+            except HomeAssistantError as ex: 
+                
+                # log error, but not to system logger as HA will take care of it.
+                _logsi.LogError(str(ex), logToSystemLogger=False)
+                raise
+            
             except Exception as ex:
                 
                 # log exception, but not to system logger as HA will take care of it.
@@ -516,8 +585,7 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
 
             # did we resolve it? if not, then log a message.
             if player is None:
-                _logsi.LogError("Entity id value of '%s' could not be resolved to a MediaPlayerEntity instance for the '%s' method call" % (str(entity_id), service.service))
-                return None
+                raise HomeAssistantError("Entity id value of '%s' could not be resolved to a MediaPlayerEntity instance for the '%s' method call" % (str(entity_id), service.service))
 
             # return the MediaPlayerEntity instance.
             _logsi.LogVerbose("Entity id value of '%s' was resolved to MediaPlayerEntity instance for the '%s' method call" % (str(entity_id), service.service))
@@ -525,6 +593,14 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
 
 
         # register all services this component provides, and their corresponding schemas.
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS, SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS,
+            service_handle_entity,
+            schema=SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS_SCHEMA,
+        )
+
         _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_AUDIO_TONE_LEVELS, SERVICE_AUDIO_TONE_LEVELS_SCHEMA)
         hass.services.async_register(
             DOMAIN,
@@ -622,6 +698,14 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             SERVICE_SNAPSHOT_STORE,
             service_handle_entity,
             schema=SERVICE_SNAPSHOT_STORE_SCHEMA,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS, SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS,
+            service_handle_entity,
+            schema=SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS_SCHEMA,
         )
 
         _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_ZONE_TOGGLE_MEMBER, SERVICE_ZONE_TOGGLE_MEMBER_SCHEMA)

@@ -4,7 +4,7 @@ audio_tone_levels:
   fields:
     entity_id:
       name: Entity ID
-      description: Entity ID of the SoundTouch device whose audio tone levels will be adjusted.
+      description: Entity ID of the SoundTouchPlus device that will process the request.
       example: "media_player.soundtouch_livingroom"
       required: true
       selector:
@@ -34,13 +34,34 @@ audio_tone_levels:
           step: 25
           mode: slider
 
+clear_source_nowplayingstatus:
+  name: Clear Source NowPlayingStatus
+  description: Clears the NowPlayingStatus object for a given source and sourceAccount.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    source_title:
+      name: Source Title
+      description: Source input this content item is played with (case-sensitive).
+      example: "PRODUCT"
+      required: true
+      selector:
+        text:
+
 musicservice_station_list:
   name: Get Music Service Station List
   description: Retrieves the list of your stored stations from the specified music service (e.g. PANDORA, etc).
   fields:
     entity_id:
       name: Entity ID
-      description: Entity ID of the SoundTouch device that will query the specified music service.
+      description: Entity ID of the SoundTouchPlus device that will process the request.
       example: "media_player.soundtouch_livingroom"
       required: true
       selector:
@@ -80,7 +101,7 @@ play_contentitem:
   fields:
     entity_id:
       name: Entity ID
-      description: Entity ID of the SoundTouch device to play the media.
+      description: Entity ID of the SoundTouchPlus device that will process the request.
       example: "media_player.soundtouch_livingroom"
       required: true
       selector:
@@ -180,7 +201,7 @@ play_tts:
   fields:
     entity_id:
       name: Entity ID
-      description: Entity ID of the SoundTouch device to play the message.
+      description: Entity ID of the SoundTouchPlus device that will process the request.
       example: "media_player.soundtouch_livingroom"
       required: true
       selector:
@@ -248,7 +269,7 @@ play_url:
   fields:
     entity_id:
       name: Entity ID
-      description: Entity ID of the SoundTouch device to play the media.
+      description: Entity ID of the SoundTouchPlus device that will process the request.
       example: "media_player.soundtouch_livingroom"
       required: true
       selector:
@@ -316,7 +337,7 @@ preset_list:
   fields:
     entity_id:
       name: Entity ID
-      description: Entity ID of the SoundTouch device whose preset list will be retrieved.
+      description: Entity ID of the SoundTouchPlus device that will process the request.
       example: "media_player.soundtouch_livingroom"
       required: true
       selector:
@@ -337,7 +358,7 @@ reboot_device:
   fields:
     entity_id:
       name: Entity ID
-      description: Entity ID of the SoundTouch device to be rebooted.
+      description: Entity ID of the SoundTouchPlus device that will process the request.
       example: "media_player.soundtouch_livingroom"
       required: true
       selector:
@@ -360,7 +381,7 @@ recent_list:
   fields:
     entity_id:
       name: Entity ID
-      description: Entity ID of the SoundTouch device whose recently played list will be retrieved.
+      description: Entity ID of the SoundTouchPlus device that will process the request.
       example: "media_player.soundtouch_livingroom"
       required: true
       selector:
@@ -374,7 +395,7 @@ remote_keypress:
   fields:
     entity_id:
       name: Entity ID
-      description: Entity ID of the SoundTouch device to be controlled.
+      description: Entity ID of the SoundTouchPlus device that will process the request.
       example: "media_player.soundtouch_livingroom"
       required: true
       selector:
@@ -441,7 +462,7 @@ snapshot_restore:
   fields:
     entity_id:
       name: Entity ID
-      description: Entity ID of the SoundTouch device whose settings will be restored from a snapshot.
+      description: Entity ID of the SoundTouchPlus device that will process the request.
       example: "media_player.soundtouch_livingroom"
       required: true
       selector:
@@ -462,13 +483,136 @@ snapshot_store:
   fields:
     entity_id:
       name: Entity ID
-      description: Entity ID of the SoundTouch device whose settings will be stored to a snapshot.
+      description: Entity ID of the SoundTouchPlus device that will process the request.
       example: "media_player.soundtouch_livingroom"
       required: true
       selector:
         entity:
           integration: soundtouchplus
           domain: media_player
+
+update_source_nowplayingstatus:
+  name: Update Source NowPlayingStatus
+  description: Updates the NowPlayingStatus object for a given source and sourceAccount.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    source_title:
+      name: Source Title
+      description: Source input this content item is played with (case-sensitive).
+      example: "Product (TV)"
+      required: true
+      selector:
+        text:
+    album:
+      name: Album
+      description: The album of the playing track (if present). 
+      example: ""
+      required: false
+      selector:
+        text:
+    artist:
+      name: Artist
+      description: The creator of the track (if present).
+      example: ""
+      required: false
+      selector:
+        text:
+    artist_id:
+      name: Artist ID
+      description: Unique identifier of the artist, as provided by the source music service (if present).
+      example: ""
+      required: false
+      selector:
+        text:
+    art_url:
+      name: Art URL
+      description: A url link to the art image of the station (if present). 
+      example: "https://media.themoviedb.org/t/p/w533_and_h300_bestv2/3Kzc6V4MWs3RXCmE5DhAYnfWL8F.jpg"
+      required: false
+      selector:
+        text:
+    description:
+      name: Description
+      description: A brief description that was added to the track (if present). 
+      example: ""
+      required: false
+      selector:
+        text:
+    duration:
+      name: Duration
+      description: The track's duration (if present).
+      example: ""
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    genre:
+      name: Genre
+      description: The genre of the track (if present). 
+      example: ""
+      required: false
+      selector:
+        text:
+    play_status:
+      name: Play Status
+      description: Indicates whether the device is currently playing the embedded track. 
+      example: ""
+      required: false
+      selector:
+        text:
+    position:
+      name: Position
+      description: The current position of the playing media (if present). 
+      example: ""
+      required: false
+      selector:
+        number:
+          min: 0
+          mode: box
+    session_id:
+      name: Session ID
+      description: Unique identifier of the session, as provided by the source music service (if present). 
+      example: ""
+      required: false
+      selector:
+        text:
+    station_location:
+      name: Station Location
+      description: The station's location.
+      example: "Kodi HTPC"
+      required: false
+      selector:
+        text:
+    station_name:
+      name: Station Name
+      description: The station's name (if present). 
+      example: "Megamind vs The Doom Syndicate"
+      required: false
+      selector:
+        text:
+    track:
+      name: Track
+      description: The current media track name (if present). 
+      example: ""
+      required: false
+      selector:
+        text:
+    track_id:
+      name: Track ID
+      description: Unique identifier of the track, as provided by the source music service (if present). 
+      example: ""
+      required: false
+      selector:
+        text:
 
 zone_toggle_member:
   name: Zone Member Toggle

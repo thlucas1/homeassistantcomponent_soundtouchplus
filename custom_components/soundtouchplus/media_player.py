@@ -303,8 +303,8 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     @property
     def media_album_name(self):
         """ Album name of current playing media. """
-        if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
-            config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
+        config:NowPlayingStatus = self._GetNowPlayingStatusConfiguration()
+        if config is not None:
             return config.Album
         return None
 
@@ -312,8 +312,8 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     @property
     def media_artist(self):
         """ Artist of current playing media. """
-        if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
-            config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
+        config:NowPlayingStatus = self._GetNowPlayingStatusConfiguration()
+        if config is not None:
             return config.Artist
         return None
 
@@ -343,8 +343,8 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     @property
     def media_image_url(self):
         """ Image url of current playing media. """
-        if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
-            config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
+        config:NowPlayingStatus = self._GetNowPlayingStatusConfiguration()
+        if config is not None:
             return config.ArtUrl
         return None
 
@@ -352,8 +352,10 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     @property
     def media_title(self):
         """ Title of current playing media. """
-        if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
-            config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
+        config:NowPlayingStatus = self._GetNowPlayingStatusConfiguration()
+        if config is not None:
+            # if self._attr_media_content_type == 'music':
+            #     return f"{config.Artist} - {config.Track}"
             if config.StationName is not None:
                 return config.StationName
             if config.Artist is not None:
@@ -364,8 +366,8 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     @property
     def media_track(self):
         """ Artist of current playing media. """
-        if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
-            config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
+        config:NowPlayingStatus = self._GetNowPlayingStatusConfiguration()
+        if config is not None:
             return config.Track
         return None
 
@@ -1014,6 +1016,22 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LeaveMethod(SILevel.Verbose)
 
 
+    def _GetNowPlayingStatusConfiguration(self) -> NowPlayingStatus:
+
+        config:NowPlayingStatus = None
+
+        # get device nowplaying status.
+        if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
+            config = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
+
+            # do we have a source-specific nowplaying status?  if so, then return it.
+            cacheKey = "%s-%s:%s" % (SoundTouchNodes.nowPlaying.Path, config.Source, config.SourceAccount)
+            if cacheKey in self._client.ConfigurationCache:
+                config = self._client.ConfigurationCache[cacheKey]
+
+        return config
+
+
     # -----------------------------------------------------------------------------------
     # SoundTouch Event Notification Handlers
     #
@@ -1484,6 +1502,46 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LeaveMethod(SILevel.Debug)
 
         
+    def service_clear_source_nowplayingstatus(self, 
+                                              sourceTitle:str,
+                                              ) -> None:
+        """
+        Clears the NowPlayingStatus object for a given source title.
+        """
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug)
+            apiMethodParms.AppendKeyValue("sourceTitle", sourceTitle)
+            _logsi.LogMethodParmList(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE % (self.name, 'service_clear_source_nowplayingstatus'), apiMethodParms)
+
+            # get source and account values from source title.
+            sourceList:SourceList = self._client.GetSourceList(refresh=False)
+            sourceItem:SourceItem = sourceList.GetSourceItemByTitle(sourceTitle)
+
+            # clear nowplaying status for source.
+            cacheKey = "%s-%s:%s" % (SoundTouchNodes.nowPlaying.Path, sourceItem.Source, sourceItem.SourceAccount)
+            if cacheKey in self._client.ConfigurationCache:
+                del self._client.ConfigurationCache[cacheKey]
+                _logsi.LogVerbose("'%s': NowPlayingStatus for source '%s' was removed" % (self.name, cacheKey))
+
+            # inform Home Assistant of the status update.
+            self.async_write_ha_state()
+            return
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
+
+
     def service_musicservice_station_list(self, source:str, sourceAccount:str, sortType:str) -> NavigateResponse:
         """
         Retrieves a list of your stored stations from the specified music service (e.g. PANDORA, etc).
@@ -1955,6 +2013,73 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "service_snapshot_store")
             
             self._client.StoreSnapshot()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
+
+
+    def service_update_source_nowplayingstatus(self, 
+                                               sourceTitle:str,
+                                               album:str, artist:str, artistId:str, artUrl:str, description:str, 
+                                               duration:int, genre:str, playStatus:str, position:int, 
+                                               sessionId:str, stationLocation:str, stationName:str,
+                                               track:str, trackId:str,
+                                               ) -> None:
+        """
+        Updates the NowPlayingStatus object for a given source title.
+        """
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug)
+            apiMethodParms.AppendKeyValue("sourceTitle", sourceTitle)
+            apiMethodParms.AppendKeyValue("album", album)
+            apiMethodParms.AppendKeyValue("artist", artist)
+            apiMethodParms.AppendKeyValue("artistId", artistId)
+            apiMethodParms.AppendKeyValue("artUrl", artUrl)
+            apiMethodParms.AppendKeyValue("description", description)
+            apiMethodParms.AppendKeyValue("duration", duration)
+            apiMethodParms.AppendKeyValue("genre", genre)
+            apiMethodParms.AppendKeyValue("playStatus", playStatus)
+            apiMethodParms.AppendKeyValue("position", position)
+            apiMethodParms.AppendKeyValue("sessionId", sessionId)
+            apiMethodParms.AppendKeyValue("stationLocation", stationLocation)
+            apiMethodParms.AppendKeyValue("stationName", stationName)
+            apiMethodParms.AppendKeyValue("track", track)
+            apiMethodParms.AppendKeyValue("trackId", trackId)
+            _logsi.LogMethodParmList(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE % (self.name, 'service_update_source_nowplayingstatus'), apiMethodParms)
+
+            # validations.
+            if duration == 0: duration = None
+            if position == 0: position = None
+            
+            # get source and account values from source title.
+            sourceList:SourceList = self._client.GetSourceList(refresh=False)
+            sourceItem:SourceItem = sourceList.GetSourceItemByTitle(sourceTitle)
+
+            # call service.
+            config:NowPlayingStatus = self._client.UpdateNowPlayingStatusForSource(
+                                            sourceItem.Source, sourceItem.SourceAccount, 
+                                            album, artist, artistId, artUrl, description,
+                                            duration, genre, playStatus, position, 
+                                            sessionId, stationLocation, stationName,
+                                            track, trackId)
+            
+            # update nowplaying attributes.
+            self._UpdateNowPlayingData(config)
+
+            # inform Home Assistant of the status update.
+            self.async_write_ha_state()
+            return
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).

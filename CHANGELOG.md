@@ -6,6 +6,12 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.31 ] - 2024/03/05
+
+  * Added service `clear_source_nowplayingstatus` to clear the NowPlayingStatus for a given source.
+  * Added service `update_source_nowplayingstatus` to allow updates to the NowPlayingStatus for a given source.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.56.
+
 ###### [ 1.0.30 ] - 2024/03/02
 
   * Updated underlying `spotifywebapiPython` package requirement to version 1.0.33.

@@ -58,7 +58,7 @@
       "fields": {
         "entity_id": {
           "name": "Entity ID",
-          "description": "Entity ID of the SoundTouch device whose audio tone levels will be adjusted."
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
         },
         "bass_level": {
           "name": "Bass Level",
@@ -70,13 +70,27 @@
         }
       }
     },
+    "clear_source_nowplayingstatus": {
+      "name": "Clear Source NowPlayingStatus",
+      "description": "Clears the NowPlayingStatus object for a given source and sourceAccount.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        },
+        "source_title": {
+          "name": "Source Title",
+          "description": "Source input this content item is played with (case-sensitive)."
+        }
+      }
+    },
     "musicservice_station_list": {
       "name": "Get Music Service Station List",
       "description": "Retrieves the list of your stored stations from the specified music service (e.g. PANDORA, etc).",
       "fields": {
         "entity_id": {
           "name": "Entity ID",
-          "description": "Entity ID of the SoundTouch device that will query the specified music service."
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
         },
         "source": {
           "name": "Source",
@@ -98,7 +112,7 @@
       "fields": {
         "entity_id": {
           "name": "Entity ID",
-          "description": "Entity ID of the SoundTouch device to play the media."
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
         },
         "name": {
           "name": "Item Name",
@@ -158,7 +172,7 @@
       "fields": {
         "entity_id": {
           "name": "Entity ID",
-          "description": "Entity ID of the SoundTouch device to play the message."
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
         },
         "message": {
           "name": "Message Text",
@@ -196,7 +210,7 @@
       "fields": {
         "entity_id": {
           "name": "Entity ID",
-          "description": "Entity ID of the SoundTouch device to play the media."
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
         },
         "url": {
           "name": "URL",
@@ -234,7 +248,7 @@
       "fields": {
         "entity_id": {
           "name": "Entity ID",
-          "description": "Entity ID of the SoundTouch device whose preset list will be retrieved."
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
         },
         "include_empty_slots": {
           "name": "Include Empty Slots?",
@@ -248,7 +262,7 @@
       "fields": {
         "entity_id": {
           "name": "Entity ID",
-          "description": "Entity ID of the SoundTouch device to be rebooted."
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
         },
         "port": {
           "name": "SSH Port Number",
@@ -262,7 +276,7 @@
       "fields": {
         "entity_id": {
           "name": "Entity ID",
-          "description": "Entity ID of the SoundTouch device whose recently played list will be retrieved."
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
         }
       }
     },
@@ -272,7 +286,7 @@
       "fields": {
         "entity_id": {
           "name": "Entity ID",
-          "description": "Entity ID of the SoundTouch device to be controlled."
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
         },
         "key_id": {
           "name": "Key Identifier",
@@ -290,7 +304,7 @@
       "fields": {
         "entity_id": {
           "name": "Entity ID",
-          "description": "Entity ID of the SoundTouch device whose settings will be restored from a snapshot."
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
         },
         "restore_volume": {
           "name": "Restore Volume?",
@@ -304,7 +318,77 @@
       "fields": {
         "entity_id": {
           "name": "Entity ID",
-          "description": "Entity ID of the SoundTouch device whose settings will be stored to a snapshot."
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        }
+      }
+    },
+    "update_source_nowplayingstatus": {
+      "name": "Update Source NowPlayingStatus",
+      "description": "Updates the NowPlayingStatus object for a given source and sourceAccount.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        },
+        "source_title": {
+          "name": "Source Title",
+          "description": "Source input this content item is played with (case-sensitive)."
+        },
+        "album": {
+          "name": "Album",
+          "description": "The album of the playing track (if present). "
+        },
+        "artist": {
+          "name": "Artist",
+          "description": "The creator of the track (if present). "
+        },
+        "artist_id": {
+          "name": "Artist ID",
+          "description": "Unique identifier of the artist, as provided by the source music service (if present)."
+        },
+        "art_url": {
+          "name": "Art URL",
+          "description": "A url link to the art image of the station (if present). "
+        },
+        "description": {
+          "name": "Description",
+          "description": "A brief description that was added to the track (if present). "
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "The track's duration (if present)."
+        },
+        "genre": {
+          "name": "Genre",
+          "description": "The genre of the track (if present). "
+        },
+        "play_status": {
+          "name": "Play Status",
+          "description": "Indicates whether the device is currently playing the embedded track. "
+        },
+        "position": {
+          "name": "Position",
+          "description": "The current position of the playing media (if present)."
+        },
+        "session_id": {
+          "name": "Session ID",
+          "description": "Unique identifier of the session, as provided by the source music service (if present). "
+        },
+        "station_location": {
+          "name": "Station Location",
+          "description": "The station's location."
+        },
+        "station_name": {
+          "name": "Station Name",
+          "description": "The station's name (if present). "
+        },
+        "track": {
+          "name": "Track",
+          "description": "The current media track name (if present). "
+        },
+        "track_id": {
+          "name": "Track ID",
+          "description": "Unique identifier of the track, as provided by the source music service (if present)."
         }
       }
     },
