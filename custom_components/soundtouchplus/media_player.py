@@ -790,7 +790,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                             # play announcement via play_tts service.
                             _logsi.LogVerbose("'%s': MediaPlayer is calling play_tts service to play announcement: '%s'" % (self.name, message))
                             await self.hass.async_add_executor_job(
-                                self.service_play_tts, message, "Announcement", "Announcement", None, ttsUrl, None, None
+                                self.service_play_tts, message, "Announcement", "Announcement", None, ttsUrl, 0, None
                                 )
                             return
 
