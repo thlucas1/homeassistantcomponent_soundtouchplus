@@ -238,7 +238,7 @@ play_tts:
         text:
     tts_url:
       name: TTS Service Url
-      description: The Text-To-Speech url used to translate the message.  The value should contain a "{saytext}" format parameter, that will be used to insert the encoded message text.
+      description: The Text-To-Speech url used to translate the message.  The value should contain a '{saytext}' format parameter, that will be used to insert the encoded message text.
       example: "http://translate.google.com/translate_tts?ie=UTF-8&tl=EN&client=tw-ob&q={saytext}"
       required: false
       selector:

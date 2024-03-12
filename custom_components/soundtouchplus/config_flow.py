@@ -44,6 +44,7 @@ from .const import (
     CONF_DEVICE_ID,
     CONF_OPTION_SOURCE_LIST,
     CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID,
+    CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE,
     CONF_PING_WEBSOCKET_INTERVAL,
     CONF_PORT_WEBSOCKET,
     DEFAULT_PING_WEBSOCKET_INTERVAL,
@@ -444,6 +445,7 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
                 # update config entry options from user input values.
                 self._Options[CONF_OPTION_SOURCE_LIST] = user_input.get(CONF_OPTION_SOURCE_LIST, None)
                 self._Options[CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID] = user_input.get(CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID, None)
+                self._Options[CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE] = user_input.get(CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE, None)
                 
                 # store the updated config entry options.
                 return await self._update_options(self._Options)
@@ -462,15 +464,20 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
             # default source list to empty array, which will cause the entire list to be displayed in the media player.
             schema = vol.Schema(
                 {
-                    vol.Optional(CONF_OPTION_SOURCE_LIST, default=self._Options.get(CONF_OPTION_SOURCE_LIST, [])): cv.multi_select(source_list_all),
+                    vol.Optional(CONF_OPTION_SOURCE_LIST, 
+                                 default=self._Options.get(CONF_OPTION_SOURCE_LIST, [])
+                                 ): cv.multi_select(source_list_all),
                     # note - DO NOT use "default" argument on the following - use "suggested_value" instead.
                     # using "default=" does not allow a null entity_id to be selected!
                     vol.Optional(CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID, 
                                  description={"suggested_value": self._Options.get(CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID)},
-                                ): selector.EntitySelector(selector.EntitySelectorConfig(integration=DOMAIN_SPOTIFYPLUS, 
-                                                           domain=Platform.MEDIA_PLAYER, 
-                                                           multiple=False),
+                                 ): selector.EntitySelector(selector.EntitySelectorConfig(integration=DOMAIN_SPOTIFYPLUS, 
+                                                            domain=Platform.MEDIA_PLAYER, 
+                                                            multiple=False),
                     ),
+                    vol.Optional(CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE, 
+                                 default=self._Options.get(CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE, False)
+                                 ): cv.boolean,
                 }
             )
             

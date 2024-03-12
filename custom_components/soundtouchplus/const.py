@@ -13,6 +13,7 @@ CONF_PING_WEBSOCKET_INTERVAL = "ping_websocket_interval"
 CONF_PORT_WEBSOCKET = "port_websocket"
 CONF_OPTION_SOURCE_LIST = "source_list"
 CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID = "spotify_mediaplayer_entity_id"
+CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE = "tts_force_google_translate"
 
 DEFAULT_PING_WEBSOCKET_INTERVAL = 0
 DEFAULT_PORT = 8090

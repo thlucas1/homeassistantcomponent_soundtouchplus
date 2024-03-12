@@ -8,6 +8,7 @@ from typing import Any
 
 from .const import (
     CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID,
+    CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE,
 )
 
 
@@ -50,3 +51,11 @@ class InstanceDataSoundTouchPlus:
         """
         return self.options.get(CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID, None)
     
+    @property
+    def OptionTtsForceGoogleTranslate(self) -> bool | None:
+        """
+        TTS Force Google Translate option.  If True, all play media announcement type of 
+        requests will use the SoundTouchPlus Play TTS service (which uses Google
+        Translate); otherwise, use the specified service.
+        """
+        return self.options.get(CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE, False)

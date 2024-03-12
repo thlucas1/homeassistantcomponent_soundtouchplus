@@ -13,9 +13,10 @@ import datetime as dt
 from functools import partial
 import logging
 import re
+from typing import Any
+import urllib.parse
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
-from typing import Any
 
 from homeassistant.components import media_source
 from homeassistant.components.media_player import (
@@ -57,7 +58,6 @@ from .browse_media import (
 )
 from .const import (
     CONF_OPTION_SOURCE_LIST, 
-    CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID, 
     DOMAIN, 
     DOMAIN_SPOTIFYPLUS
 )
@@ -757,8 +757,46 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.EnterMethod(SILevel.Debug)
             _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS, self.name, "async_play_media", "media_type='%s', media_id='%s', kwargs='%s'" % (str(media_type), media_id, str(kwargs)))
 
+            # is media to play from a media source?
             if media_source.is_media_source_id(media_id):
-                _logsi.LogVerbose("'%s': MediaPlayer detected that media_id '%s' is a media-source item" % (self.name, media_id))
+                _logsi.LogVerbose("'%s': MediaPlayer detected that media_id is a media-source item: '%s'" % (self.name, media_id))
+                
+                # is this an announcement tts message?
+                announce:bool = kwargs.get(ATTR_MEDIA_ANNOUNCE, False)
+                
+                if (announce == True) \
+                and (media_id is not None) \
+                and (media_id.startswith('media-source://tts/')):
+                    
+                    _logsi.LogVerbose("'%s': MediaPlayer detected that media_id is an announcement: '%s'" % (self.name, media_id))
+
+                    # ensure we have querystring parameters.
+                    idx:int = media_id.find('?')
+                    if idx > -1:
+                        
+                        urlValues:dict = dict(urllib.parse.parse_qsl(media_id[idx+1:], keep_blank_values=True))
+                        _logsi.LogDictionary(SILevel.Verbose, "'%s': MediaPlayer announcement parameters dictionary: '%s'" % (self.name, str(urlValues)), urlValues)
+                        
+                        # are we forcing tts announcements to use our play tts service?
+                        if self.data.OptionTtsForceGoogleTranslate:
+
+                            # get message parameters.
+                            # parameters will vary based upon the media-source (e.g. google cloud vs google translate).
+                            message:str = urlValues.get("message", None)
+                            language:str = urlValues.get("language", "EN")
+                            voice:str = urlValues.get("voice", None)  # google cloud parameter
+                            ttsUrl:str = "http://translate.google.com/translate_tts?ie=UTF-8&tl={language}&client=tw-ob&q={saytext}".replace("{language}", language)
+    
+                            # play announcement via play_tts service.
+                            _logsi.LogVerbose("'%s': MediaPlayer is calling play_tts service to play announcement: '%s'" % (self.name, message))
+                            await self.hass.async_add_executor_job(
+                                self.service_play_tts, message, "Announcement", "Announcement", None, ttsUrl, None, None
+                                )
+                            return
+
+                # resolve the media to play.  
+                # if it's an announcement, then it turns the text message into a playable MP3 
+                # url from the selected tts media source.
                 play_item = await media_source.async_resolve_media(
                     self.hass, media_id, self.entity_id
                 )
@@ -816,7 +854,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
                 _logsi.LogDictionary(SILevel.Verbose, "'%s': MediaPlayer play media detected keyword arguments" % self.name, extra_options, prettyPrint=True)
                 source = extra_options.get(ATTR_INPUT_SOURCE, None)
-                announce = bool(extra_options.get(ATTR_MEDIA_ANNOUNCE, False))
+                announce = bool(kwargs.get(ATTR_MEDIA_ANNOUNCE, False))
 
                 # if this is an announcement (e.g. say text) then set arguments to reflect this.
                 if announce:
