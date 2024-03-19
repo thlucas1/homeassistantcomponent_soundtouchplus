@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.34 ] - 2024/03/19
+
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.36.
+
 ###### [ 1.0.33 ] - 2024/03/12
 
   * Updated TTS force Google Translate support to use a volume level of zero, which causes the announcement to be played at the current volume level of the SoundTouch device.  Prior to the fix, the volume level was set at 30.
