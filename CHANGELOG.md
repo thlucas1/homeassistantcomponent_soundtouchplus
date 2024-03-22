@@ -6,6 +6,16 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+MediaPlayerState
+
+###### [ 1.0.36 ] - 2024/03/22
+
+  * Updated `media_player.state` property to return the correct power state when the device has been placed into STANDBY.  This corrects a bug that was introduced in v1.0.28, which set the state to STANDBY instead of OFF.
+  * Updated `media_player.media_image_url` to return the content item coverart if present; otherwise, return the nowplaying arturl value.
+  * Added new extra state attribute named `soundtouchplus_nowplaying_isadvertisement` - True if the current source is playing an advertisement; otherwise, False.  Note that not all sources support advertisement detection.
+  * Added new extra state attribute named `soundtouchplus_nowplaying_isfavorite` - True if the current source content has been marked as a favorite; otherwise, False.  Note that not all sources support favorites.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.57.
+
 ###### [ 1.0.35 ] - 2024/03/20
 
   * Updated underlying `spotifywebapiPython` package requirement to version 1.0.37.

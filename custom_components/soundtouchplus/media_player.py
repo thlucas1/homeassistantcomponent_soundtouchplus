@@ -72,6 +72,8 @@ if (_logsi == None):
 _logsi.SystemLogger = logging.getLogger(__name__)
 
 # our extra state attribute names.
+ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISADVERTISEMENT = "soundtouchplus_nowplaying_isadvertisement"
+ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISFAVORITE = "soundtouchplus_nowplaying_isfavorite"
 ATTR_SOUNDTOUCHPLUS_PRESETS_LASTUPDATED = "soundtouchplus_presets_lastupdated"
 ATTR_SOUNDTOUCHPLUS_RECENTS_LASTUPDATED = "soundtouchplus_recents_lastupdated"
 ATTR_SOUNDTOUCHPLUS_SOUND_MODE = "soundtouchplus_sound_mode"
@@ -171,7 +173,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             # initialize base class attributes (MediaPlayerEntity).
             self._attr_icon = "mdi:speaker"
             self._attr_media_image_remotely_accessible = False
-            self._attr_state = MediaPlayerState.IDLE
+            self._attr_state = None
             
             # A unique_id for this entity within this domain.
             # Note: This is NOT used to generate the user visible Entity ID used in automations.
@@ -262,10 +264,12 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         """ Return entity specific state attributes. """
         # build list of our extra state attributes to return to HA UI.
         attributes = {}
+        attributes[ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISADVERTISEMENT] = False
+        attributes[ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISFAVORITE] = False
         attributes[ATTR_SOUNDTOUCHPLUS_PRESETS_LASTUPDATED] = self.soundtouchplus_presets_lastupdated
         attributes[ATTR_SOUNDTOUCHPLUS_RECENTS_LASTUPDATED] = self.soundtouchplus_recents_lastupdated
         attributes[ATTR_SOUNDTOUCHPLUS_SOURCE] = self.soundtouchplus_source
-
+        
         if SoundTouchNodes.audiodspcontrols.Path in self._client.ConfigurationCache:
             config:AudioDspControls = self._client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path]
             attributes[ATTR_SOUNDTOUCHPLUS_SOUND_MODE] = config.AudioMode
@@ -281,6 +285,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         else:
             attributes[ATTR_SOUNDTOUCHPLUS_TONE_BASS_LEVEL] = ATTRVALUE_NOT_CAPABLE
             attributes[ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL] = ATTRVALUE_NOT_CAPABLE
+
+        if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
+            config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
+            attributes[ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISADVERTISEMENT] = config.IsAdvertisement
+            attributes[ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISFAVORITE] = config.IsFavorite
             
         return attributes
 
@@ -345,7 +354,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         """ Image url of current playing media. """
         config:NowPlayingStatus = self._GetNowPlayingStatusConfiguration()
         if config is not None:
-            return config.ArtUrl
+            return config.ContainerArtUrl
         return None
 
 
@@ -421,9 +430,9 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         if SoundTouchNodes.nowPlaying.Path in self._client.ConfigurationCache:
             config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
             if config.Source == SoundTouchSources.STANDBY.value:
-                result = MediaPlayerState.STANDBY
+                result = MediaPlayerState.OFF
             elif config.Source == SoundTouchSources.INVALID:
-                result = MediaPlayerState.STANDBY
+                result = None
             elif config.PlayStatus == PlayStatusTypes.Playing.value:
                 result = MediaPlayerState.PLAYING
             elif config.PlayStatus == PlayStatusTypes.Buffering.value:
@@ -435,7 +444,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             elif config.PlayStatus == PlayStatusTypes.Invalid.value:
                 result = MediaPlayerState.PAUSED
         else:
-            result = MediaPlayerState.OFF
+            result = None
         return result
 
 
