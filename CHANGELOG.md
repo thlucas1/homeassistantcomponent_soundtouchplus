@@ -8,6 +8,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 MediaPlayerState
 
+###### [ 1.0.37 ] - 2024/03/27
+
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.40.
+
 ###### [ 1.0.36 ] - 2024/03/22
 
   * Updated `media_player.state` property to return the correct power state when the device has been placed into STANDBY.  This corrects a bug that was introduced in v1.0.28, which set the state to STANDBY instead of OFF.
