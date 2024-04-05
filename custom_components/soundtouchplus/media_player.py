@@ -363,12 +363,12 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         """ Title of current playing media. """
         config:NowPlayingStatus = self._GetNowPlayingStatusConfiguration()
         if config is not None:
-            # if self._attr_media_content_type == 'music':
-            #     return f"{config.Artist} - {config.Track}"
             if config.StationName is not None:
                 return config.StationName
-            if config.Artist is not None:
-                return f"{config.Artist} - {config.Track}"
+            elif config.Artist is not None:
+                return config.Track
+            else:
+                return config.Track
         return None
 
 
@@ -2378,6 +2378,23 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                     media_content_id
                 )
 
+            elif media_content_type == 'favorites':
+                # ignore Sonos-Card "favorites" node queries.
+                _logsi.LogVerbose("'%s': ignoring Sonos-Card favorites query (no SoundTouch equivalent)" % self.name)
+                
+                # Sonos-Card requires a valid BrowseMedia object, so return an empty one.
+                browseMedia:BrowseMedia = BrowseMedia(
+                    can_expand=False,
+                    can_play=False,
+                    children=[],
+                    children_media_class=None,
+                    media_class=None,
+                    media_content_id=media_content_id,
+                    media_content_type=media_content_type,
+                    title="Favorites not supported",
+                    )
+                return browseMedia
+                
             else:
                 
                 # set library map based upon the content we are currently browsing.
