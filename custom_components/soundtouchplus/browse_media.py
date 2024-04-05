@@ -87,7 +87,6 @@ class BrowsableMedia(StrEnum):
     SPOTIFY_CATEGORYS = "spotify_categorys"
     SPOTIFY_FEATURED_PLAYLISTS = "spotify_featured_playlists"
     SPOTIFY_NEW_RELEASES = "spotify_new_releases"
-    #SPOTIFY_USER_DAILY_MIXES = "spotify_user_daily_mixes"
     SPOTIFY_USER_FOLLOWED_ARTISTS = "spotify_user_followed_artists"
     SPOTIFY_USER_PLAYLISTS = "spotify_user_playlists"
     SPOTIFY_USER_RECENTLY_PLAYED = "spotify_user_recently_played"
@@ -276,13 +275,6 @@ SPOTIFY_LIBRARY_MAP = {
         "parent": MediaClass.DIRECTORY,
         "children": MediaClass.PLAYLIST,
     },
-    # BrowsableMedia.SPOTIFY_USER_DAILY_MIXES.value: {
-    #     "title": "Daily Mixes",
-    #     "title_node": "Spotify Daily Mix Playlists",
-    #     "image": f"/local/images/{DOMAIN}_medialib_spotify_daily_mixes.png",
-    #     "parent": MediaClass.DIRECTORY,
-    #     "children": MediaClass.PLAYLIST,
-    # },
     BrowsableMedia.SPOTIFY_USER_RECENTLY_PLAYED.value:  {
         "title": "Recently Played",
         "title_node": "Spotify Recently Played",
@@ -685,10 +677,6 @@ def browse_media_node(hass:HomeAssistant,
             media_content_id = 'spotify:category:0JQ5DAt0tbjZptfcdMSKl3'   # special hidden category "Made For You"
             media, items = _SpotifyPlusGetCategoryPlaylists(hass, data, playerName, media_content_type, media_content_id)
 
-        # elif media_content_type == BrowsableMedia.SPOTIFY_USER_DAILY_MIXES:
-        #     _logsi.LogVerbose(STAppMessages.MSG_SPOTIFYPLUS_SERVICE_EXECUTE % (playerName, DOMAIN_SPOTIFYPLUS, media_content_type))
-        #     media, items = _SpotifyPlusSearchPlaylists(hass, data, playerName, media_content_type, media_content_id, data.OptionSpotifyMediaPlayerEntityId, "Daily Mix", 200, True)
-            
         elif media_content_type == MediaType.ALBUM:
             _logsi.LogVerbose(STAppMessages.MSG_SPOTIFYPLUS_SERVICE_EXECUTE % (playerName, DOMAIN_SPOTIFYPLUS, media_content_type))
             media, items = _SpotifyPlusGetAlbum(hass, data, playerName, media_content_type, media_content_id)

@@ -8,6 +8,17 @@ Change are listed in reverse chronological order (newest to oldest).
 
 MediaPlayerState
 
+###### [ 1.0.39 ] - 2024/04/05
+
+  * Updated Media Browser logic to return an empty `BrowseMedia` object when ignoring Sonos-Card 'favorites' node requests, as a null object was causing numerous `Browse Media should use new BrowseMedia class` log warnings.
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.42.
+
+###### [ 1.0.38 ] - 2024/04/04
+
+  * Updated Media Browser logic to ignore Sonos-Card 'favorites' node requests, as there is no SoundTouch direct equivalent.
+  * Updated `media_player.media_title` attribute to just return the track name (not the `artist - track name`).
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.41.
+
 ###### [ 1.0.37 ] - 2024/03/27
 
   * Updated underlying `spotifywebapiPython` package requirement to version 1.0.40.
