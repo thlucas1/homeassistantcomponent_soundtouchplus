@@ -80,6 +80,7 @@ class BrowsableMedia(StrEnum):
     PANDORA_STATIONS = "pandora_stations"
     SOUNDTOUCH_PRESETS = "soundtouch_presets"
     SOUNDTOUCH_RECENTLY_PLAYED = "soundtouch_recently_played"
+    # FAVORITES = "favorites"
     # spotify library types should all start with "spotify_".
     SPOTIFY_LIBRARY_INDEX = "spotify_library_index"
     SPOTIFY_CATEGORY_PLAYLISTS = "spotify_category_playlists"
@@ -127,6 +128,14 @@ LIBRARY_MAP = {
         "parent": MediaClass.DIRECTORY,
         "children": MediaClass.TRACK,
     },
+    # BrowsableMedia.FAVORITES.value: {
+    #     "title": "Favorites",
+    #     "title_node": "SoundTouchPlus Favorites",
+    #     "image": f"/local/images/{DOMAIN}_medialib_favorites.png",
+    #     "parent": MediaClass.DIRECTORY,
+    #     "children": MediaClass.TRACK,
+    #     "is_index_item": False,
+    # },
     BrowsableMedia.SPOTIFY_LIBRARY_INDEX.value: {
         "title": "Spotify",
         "title_node": "SoundTouchPlus Spotify Media Library",
@@ -596,6 +605,11 @@ def browse_media_node(hass:HomeAssistant,
             media:RecentList = data.client.GetRecentList(True, resolveSourceTitles=True)
             items = media.Recents
             
+        # elif media_content_type == BrowsableMedia.FAVORITES:
+        #     _logsi.LogVerbose("'%s': querying client device for SoundTouch presets" % playerName)
+        #     media:PresetList = data.client.GetPresetList(refresh=True, resolveSourceTitles=True)
+        #     items = media.Presets
+
         elif media_content_type == BrowsableMedia.PANDORA_STATIONS:
             _logsi.LogVerbose("'%s': querying client device for Pandora stations" % playerName)
             sourceItems:SourceList = data.client.GetSourceList(refresh=False)

@@ -2379,6 +2379,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 )
 
             elif media_content_type == 'favorites':
+                
                 # ignore Sonos-Card "favorites" node queries.
                 _logsi.LogVerbose("'%s': ignoring Sonos-Card favorites query (no SoundTouch equivalent)" % self.name)
                 
