@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.41 ] - 2024/04/21
+
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.43.
+
 ###### [ 1.0.40 ] - 2024/04/15
 
   * Corrected a bug in the underlying `bosesoundtouchapi` that was returning an incorrect image url for currently playing media.  This incorrect value was being used by the `media_player.media_image_url` value, which caused an incorrect image to be displayed for currently playing media in the media player UI.
