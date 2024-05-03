@@ -5,9 +5,9 @@ import base64
 import os
 import pickle
 import logging
+import enum
 from typing import Any, Tuple
 
-from homeassistant.backports.enum import StrEnum
 from homeassistant.components import media_source
 from homeassistant.components.media_player import (
     BrowseError,
@@ -70,7 +70,7 @@ SPOTIFY_BROWSE_LIMIT = 50
 SPOTIFY_BROWSE_LIMIT_TOTAL = 200
 """ Max number of items to return from a SpotifyPlus integration request that supports paging. """
 
-class BrowsableMedia(StrEnum):
+class BrowsableMedia(enum.StrEnum):
     """
     Enum of browsable media.
     Contains the library root node key value definitions.

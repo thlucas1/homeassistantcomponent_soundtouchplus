@@ -55,6 +55,20 @@ clear_source_nowplayingstatus:
       selector:
         text:
 
+get_source_list:
+  name: Get Source List
+  description: Retrieves the list of sources defined to the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+
 musicservice_station_list:
   name: Get Music Service Station List
   description: Retrieves the list of your stored stations from the specified music service (e.g. PANDORA, etc).
@@ -78,7 +92,7 @@ musicservice_station_list:
     source_account:
       name: Source Account
       description: Music service source account (e.g. the music service user-id).  Default is none.
-      example: ""
+      example: "youremail@provider.com"
       required: false
       selector:
         text:

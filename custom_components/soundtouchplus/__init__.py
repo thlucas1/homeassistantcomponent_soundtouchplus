@@ -41,6 +41,7 @@ from .const import (
     SERVICE_REMOTE_KEYPRESS,
     SERVICE_SNAPSHOT_RESTORE,
     SERVICE_SNAPSHOT_STORE,
+    SERVICE_GET_SOURCE_LIST,
     SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS,
     SERVICE_ZONE_TOGGLE_MEMBER
 )
@@ -97,6 +98,12 @@ SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
         vol.Required("source_title"): cv.string,
+    }
+)
+
+SERVICE_GET_SOURCE_LIST_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
     }
 )
 
@@ -500,7 +507,13 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                 response:dict = {}
 
                 # process service request.
-                if service.service == SERVICE_MUSICSERVICE_STATION_LIST:
+                if service.service == SERVICE_GET_SOURCE_LIST:
+
+                    # get list of sources defined for the device.
+                    results:SourceList = await hass.async_add_executor_job(player.service_get_source_list)
+                    response = results.ToDictionary()
+
+                elif service.service == SERVICE_MUSICSERVICE_STATION_LIST:
 
                     # get list of music service stations.
                     source = service.data.get("source")
@@ -698,6 +711,15 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             SERVICE_SNAPSHOT_STORE,
             service_handle_entity,
             schema=SERVICE_SNAPSHOT_STORE_SCHEMA,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_SOURCE_LIST, SERVICE_GET_SOURCE_LIST_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_SOURCE_LIST,
+            service_handle_getlist,
+            schema=SERVICE_GET_SOURCE_LIST_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
         )
 
         _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS, SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS_SCHEMA)

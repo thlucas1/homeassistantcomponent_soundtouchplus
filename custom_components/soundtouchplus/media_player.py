@@ -1,6 +1,16 @@
 """
 Support for interface with a Bose SoundTouch.
 """
+
+# Important notes about HA State writes:
+#
+# `self.async_write_ha_state()` should always be used inside of the event loop (any method that is async itself or a callback). 
+# If you are in a `async def` method or one wrapped in `@callback`, use `async_write_ha_state` since you are inside of the event loop. 
+
+# `self.schedule_update_ha_state(force_refresh=True)` should be unsed when not inside of the event loop (e.g. for sync functions that are ran 
+# inside of the executor thread).  If you are in a `def` method (no async) then use `schedule_update_ha_state` since you are inside of the event loop.
+
+
 from __future__ import annotations
 
 # external package imports.
@@ -1131,7 +1141,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             self._socket.StopNotification()
             
             # inform Home Assistant of the status update.
-            self.async_write_ha_state()
+            self.schedule_update_ha_state(force_refresh=True)
             
 
     @callback
@@ -1150,7 +1160,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # inform Home Assistant of the status update.
             self.update()
-            self.async_write_ha_state()
+            self.schedule_update_ha_state(force_refresh=True)
 
     @callback
     def _OnSoundTouchUpdateEvent_audiodspcontrols(self, client:SoundTouchClient, args:Element) -> None:
@@ -1170,7 +1180,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogVerbose("'%s': MediaPlayer audiodspcontrols (sound_mode_list) updated: %s" % (self.name, config.ToString()))
             
             # inform Home Assistant of the status update.
-            self.async_write_ha_state()
+            self.schedule_update_ha_state(force_refresh=True)
             
 
     @callback
@@ -1191,7 +1201,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogVerbose("'%s': MediaPlayer audioproducttonecontrols updated: %s" % (self.name, config.ToString()))
             
             # inform Home Assistant of the status update.
-            self.async_write_ha_state()
+            self.schedule_update_ha_state(force_refresh=True)
 
 
     @callback
@@ -1216,7 +1226,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 self._UpdateNowPlayingData(config)
 
             # inform Home Assistant of the status update.
-            self.async_write_ha_state()
+            self.schedule_update_ha_state(force_refresh=True)
             
         # reset websocket error count, as we know websockets are active again.
         self.websocket_error_count = 0
@@ -1243,7 +1253,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # inform Home Assistant of the status update.
             self.soundtouchplus_presets_lastupdated = config.LastUpdatedOn
-            self.async_write_ha_state()
+            self.schedule_update_ha_state(force_refresh=True)
 
 
     @callback
@@ -1267,7 +1277,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # inform Home Assistant of the status update.
             self.soundtouchplus_recents_lastupdated = config.LastUpdatedOn
-            self.async_write_ha_state()
+            self.schedule_update_ha_state(force_refresh=True)
 
 
     @callback
@@ -1287,7 +1297,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogVerbose("'%s': sources (source_list) updated = %s" % (self.name, config.ToString()))
 
             # inform Home Assistant of the status update.
-            self.async_write_ha_state()
+            self.schedule_update_ha_state(force_refresh=True)
 
 
     @callback
@@ -1308,7 +1318,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogVerbose("'%s': MediaPlayer volume updated: %s" % (self.name, config.ToString()))
 
             # inform Home Assistant of the status update.
-            self.async_write_ha_state()
+            self.schedule_update_ha_state(force_refresh=True)
 
 
     @callback
@@ -1332,7 +1342,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogArray(SILevel.Verbose, "'%s': MediaPlayer zone updated - group_members list" % self.name, self._attr_group_members)
 
             # inform Home Assistant of the status update.
-            self.async_write_ha_state()
+            self.schedule_update_ha_state(force_refresh=True)
 
 
     # -----------------------------------------------------------------------------------
@@ -1575,8 +1585,38 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 _logsi.LogVerbose("'%s': NowPlayingStatus for source '%s' was removed" % (self.name, cacheKey))
 
             # inform Home Assistant of the status update.
-            self.async_write_ha_state()
+            self.schedule_update_ha_state(force_refresh=True)
             return
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
+
+
+    def service_get_source_list(self) -> SourceList:
+        """
+        Retrieves the list of sources defined for a device.
+
+        Returns:
+            A `SourceList` instance that contains defined sources.
+        """
+        try:
+
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "service_get_source_list")
+
+            # get preset list.
+            sourceList:SourceList = self._client.GetSourceList(True)
+            
+            # return to caller.
+            return sourceList
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
@@ -1886,8 +1926,16 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             # trace.
             _logsi.EnterMethod(SILevel.Debug)
             _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "service_preset_list")
+
+            # get preset list.
+            presetList:PresetList = self._client.GetPresetList(True, resolveSourceTitles=True)
             
-            return self._client.GetPresetList(True, resolveSourceTitles=True)
+            # update state attributes.
+            self.soundtouchplus_presets_lastupdated = presetList.LastUpdatedOn
+            self.schedule_update_ha_state(force_refresh=True)
+
+            # return to caller.
+            return presetList
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
@@ -1955,8 +2003,16 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             # trace.
             _logsi.EnterMethod(SILevel.Debug)
             _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "service_recent_list")
+
+            # get recents list.
+            recentList:RecentList = self._client.GetRecentList(True, resolveSourceTitles=True)
             
-            return self._client.GetRecentList(True, resolveSourceTitles=True)
+            # update state attributes.
+            self.soundtouchplus_recents_lastupdated = recentList.LastUpdatedOn
+            self.schedule_update_ha_state(force_refresh=True)
+
+            # return to caller.
+            return recentList
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
@@ -2125,7 +2181,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             self._UpdateNowPlayingData(config)
 
             # inform Home Assistant of the status update.
-            self.async_write_ha_state()
+            self.schedule_update_ha_state(force_refresh=True)
             return
 
         # the following exceptions have already been logged, so we just need to

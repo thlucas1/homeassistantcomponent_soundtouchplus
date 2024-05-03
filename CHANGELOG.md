@@ -6,6 +6,17 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.42 ] - 2024/05/03
+
+  * Changed all `media_player.async_write_ha_state()` calls to `schedule_update_ha_state(force_refresh=True)` calls due to HA 2024.5 release requirements.  This fixes the issue of "Failed to call service X. Detected that custom integration 'Y' calls async_write_ha_state from a thread at Z. Please report it to the author of the 'Y' custom integration.".
+  * Added service `get_source_list` to get the current source list configuration of the device.
+  * Modified `media_player.service_preset_list` service to update the extra state attribute named `soundtouchplus_presets_lastupdated` to correctly reflect the last update datetime.
+  * Modified `media_player.service_recent_list` service to update the extra state attribute named `soundtouchplus_recents_lastupdated` to correctly reflect the last update datetime.
+  * Added system health information.
+  * Modified strings.json (and translations) to remove a placeholder inside single quotes that was embedded in a service description.  This was causing hass validation step to fail.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.59.
+  * Updated Python version from 3.11 to 3.12.3 due to HA 2024.5 release requirements.
+
 ###### [ 1.0.41 ] - 2024/04/21
 
   * Updated underlying `spotifywebapiPython` package requirement to version 1.0.43.

@@ -24,6 +24,7 @@ DEFAULT_TIMEOUT = 15
 # custom service names.
 SERVICE_AUDIO_TONE_LEVELS = "audio_tone_levels"
 SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS = "clear_source_nowplayingstatus"
+SERVICE_GET_SOURCE_LIST = "get_source_list"
 SERVICE_MUSICSERVICE_STATION_LIST = "musicservice_station_list"
 SERVICE_PLAY_CONTENTITEM = "play_contentitem"
 SERVICE_PLAY_HANDOFF = "play_handoff"
