@@ -9,10 +9,10 @@
   "issue_tracker": "https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/issues",
   "loggers": [ "bosesoundtouchapi" ],
   "requirements": [
-    "bosesoundtouchapi==1.0.59",
+    "bosesoundtouchapi==1.0.66",
     "smartinspectPython>=3.0.33",
     "spotifywebapiPython==1.0.43"
   ],
-  "version": "1.0.42",
+  "version": "1.0.43",
   "zeroconf": [ "_soundtouch._tcp.local." ]
 }

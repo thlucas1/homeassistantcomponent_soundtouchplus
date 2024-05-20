@@ -24,24 +24,27 @@ from .const import (
     DOMAIN,
     CONF_PORT_WEBSOCKET,
     CONF_PING_WEBSOCKET_INTERVAL,
+    CONF_OPTION_RECENTS_CACHE_MAX_ITEMS,
     CONF_OPTION_SOURCE_LIST,
     DEFAULT_PING_WEBSOCKET_INTERVAL,
     DEFAULT_PORT,
     DEFAULT_PORT_WEBSOCKET,
     SERVICE_AUDIO_TONE_LEVELS,
     SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS,
+    SERVICE_GET_SOURCE_LIST,
     SERVICE_MUSICSERVICE_STATION_LIST,
     SERVICE_PLAY_CONTENTITEM,
     SERVICE_PLAY_HANDOFF,
     SERVICE_PLAY_TTS,
     SERVICE_PLAY_URL,
     SERVICE_PRESET_LIST,
+    SERVICE_PRESET_REMOVE,
     SERVICE_REBOOT_DEVICE,
     SERVICE_RECENT_LIST,
+    SERVICE_RECENT_LIST_CACHE,
     SERVICE_REMOTE_KEYPRESS,
     SERVICE_SNAPSHOT_RESTORE,
     SERVICE_SNAPSHOT_STORE,
-    SERVICE_GET_SOURCE_LIST,
     SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS,
     SERVICE_ZONE_TOGGLE_MEMBER
 )
@@ -171,6 +174,13 @@ SERVICE_PRESET_LIST_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_PRESET_REMOVE_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("preset_id", default=1): vol.All(vol.Range(min=1,max=6)),
+    }
+)
+
 SERVICE_REBOOT_DEVICE_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
@@ -179,6 +189,12 @@ SERVICE_REBOOT_DEVICE_SCHEMA = vol.Schema(
 )
 
 SERVICE_RECENT_LIST_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+    }
+)
+
+SERVICE_RECENT_LIST_CACHE_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
     }
@@ -375,6 +391,10 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     get_metadata_from_url_file = service.data.get("get_metadata_from_url_file")
                     await hass.async_add_executor_job(player.service_play_url, url, artist, album, track, volume_level, app_key, get_metadata_from_url_file)
 
+                elif service.service == SERVICE_PRESET_REMOVE:
+                    preset_id = service.data.get("preset_id")
+                    await hass.async_add_executor_job(player.service_preset_remove, preset_id)
+
                 elif service.service == SERVICE_AUDIO_TONE_LEVELS:
                     bass_level = service.data.get("bass_level")
                     treble_level = service.data.get("treble_level")
@@ -537,6 +557,12 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     results:RecentList = await hass.async_add_executor_job(player.service_recent_list)
                     response = results.ToDictionary()
 
+                elif service.service == SERVICE_RECENT_LIST_CACHE:
+
+                    # get list of recently played cached items defined for the device.
+                    results:RecentList = await hass.async_add_executor_job(player.service_recent_list_cache)
+                    response = results.ToDictionary()
+
                 # build list of items to return.
                 _logsi.LogDictionary(SILevel.Verbose, "Service Response data: '%s'" % (service.service), response, prettyPrint=True)
                 return response 
@@ -622,6 +648,15 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             schema=SERVICE_AUDIO_TONE_LEVELS_SCHEMA,
         )
 
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_SOURCE_LIST, SERVICE_GET_SOURCE_LIST_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_SOURCE_LIST,
+            service_handle_getlist,
+            schema=SERVICE_GET_SOURCE_LIST_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+
         _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_MUSICSERVICE_STATION_LIST, SERVICE_MUSICSERVICE_STATION_LIST_SCHEMA)
         hass.services.async_register(
             DOMAIN,
@@ -672,6 +707,14 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             supports_response=SupportsResponse.ONLY,
         )
 
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_PRESET_REMOVE, SERVICE_PRESET_REMOVE_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_PRESET_REMOVE,
+            service_handle_entity,
+            schema=SERVICE_PRESET_REMOVE_SCHEMA,
+        )
+
         _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_REBOOT_DEVICE, SERVICE_REBOOT_DEVICE_SCHEMA)
         hass.services.async_register(
             DOMAIN,
@@ -686,6 +729,15 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             SERVICE_RECENT_LIST,
             service_handle_getlist,
             schema=SERVICE_RECENT_LIST_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_RECENT_LIST_CACHE, SERVICE_RECENT_LIST_CACHE_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_RECENT_LIST_CACHE,
+            service_handle_getlist,
+            schema=SERVICE_RECENT_LIST_CACHE_SCHEMA,
             supports_response=SupportsResponse.ONLY,
         )
 
@@ -711,15 +763,6 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             SERVICE_SNAPSHOT_STORE,
             service_handle_entity,
             schema=SERVICE_SNAPSHOT_STORE_SCHEMA,
-        )
-
-        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_SOURCE_LIST, SERVICE_GET_SOURCE_LIST_SCHEMA)
-        hass.services.async_register(
-            DOMAIN,
-            SERVICE_GET_SOURCE_LIST,
-            service_handle_getlist,
-            schema=SERVICE_GET_SOURCE_LIST_SCHEMA,
-            supports_response=SupportsResponse.ONLY,
         )
 
         _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS, SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS_SCHEMA)
@@ -779,6 +822,7 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
         port_websocket:int = entry.data.get(CONF_PORT_WEBSOCKET, DEFAULT_PORT_WEBSOCKET)
         ping_websocket_interval:int = entry.data.get(CONF_PING_WEBSOCKET_INTERVAL, DEFAULT_PING_WEBSOCKET_INTERVAL)
         option_source_list:list[str] = entry.options.get(CONF_OPTION_SOURCE_LIST, [])
+        option_recents_cache_max_items:int = entry.options.get(CONF_OPTION_RECENTS_CACHE_MAX_ITEMS, 0)
 
         device:SoundTouchDevice = None
         client:SoundTouchClient = None
@@ -817,6 +861,11 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
                 # create a websocket to receive notifications from the device.
                 _logsi.LogVerbose("'%s': Component async_setup_entry is creating SoundTouchWebSocket instance: port=%s, pingInterval=%s" % (entry.title, str(port_websocket), str(ping_websocket_interval)))
                 socket = await hass.async_add_executor_job(SoundTouchWebSocket, client, port_websocket, ping_websocket_interval)
+                
+                # enable recently played items cache.
+                if (option_recents_cache_max_items > 0):
+                    cacheDir:str = "%s/www/%s" % (hass.config.config_dir, DOMAIN)
+                    client.UpdateRecentListCacheStatus(True, cacheDir, maxItems=option_recents_cache_max_items)
 
                 # we cannot start listening for notifications just yet, as the entity has not been
                 # added to HA UI yet.  this will happen in the `media_player.async_added_to_hass` method.

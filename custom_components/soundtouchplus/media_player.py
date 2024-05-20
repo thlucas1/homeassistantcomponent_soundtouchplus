@@ -7,7 +7,7 @@ Support for interface with a Bose SoundTouch.
 # `self.async_write_ha_state()` should always be used inside of the event loop (any method that is async itself or a callback). 
 # If you are in a `async def` method or one wrapped in `@callback`, use `async_write_ha_state` since you are inside of the event loop. 
 
-# `self.schedule_update_ha_state(force_refresh=True)` should be unsed when not inside of the event loop (e.g. for sync functions that are ran 
+# `self.schedule_update_ha_state(force_refresh=False)` should be unsed when not inside of the event loop (e.g. for sync functions that are ran 
 # inside of the executor thread).  If you are in a `def` method (no async) then use `schedule_update_ha_state` since you are inside of the event loop.
 
 
@@ -23,6 +23,7 @@ import datetime as dt
 from functools import partial
 import logging
 import re
+import time
 from typing import Any
 import urllib.parse
 from xml.etree import ElementTree
@@ -67,6 +68,7 @@ from .browse_media import (
     SPOTIFY_LIBRARY_MAP,
 )
 from .const import (
+    CONF_OPTION_RECENTS_CACHE_MAX_ITEMS,
     CONF_OPTION_SOURCE_LIST, 
     DOMAIN, 
     DOMAIN_SPOTIFYPLUS
@@ -86,6 +88,9 @@ ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISADVERTISEMENT = "soundtouchplus_nowplaying_isad
 ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISFAVORITE = "soundtouchplus_nowplaying_isfavorite"
 ATTR_SOUNDTOUCHPLUS_PRESETS_LASTUPDATED = "soundtouchplus_presets_lastupdated"
 ATTR_SOUNDTOUCHPLUS_RECENTS_LASTUPDATED = "soundtouchplus_recents_lastupdated"
+ATTR_SOUNDTOUCHPLUS_RECENTS_CACHE_ENABLED = "soundtouchplus_recents_cache_enabled"
+ATTR_SOUNDTOUCHPLUS_RECENTS_CACHE_LASTUPDATED = "soundtouchplus_recents_cache_lastupdated"
+ATTR_SOUNDTOUCHPLUS_RECENTS_CACHE_MAX_ITEMS = "soundtouchplus_recents_cache_max_items"
 ATTR_SOUNDTOUCHPLUS_SOUND_MODE = "soundtouchplus_sound_mode"
 ATTR_SOUNDTOUCHPLUS_SOURCE = "soundtouchplus_source"
 ATTR_SOUNDTOUCHPLUS_TONE_BASS_LEVEL = "soundtouchplus_tone_bass_level"
@@ -178,6 +183,8 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             self.data:InstanceDataSoundTouchPlus = data
             self.soundtouchplus_presets_lastupdated:int = 0
             self.soundtouchplus_recents_lastupdated:int = 0
+            self.soundtouchplus_recents_cache_lastupdated:int = 0
+            self.recents_cache_max_items:int = 20
             self.websocket_error_count:int = 0
 
             # initialize base class attributes (MediaPlayerEntity).
@@ -236,11 +243,15 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             # if websockets are not supported, then we need to enable device polling.
             if self._socket is None:
                 _logsi.LogVerbose("'%s': MediaPlayer device polling is being enabled, as the device does not support websockets" % self.name)
+                _logsi.LogVerbose("'%s': MediaPlayer RecentListCache will be disabled due to device not supporting websockets" % self.name)
                 self._attr_should_poll = True
             
             # load option: source_list - list of supported sources.
             self._attr_source_list = data.options.get(CONF_OPTION_SOURCE_LIST, None)
             _logsi.LogArray(SILevel.Verbose, "'%s': MediaPlayer configuration option: '%s' = '%s'" % (self.name, CONF_OPTION_SOURCE_LIST, str(self._attr_source_list)), self._attr_source_list)
+
+            # trace option: recents_cache_max_items - max items to keep in the recently played list cache.
+            _logsi.LogVerbose("'%s': MediaPlayer configuration option: '%s' = '%s' (RecentListCacheEnabled=%s)" % (self.name, CONF_OPTION_RECENTS_CACHE_MAX_ITEMS, str(self._client.RecentListCacheMaxItems), str(self._client.RecentListCacheEnabled)))
 
             # trace.
             _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer SoundTouchClient object" % self.name, self._client)
@@ -278,7 +289,10 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         attributes[ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISFAVORITE] = False
         attributes[ATTR_SOUNDTOUCHPLUS_PRESETS_LASTUPDATED] = self.soundtouchplus_presets_lastupdated
         attributes[ATTR_SOUNDTOUCHPLUS_RECENTS_LASTUPDATED] = self.soundtouchplus_recents_lastupdated
+        attributes[ATTR_SOUNDTOUCHPLUS_RECENTS_CACHE_LASTUPDATED] = self.soundtouchplus_recents_cache_lastupdated
         attributes[ATTR_SOUNDTOUCHPLUS_SOURCE] = self.soundtouchplus_source
+        attributes[ATTR_SOUNDTOUCHPLUS_RECENTS_CACHE_ENABLED] = self._client.RecentListCacheEnabled
+        attributes[ATTR_SOUNDTOUCHPLUS_RECENTS_CACHE_MAX_ITEMS] = self._client.RecentListCacheMaxItems
         
         if SoundTouchNodes.audiodspcontrols.Path in self._client.ConfigurationCache:
             config:AudioDspControls = self._client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path]
@@ -642,7 +656,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             # otherwise, the group_members are rebuilt in the zoneupdated event.
             if self._attr_should_poll == True:
                 self._attr_group_members = self._BuildZoneMemberEntityIdList(config)
-        
+                
             # does this device support audiodspcontrols?
             if SoundTouchNodes.audiodspcontrols.Path in self._client.Device.SupportedUris:
                 _logsi.LogVerbose("'%s': MediaPlayer is getting audio dsp controls (e.g. sound_mode)" % self.name)
@@ -1141,7 +1155,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             self._socket.StopNotification()
             
             # inform Home Assistant of the status update.
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
             
 
     @callback
@@ -1160,7 +1174,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # inform Home Assistant of the status update.
             self.update()
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
 
     @callback
     def _OnSoundTouchUpdateEvent_audiodspcontrols(self, client:SoundTouchClient, args:Element) -> None:
@@ -1180,7 +1194,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogVerbose("'%s': MediaPlayer audiodspcontrols (sound_mode_list) updated: %s" % (self.name, config.ToString()))
             
             # inform Home Assistant of the status update.
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
             
 
     @callback
@@ -1201,7 +1215,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogVerbose("'%s': MediaPlayer audioproducttonecontrols updated: %s" % (self.name, config.ToString()))
             
             # inform Home Assistant of the status update.
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
 
 
     @callback
@@ -1224,9 +1238,14 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 
                 # update nowplaying attributes.
                 self._UpdateNowPlayingData(config)
+                
+                # if media is playing, then update the recently played cache lastupdated value,
+                # as the api could have added a new entry to the cache.
+                if config.IsPlaying:
+                    self.soundtouchplus_recents_cache_lastupdated = self._client.RecentListCache.LastUpdatedOn
 
             # inform Home Assistant of the status update.
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
             
         # reset websocket error count, as we know websockets are active again.
         self.websocket_error_count = 0
@@ -1253,7 +1272,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # inform Home Assistant of the status update.
             self.soundtouchplus_presets_lastupdated = config.LastUpdatedOn
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
 
 
     @callback
@@ -1277,7 +1296,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # inform Home Assistant of the status update.
             self.soundtouchplus_recents_lastupdated = config.LastUpdatedOn
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
 
 
     @callback
@@ -1297,7 +1316,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogVerbose("'%s': sources (source_list) updated = %s" % (self.name, config.ToString()))
 
             # inform Home Assistant of the status update.
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
 
 
     @callback
@@ -1318,7 +1337,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogVerbose("'%s': MediaPlayer volume updated: %s" % (self.name, config.ToString()))
 
             # inform Home Assistant of the status update.
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
 
 
     @callback
@@ -1342,7 +1361,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogArray(SILevel.Verbose, "'%s': MediaPlayer zone updated - group_members list" % self.name, self._attr_group_members)
 
             # inform Home Assistant of the status update.
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
 
 
     # -----------------------------------------------------------------------------------
@@ -1493,7 +1512,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 self._attr_repeat = RepeatMode.OFF.value
             elif config.RepeatSetting == RepeatSettingTypes.One.value:
                 self._attr_repeat = RepeatMode.ONE.value
-               
+
     
     # -----------------------------------------------------------------------------------
     # Custom Services
@@ -1585,7 +1604,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 _logsi.LogVerbose("'%s': NowPlayingStatus for source '%s' was removed" % (self.name, cacheKey))
 
             # inform Home Assistant of the status update.
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
             return
 
         # the following exceptions have already been logged, so we just need to
@@ -1932,10 +1951,40 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             
             # update state attributes.
             self.soundtouchplus_presets_lastupdated = presetList.LastUpdatedOn
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
 
             # return to caller.
             return presetList
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
+
+
+    def service_preset_remove(self, presetId:int):
+        """
+        Removes the specified Preset id from the device's list of presets.
+        
+        Args:
+            presetId (int):
+                The preset id to remove; valid values are 1 thru 6.
+        """
+        try:
+
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            if _logsi.IsOn(SILevel.Verbose):
+                parms:dict = {}
+                parms['presetId'] = presetId
+                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_preset_remove", str(parms)), parms)
+
+            self._client.RemovePreset(presetId)
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
@@ -2009,7 +2058,41 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             
             # update state attributes.
             self.soundtouchplus_recents_lastupdated = recentList.LastUpdatedOn
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
+
+            # return to caller.
+            return recentList
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
+
+
+    def service_recent_list_cache(self) -> RecentList:
+        """
+        Retrieves the list of recently played cache items defined for a device.
+
+        Returns:
+            A `RecentList` instance that contains defined recently played cache items.
+        """
+        try:
+
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "service_recent_list_cache")
+
+            # get recents list.
+            recentList:RecentList = self._client.RecentListCache
+            
+            # update state attributes.
+            self.soundtouchplus_recents_cache_lastupdated = recentList.LastUpdatedOn
+            self.schedule_update_ha_state(force_refresh=False)
 
             # return to caller.
             return recentList
@@ -2181,7 +2264,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             self._UpdateNowPlayingData(config)
 
             # inform Home Assistant of the status update.
-            self.schedule_update_ha_state(force_refresh=True)
+            self.schedule_update_ha_state(force_refresh=False)
             return
 
         # the following exceptions have already been logged, so we just need to

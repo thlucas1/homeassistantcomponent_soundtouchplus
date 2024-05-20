@@ -45,6 +45,7 @@ from .const import (
     CONF_OPTION_SOURCE_LIST,
     CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID,
     CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE,
+    CONF_OPTION_RECENTS_CACHE_MAX_ITEMS,
     CONF_PING_WEBSOCKET_INTERVAL,
     CONF_PORT_WEBSOCKET,
     DEFAULT_PING_WEBSOCKET_INTERVAL,
@@ -446,6 +447,7 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
                 self._Options[CONF_OPTION_SOURCE_LIST] = user_input.get(CONF_OPTION_SOURCE_LIST, None)
                 self._Options[CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID] = user_input.get(CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID, None)
                 self._Options[CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE] = user_input.get(CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE, None)
+                self._Options[CONF_OPTION_RECENTS_CACHE_MAX_ITEMS] = user_input.get(CONF_OPTION_RECENTS_CACHE_MAX_ITEMS, 0)
                 
                 # store the updated config entry options.
                 return await self._update_options(self._Options)
@@ -459,13 +461,23 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
             # log sources that are currently selected.
             source_list_selected:list[str] = self._Options.get(CONF_OPTION_SOURCE_LIST, [])
             _logsi.LogArray(SILevel.Verbose, "'%s': OptionsFlow currently SELECTED '%s' items for device" % (self._name, CONF_OPTION_SOURCE_LIST), source_list_selected)
+            
+            # remove any previously selected sources that no longer exist in the source list.
+            # if we don't do this, then the user won't be able to save any changes in the form.
+            idx:int = 0
+            while idx < len(source_list_selected):
+                if (source_list_selected[idx] not in source_list_all):
+                    _logsi.LogVerbose("'%s': OptionsFlow is removing source '%s' as it no longer exists in the current list of defined sources" % (self._name, source_list_selected[idx]))
+                    del source_list_selected[idx]
+                else:
+                    idx += 1
                    
             # create validation schema.
             # default source list to empty array, which will cause the entire list to be displayed in the media player.
             schema = vol.Schema(
                 {
                     vol.Optional(CONF_OPTION_SOURCE_LIST, 
-                                 default=self._Options.get(CONF_OPTION_SOURCE_LIST, [])
+                                 default=source_list_selected
                                  ): cv.multi_select(source_list_all),
                     # note - DO NOT use "default" argument on the following - use "suggested_value" instead.
                     # using "default=" does not allow a null entity_id to be selected!
@@ -475,6 +487,10 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
                                                             domain=Platform.MEDIA_PLAYER, 
                                                             multiple=False),
                     ),
+                    vol.Optional(CONF_OPTION_RECENTS_CACHE_MAX_ITEMS, 
+                                 description={"suggested_value": self._Options.get(CONF_OPTION_RECENTS_CACHE_MAX_ITEMS)},
+                                 default=self._Options.get(CONF_OPTION_RECENTS_CACHE_MAX_ITEMS, 0)
+                                 ): cv.positive_int,
                     vol.Optional(CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE, 
                                  default=self._Options.get(CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE, False)
                                  ): cv.boolean,
@@ -534,7 +550,8 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
 
             _logsi.LogVerbose("'%s': OptionsFlow is creating SoundTouchClient instance" % self._name)
             client:SoundTouchClient = SoundTouchClient(device)
-
+            
+            # get device source list.
             _logsi.LogVerbose("'%s': OptionsFlow is retrieving SourceList configuration for device" % self._name)
             sourceList:SourceList = client.GetSourceList()
             

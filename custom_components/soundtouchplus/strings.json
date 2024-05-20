@@ -40,9 +40,10 @@
         "title": "{name} Options",
         "description": "Configure SoundTouch Plus integration options that control the selected device.",
         "data": {
-          "source_list": "Source list selections; check to show, uncheck to hide.",
-          "spotify_mediaplayer_entity_id": "SpotifyPlus integration media player entity id used to query Spotify API for data.",
-          "tts_force_google_translate": "Force TTS announcements to use Google Translate."
+          "source_list": "Source list selections; check to show, uncheck to hide",
+          "spotify_mediaplayer_entity_id": "SpotifyPlus integration media player entity id used to query Spotify API for data",
+          "recents_cache_max_items":  "Maximum # of items to keep in the recently played list cache, or zero to disable",
+          "tts_force_google_translate": "Force TTS announcements to use Google Translate"
         },
         "submit": "Save"
       }
@@ -273,6 +274,20 @@
         }
       }
     },
+    "preset_remove": {
+      "name": "Remove Preset",
+      "description": "Removes the preset at the specified preset id.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        },
+        "preset_id": {
+          "name": "Preset ID",
+          "description": "Preset ID to remove (1-6)."
+        }
+      }
+    },
     "reboot_device": {
       "name": "Reboot Device",
       "description": "Reboots the SoundTouch device operating system; all connectivity will be lost for about 30-45 seconds while the speaker reboots.",
@@ -290,6 +305,16 @@
     "recent_list": {
       "name": "Get Recent List",
       "description": "Retrieves the list of recently played items defined to the device.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        }
+      }
+    },
+    "recent_list_cache": {
+      "name": "Get Recent List Cache",
+      "description": "Retrieves the list of recently played cached items stored on the local file system.  Items in this list will contain cover art url links.",
       "fields": {
         "entity_id": {
           "name": "Entity ID",

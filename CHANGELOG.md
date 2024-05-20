@@ -6,6 +6,14 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.43 ] - 2024/05/20
+
+  * Added extra state variables related to recently played cache feature: `soundtouchplus_recents_cache_enabled`, `soundtouchplus_recents_cache_max_items`, `soundtouchplus_recents_cache_lastupdated`.
+  * Added service `recent_list_cache` to retrieve the recently played items cache from the file system.
+  * Added service `remove_preset` to remove the specified preset id.
+  * Changed all `media_player.schedule_update_ha_state(force_refresh=True)` calls to `schedule_update_ha_state(force_refresh=False)` to improve performance.  Suggested by @bdraco, along with an explanation of why.  Thanks @bdraco!
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.66.
+
 ###### [ 1.0.42 ] - 2024/05/03
 
   * Changed all `media_player.async_write_ha_state()` calls to `schedule_update_ha_state(force_refresh=True)` calls due to HA 2024.5 release requirements.  This fixes the issue of "Failed to call service X. Detected that custom integration 'Y' calls async_write_ha_state from a thread at Z. Please report it to the author of the 'Y' custom integration.".
