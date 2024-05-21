@@ -97,6 +97,8 @@ ATTR_SOUNDTOUCHPLUS_TONE_BASS_LEVEL = "soundtouchplus_tone_bass_level"
 ATTR_SOUNDTOUCHPLUS_TONE_BASS_LEVEL_RANGE = "soundtouchplus_tone_bass_level_range"
 ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL = "soundtouchplus_tone_treble_level"
 ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL_RANGE = "soundtouchplus_tone_treble_level_range"
+ATTR_SOUNDTOUCHPLUS_WEBSOCKETS_ENABLED = "soundtouchplus_websockets_enabled"
+ATTR_SOUNDTOUCHPLUS_POLLING_ENABLED = "soundtouchplus_polling_enabled"
 ATTRVALUE_NOT_CAPABLE = "not capable"
 
 
@@ -293,6 +295,8 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         attributes[ATTR_SOUNDTOUCHPLUS_SOURCE] = self.soundtouchplus_source
         attributes[ATTR_SOUNDTOUCHPLUS_RECENTS_CACHE_ENABLED] = self._client.RecentListCacheEnabled
         attributes[ATTR_SOUNDTOUCHPLUS_RECENTS_CACHE_MAX_ITEMS] = self._client.RecentListCacheMaxItems
+        attributes[ATTR_SOUNDTOUCHPLUS_WEBSOCKETS_ENABLED] = (self._socket is not None)
+        attributes[ATTR_SOUNDTOUCHPLUS_POLLING_ENABLED] = (self._attr_should_poll)
         
         if SoundTouchNodes.audiodspcontrols.Path in self._client.ConfigurationCache:
             config:AudioDspControls = self._client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path]

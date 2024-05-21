@@ -6,6 +6,11 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.44 ] - 2024/05/21
+
+  * Added extra state variable: `soundtouchplus_websockets_enabled`.  Returns true if websocket support is enabled for the device; otherwise, false if device does not support websockets or if websockets were disabled during device setup.
+  * Added extra state variable: `soundtouchplus_polling_enabled`.  Returns true if device polling is enabled; otherwise, false.  Polling can be a temporary condition, in that it will be enabled if websocket support is enabled and the connection is lost and has not been re-established yet.
+
 ###### [ 1.0.43 ] - 2024/05/20
 
   * Added extra state variables related to recently played cache feature: `soundtouchplus_recents_cache_enabled`, `soundtouchplus_recents_cache_max_items`, `soundtouchplus_recents_cache_lastupdated`.
