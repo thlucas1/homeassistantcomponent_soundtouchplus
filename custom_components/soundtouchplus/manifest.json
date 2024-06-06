@@ -13,6 +13,6 @@
     "smartinspectPython>=3.0.33",
     "spotifywebapiPython==1.0.43"
   ],
-  "version": "1.0.44",
+  "version": "1.0.45",
   "zeroconf": [ "_soundtouch._tcp.local." ]
 }

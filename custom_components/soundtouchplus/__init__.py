@@ -1,6 +1,7 @@
 """
 The soundtouchplus integration.
 """
+import functools
 import logging
 from urllib3._version import __version__ as urllib3_version
 import voluptuous as vol
@@ -250,6 +251,20 @@ SERVICE_ZONE_TOGGLE_MEMBER_SCHEMA = vol.Schema(
 )
 
 
+def _trace_LogTextFile(filePath: str, title: str) -> None:
+    """
+    Log the contents of the specified text file to the SmartInspect trace log.
+    
+    Args:
+        filePath (str):
+            Fully-qualified file path to log.
+        title (str):
+            Title to assign to the log entry.
+
+    """
+    _logsi.LogTextFile(SILevel.Verbose, title, filePath)
+
+
 async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
     """
     Set up the component.
@@ -276,10 +291,11 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             _logsi.LogObject(SILevel.Verbose, "Component async_setup for configuration type", config)
 
             # log the manifest file contents.
+            # as of HA 2024.6, we have to use an executor job to do this as the trace uses a blocking file open / read call.
             myConfigDir:str = "%s/custom_components/%s" % (hass.config.config_dir, DOMAIN)
             myManifestPath:str = "%s/manifest.json" % (myConfigDir)
-            _logsi.LogTextFile(SILevel.Verbose, "Integration Manifest File (%s)" % myManifestPath, myManifestPath)
-
+            await hass.async_add_executor_job(_trace_LogTextFile, myManifestPath, "Integration Manifest File (%s)" % myManifestPath)
+    
             # log verion information for supporting packages.
             _logsi.LogValue(SILevel.Verbose, "urllib3 version", urllib3_version)
 
@@ -865,8 +881,14 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
                 # enable recently played items cache.
                 if (option_recents_cache_max_items > 0):
                     cacheDir:str = "%s/www/%s" % (hass.config.config_dir, DOMAIN)
-                    client.UpdateRecentListCacheStatus(True, cacheDir, maxItems=option_recents_cache_max_items)
-
+                    await hass.async_add_executor_job(
+                        functools.partial(
+                            client.UpdateRecentListCacheStatus, 
+                            True, 
+                            cacheDir, 
+                            maxItems=option_recents_cache_max_items)
+                        )
+                        
                 # we cannot start listening for notifications just yet, as the entity has not been
                 # added to HA UI yet.  this will happen in the `media_player.async_added_to_hass` method.
 
