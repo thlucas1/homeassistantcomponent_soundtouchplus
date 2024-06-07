@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.46 ] - 2024/06/07
+
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.44.
+
 ###### [ 1.0.45 ] - 2024/06/06
 
   * Changed logic to access file system files via a `hass.async_add_executor_job` call.  This fixes the issue of `Detected blocking call to open inside the event loop by custom integration 'X' ...` that was introduced with HA 2024.6 release.
