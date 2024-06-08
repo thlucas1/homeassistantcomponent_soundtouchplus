@@ -993,14 +993,18 @@ async def async_unload_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
         if unload_ok:
 
             # remove instance data from domain.
-            _logsi.LogVerbose("'%s':Component async_unload_entry is removing our device instance data from the domain" % entry.title)
+            _logsi.LogVerbose("'%s': Component async_unload_entry is removing our device instance data from the domain" % entry.title)
             data:InstanceDataSoundTouchPlus = hass.data[DOMAIN].pop(entry.entry_id)
             _logsi.LogObject(SILevel.Verbose, "'%s': Component async_unload_entry unloaded configuration entry instance data" % entry.title, data)
 
             # a quick check to make sure all update listeners were removed (see method doc notes above).
             if len(entry.update_listeners) > 0:
-                _logsi.LogArray(SILevel.Warning, "'%s': Component configuration update_listener(s) did not get removed before configuration unload (%d items - should be 0)" % (entry.title, len(entry.update_listeners)), entry.update_listeners)
-                entry.update_listeners.clear()
+                _logsi.LogArray(SILevel.Warning, "'%s': Component configuration update_listener(s) did not get removed before configuration unload (%d items - should be 0 prioer to HA 2026.0 release, but after that release still contains entries)" % (entry.title, len(entry.update_listeners)), entry.update_listeners)
+                # something changed with HA 2024.6 release that causes the `update_listeners` array to still contain entries!
+                # prior to this release, the `update_listeners` array was empty by this point.
+                # I commented out the following line to clear the `update_listeners`, as it was causing `ValueError: list.remove(x): x not in list`
+                # exceptions starting with the HA 2024.6.0 release!
+                #entry.update_listeners.clear()
 
         # return status to caller.
         _logsi.LogVerbose("'%s': Component async_unload_entry completed" % entry.title)
