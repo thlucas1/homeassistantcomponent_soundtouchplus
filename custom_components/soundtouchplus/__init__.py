@@ -978,6 +978,9 @@ async def async_unload_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
     to be removed, as they are already removed by the time this method is called.
     This is accomplished by the "entry.async_on_unload(listener)" call in async_setup_entry,
     which removes them from the configuration entry just before it is unloaded.
+
+    Note that something changed with HA 2024.6 release that causes the `update_listeners` array 
+    to still contain entries; prior to this release, the `update_listeners` array was empty by this point.
     """
     try:
 
@@ -1000,9 +1003,7 @@ async def async_unload_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
             # a quick check to make sure all update listeners were removed (see method doc notes above).
             if len(entry.update_listeners) > 0:
                 _logsi.LogArray(SILevel.Warning, "'%s': Component configuration update_listener(s) did not get removed before configuration unload (%d items - should be 0 prioer to HA 2026.0 release, but after that release still contains entries)" % (entry.title, len(entry.update_listeners)), entry.update_listeners)
-                # something changed with HA 2024.6 release that causes the `update_listeners` array to still contain entries!
-                # prior to this release, the `update_listeners` array was empty by this point.
-                # I commented out the following line to clear the `update_listeners`, as it was causing `ValueError: list.remove(x): x not in list`
+                # 2024/06/08 - I commented out the following line to clear the `update_listeners`, as it was causing `ValueError: list.remove(x): x not in list`
                 # exceptions starting with the HA 2024.6.0 release!
                 #entry.update_listeners.clear()
 

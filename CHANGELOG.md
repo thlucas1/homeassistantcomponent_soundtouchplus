@@ -6,9 +6,13 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.49 ] - 2024/06/10
+
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.48.
+
 ###### [ 1.0.48 ] - 2024/06/08
 
-  * Fixed a bug that was causing `ValueError: list.remove(x): x not in list` exceptions to be raised whenever the user changed configuration options for a device.
+  * Fixed a bug that was causing `ValueError: list.remove(x): x not in list` exceptions to be raised whenever the user changed configuration options for a device.  This started appearing with the HA 2024.6.1 release.
 
 ###### [ 1.0.47 ] - 2024/06/07
 
