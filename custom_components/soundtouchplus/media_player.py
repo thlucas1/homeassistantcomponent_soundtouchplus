@@ -977,11 +977,15 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 # is sound_mode an audio mode name?  if so, then we need the value.
                 audioDspAudioMode:str = AudioDspAudioModes.GetValueByName(sound_mode)
                 if audioDspAudioMode is not None:
+                    _logsi.LogVerbose("'%s': resolved audio_mode value '%s' from name '%s'" % (self.name, audioDspAudioMode, sound_mode))
                     sound_mode = audioDspAudioMode
+
+                _logsi.LogVerbose("'%s': sound_mode to set is '%s'" % (self.name, sound_mode))
 
                 # does sound mode list contain the specified sound_mode?
                 # if so, then change the sound mode; otherwise log an error message.
                 config:AudioDspControls = self._client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path]
+                _logsi.LogObject(SILevel.Verbose, "'%s': SupportedAudioModes object" % (self.name), config)
                 if sound_mode in config.SupportedAudioModes:
                     cfgUpdate:AudioDspControls = AudioDspControls(audioMode=sound_mode)
                     self._client.SetAudioDspControls(cfgUpdate)
@@ -1195,6 +1199,14 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             # create configuration model from update event argument and update the cache.
             config:AudioDspControls = AudioDspControls(root=args[0])
             client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path] = config
+
+            # if supported audio modes not present, then refresh the config from the device.
+            # sometimes the update event will not contain the SupportedAudioModes element, and
+            # it causes subsequent `select_sound_mode` methods to fail!
+            if config.SupportedAudioModes is None:
+                _logsi.LogVerbose("'%s': Refreshing audiodspcontrols config as the event did not contain the SupportedAudioModes element!" % (self.name))
+                config = client.GetAudioDspControls(refresh=True)
+
             _logsi.LogVerbose("'%s': MediaPlayer audiodspcontrols (sound_mode_list) updated: %s" % (self.name, config.ToString()))
             
             # inform Home Assistant of the status update.
