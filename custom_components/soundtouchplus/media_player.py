@@ -989,9 +989,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 if sound_mode in config.SupportedAudioModes:
                     cfgUpdate:AudioDspControls = AudioDspControls(audioMode=sound_mode)
                     self._client.SetAudioDspControls(cfgUpdate)
+                    self._attr_sound_mode = AudioDspAudioModes.GetNameByValue(cfgUpdate.AudioMode)
                 else:
                     _logsi.LogError("'%s': Specified sound_mode value '%s' is not a supported audio mode; check the sound_mode_list state value for valid audio modes" % (self.name, sound_mode))
             else:
+                self._attr_sound_mode = ATTRVALUE_NOT_CAPABLE
                 _logsi.LogWarning("'%s': Device does not support AudioDspControls; cannot change the sound mode" % self.name)
                     
         except Exception as ex:
@@ -1196,9 +1198,8 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 argsEncoded = ElementTree.tostring(args, encoding="unicode")
                 _logsi.LogXml(SILevel.Verbose, "'%s': MediaPlayer client device event notification - %s" % (self.name, args.tag), argsEncoded)
 
-            # create configuration model from update event argument and update the cache.
+            # create configuration model from update event argument.
             config:AudioDspControls = AudioDspControls(root=args[0])
-            client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path] = config
 
             # if supported audio modes not present, then refresh the config from the device.
             # sometimes the update event will not contain the SupportedAudioModes element, and
@@ -1207,8 +1208,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 _logsi.LogVerbose("'%s': Refreshing audiodspcontrols config as the event did not contain the SupportedAudioModes element!" % (self.name))
                 config = client.GetAudioDspControls(refresh=True)
 
+            # update the cache.
+            client.ConfigurationCache[SoundTouchNodes.audiodspcontrols.Path] = config
+            self._attr_sound_mode = AudioDspAudioModes.GetNameByValue(config.AudioMode)
             _logsi.LogVerbose("'%s': MediaPlayer audiodspcontrols (sound_mode_list) updated: %s" % (self.name, config.ToString()))
-            
+
             # inform Home Assistant of the status update.
             self.schedule_update_ha_state(force_refresh=False)
             
@@ -2380,6 +2384,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 _logsi.LogVerbose("'%s': MediaPlayer sound_mode_list = %s" % (self.name, str(self._attr_sound_mode_list)))
                 _logsi.LogVerbose("'%s': MediaPlayer current sound_mode = %s" % (self.name, str(self._attr_sound_mode)))
             else:
+                self._attr_sound_mode = ATTRVALUE_NOT_CAPABLE
                 _logsi.LogVerbose("'%s': MediaPlayer device does not support sound modes (audiodspcontrols)" % self.name)
         
             # load list of supported tone levels.

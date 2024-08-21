@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.61 ] - 2024/08/21
+
+  * Updated `media_player.sound_mode` property to hold the same value as the `soundtouchplus_sound_mode` attribute.
+
 ###### [ 1.0.60 ] - 2024/08/20
 
   * Updated `_OnSoundTouchUpdateEvent_audiodspcontrols` event processing to method.  The Bose AudioDspControls update event does not contain the supported audio modes in some circumstances. This is causing the SupportedAudioModes property to be set to None, which in turn causes exceptions in the `select_sound_mode` service.  I did not catch this in my testing, as it appears to only happen when the update event occurs which is driven by a change from the device (e.g. by clicking the dialog mode button on the remote).
