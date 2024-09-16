@@ -86,6 +86,8 @@ _logsi.SystemLogger = logging.getLogger(__name__)
 # our extra state attribute names.
 ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISADVERTISEMENT = "soundtouchplus_nowplaying_isadvertisement"
 ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISFAVORITE = "soundtouchplus_nowplaying_isfavorite"
+ATTR_SOUNDTOUCHPLUS_NOWPLAYING_IMAGE_URL = "stp_nowplaying_image_url"
+ATTR_SOUNDTOUCHPLUS_POLLING_ENABLED = "soundtouchplus_polling_enabled"
 ATTR_SOUNDTOUCHPLUS_PRESETS_LASTUPDATED = "soundtouchplus_presets_lastupdated"
 ATTR_SOUNDTOUCHPLUS_RECENTS_LASTUPDATED = "soundtouchplus_recents_lastupdated"
 ATTR_SOUNDTOUCHPLUS_RECENTS_CACHE_ENABLED = "soundtouchplus_recents_cache_enabled"
@@ -98,7 +100,6 @@ ATTR_SOUNDTOUCHPLUS_TONE_BASS_LEVEL_RANGE = "soundtouchplus_tone_bass_level_rang
 ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL = "soundtouchplus_tone_treble_level"
 ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL_RANGE = "soundtouchplus_tone_treble_level_range"
 ATTR_SOUNDTOUCHPLUS_WEBSOCKETS_ENABLED = "soundtouchplus_websockets_enabled"
-ATTR_SOUNDTOUCHPLUS_POLLING_ENABLED = "soundtouchplus_polling_enabled"
 ATTRVALUE_NOT_CAPABLE = "not capable"
 
 
@@ -289,6 +290,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         attributes = {}
         attributes[ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISADVERTISEMENT] = False
         attributes[ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISFAVORITE] = False
+        attributes[ATTR_SOUNDTOUCHPLUS_NOWPLAYING_IMAGE_URL] = self.media_image_url
         attributes[ATTR_SOUNDTOUCHPLUS_PRESETS_LASTUPDATED] = self.soundtouchplus_presets_lastupdated
         attributes[ATTR_SOUNDTOUCHPLUS_RECENTS_LASTUPDATED] = self.soundtouchplus_recents_lastupdated
         attributes[ATTR_SOUNDTOUCHPLUS_RECENTS_CACHE_LASTUPDATED] = self.soundtouchplus_recents_cache_lastupdated
