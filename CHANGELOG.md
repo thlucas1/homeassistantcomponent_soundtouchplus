@@ -6,6 +6,11 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.63 ] - 2024/09/19
+
+  * Added extra state variable: `stp_nowplaying_image_url`.  Returns the url of the nowplaying image if one is present; otherwise, None.
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.96.
+
 ###### [ 1.0.62 ] - 2024/09/16
 
   * Added extra state variable: `stp_nowplaying_image_url`.  Returns the url of the nowplaying image if one is present; otherwise, None.
