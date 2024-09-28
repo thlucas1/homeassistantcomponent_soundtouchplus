@@ -6,6 +6,11 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.66 ] - 2024/09/28
+
+  * Updated `system_health` module to read the contents of the manifest file outside of the event loop.  This was causing `Detected blocking call to open with args ...` exceptions in the system log when gathering integration health details.
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.101.
+
 ###### [ 1.0.65 ] - 2024/09/25
 
   * Updated underlying `spotifywebapiPython` package requirement to version 1.0.99.
