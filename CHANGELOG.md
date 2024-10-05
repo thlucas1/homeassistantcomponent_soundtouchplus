@@ -6,6 +6,12 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.67 ] - 2024/10/04
+
+  * Updated service description strings to correct HASSFest validation errors on GitHub.
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.106.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.68.
+
 ###### [ 1.0.66 ] - 2024/09/28
 
   * Updated `system_health` module to read the contents of the manifest file outside of the event loop.  This was causing `Detected blocking call to open with args ...` exceptions in the system log when gathering integration health details.

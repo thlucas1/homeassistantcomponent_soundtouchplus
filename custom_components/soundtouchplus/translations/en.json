@@ -378,11 +378,11 @@
         },
         "album": {
           "name": "Album",
-          "description": "The album of the playing track (if present). "
+          "description": "The album of the playing track (if present)."
         },
         "artist": {
           "name": "Artist",
-          "description": "The creator of the track (if present). "
+          "description": "The creator of the track (if present)."
         },
         "artist_id": {
           "name": "Artist ID",
@@ -390,11 +390,11 @@
         },
         "art_url": {
           "name": "Art URL",
-          "description": "A url link to the art image of the station (if present). "
+          "description": "A url link to the art image of the station (if present)."
         },
         "description": {
           "name": "Description",
-          "description": "A brief description that was added to the track (if present). "
+          "description": "A brief description that was added to the track (if present)."
         },
         "duration": {
           "name": "Duration",
@@ -402,11 +402,11 @@
         },
         "genre": {
           "name": "Genre",
-          "description": "The genre of the track (if present). "
+          "description": "The genre of the track (if present)."
         },
         "play_status": {
           "name": "Play Status",
-          "description": "Indicates whether the device is currently playing the embedded track. "
+          "description": "Indicates whether the device is currently playing the embedded track."
         },
         "position": {
           "name": "Position",
@@ -414,7 +414,7 @@
         },
         "session_id": {
           "name": "Session ID",
-          "description": "Unique identifier of the session, as provided by the source music service (if present). "
+          "description": "Unique identifier of the session, as provided by the source music service (if present)."
         },
         "station_location": {
           "name": "Station Location",
@@ -422,11 +422,11 @@
         },
         "station_name": {
           "name": "Station Name",
-          "description": "The station's name (if present). "
+          "description": "The station's name (if present)."
         },
         "track": {
           "name": "Track",
-          "description": "The current media track name (if present). "
+          "description": "The current media track name (if present)."
         },
         "track_id": {
           "name": "Track ID",
