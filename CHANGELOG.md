@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.68 ] - 2024/10/22
+
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.112.
+
 ###### [ 1.0.67 ] - 2024/10/04
 
   * Updated service description strings to correct HASSFest validation errors on GitHub.
