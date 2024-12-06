@@ -6,7 +6,11 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
-###### [ 1.0.73 ] - 2024/12.02
+###### [ 1.0.74 ] - 2024/12/06
+
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.123.
+
+###### [ 1.0.73 ] - 2024/12/02
 
   * Updated underlying `spotifywebapiPython` package requirement to version 1.0.122.
   * The above `spotifywebapiPython` package will now return an exception due to the functions being deprecated by the Spotify development team.  More information can be found on the [Spotify Developer Forum Blog post](https://developer.spotify.com/blog/2024-11-27-changes-to-the-web-api) that was conveyed on November 27, 2024.  The following methods will now raise a `SpotifyApiError` exception due to the Spotify development team changes: `GetArtistRelatedArtists`, `GetTrackRecommendations`, `GetTrackAudioFeatures`, `GetFeaturedPlaylists`, `GetCategoryPlaylists`, `GetGenres`.  The following properties were also marked as deprecated for the same reason: `TrackSimplified.PreviewUrl`.
