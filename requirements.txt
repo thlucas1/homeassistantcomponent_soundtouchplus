@@ -4,4 +4,4 @@ homeassistant==2024.5.0
 ruff==0.1.3
 bosesoundtouchapi==1.0.68
 smartinspectPython>=3.0.33
-spotifywebapiPython>=1.0.126
+spotifywebapiPython>=1.0.127
