@@ -36,6 +36,7 @@ from homeassistant.const import (
 from homeassistant.core import callback, HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv, selector
+#from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo  # required by 2026.02
 
 from .const import (
     DOMAIN,
