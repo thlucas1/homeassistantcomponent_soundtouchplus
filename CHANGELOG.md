@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.91 ] - 2025/01/27
+
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.161.
+
 ###### [ 1.0.90 ] - 2025/01/26
 
   * Updated underlying `homeassistant` package to version 2025.1.3 (from version 2024.6.1).
