@@ -55,6 +55,27 @@ clear_source_nowplayingstatus:
       selector:
         text:
 
+get_audio_product_tone_controls:
+  name: Get Audio Product Tone Controls
+  description: Gets the current audio product tone controls configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    refresh:
+      name: Refresh?
+      description: True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information.
+      example: "false"
+      required: true
+      selector:
+        boolean:
+
 get_balance:
   name: Get Balance
   description: Gets the current balance configuration of the device.
@@ -548,6 +569,40 @@ remote_keypress:
             - both
             - press
             - release
+
+set_audio_product_tone_controls:
+  name: Set Audio Product Tone Controls
+  description: Sets the current audio product tone controls configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    bass_level:
+      name: Bass Level
+      description: Bass level to set, usually in the range of -100 (low) to 100 (high).
+      example: "25"
+      required: true
+      selector:
+        number:
+          min: -100
+          max: 100
+          mode: box
+    treble_level:
+      name: Treble Level
+      description: Treble level to set, usually in the range of -100 (low) to 100 (high).
+      example: "50"
+      required: true
+      selector:
+        number:
+          min: -100
+          max: 100
+          mode: box
 
 set_balance_level:
   name: Set Balance Level

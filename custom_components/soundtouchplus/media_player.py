@@ -1584,18 +1584,21 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 _logsi.LogWarning("'%s': MediaPlayer device does not support AudioProductToneControls; cannot change the tone levels" % self.name)
                 return
 
-            # get current tone levels.
+            # get current configuration.
             config:AudioProductToneControls = self.data.client.GetAudioProductToneControls()
         
-            # set new tone control values.
+            # set audio product tone values.
             config.Bass.Value = bassLevel
-            config.Treble.Value = bassLevel
+            config.Treble.Value = trebleLevel
             self.data.client.SetAudioProductToneControls(config)
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
         except SoundTouchError as ex:
-            raise HomeAssistantError(ex.Message)
+            raise ServiceValidationError(ex.Message)
+        except Exception as ex:
+            _logsi.LogException(None, ex)
+            raise IntegrationError(str(ex)) from ex
         
         finally:
                 
@@ -1642,6 +1645,54 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         
         finally:
                 
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_get_audio_product_tone_controls(
+        self,
+        refresh:bool=False,
+        ) -> dict:
+        """
+        Gets the current audio product tone controls configuration of the device.
+
+        Args:
+            refresh (bool):
+                True to query the device for realtime information and refresh the cache;
+                otherwise, False to just return the cached information.
+
+        Returns:
+            A `AudioProductToneControls` object dictionary that contains audio product tone control
+            configuration of the device IF the device supports it (e.g. ST-300, etc); 
+            otherwise, None if the device does not support it.
+
+        Note that some SoundTouch devices do not support this functionality.  For example,
+        the ST-300 will support this, but the ST-10 will not.
+        """
+        apiMethodName:str = 'service_get_audio_product_tone_controls'
+        apiMethodParms:SIMethodParmListContext = None
+        result:AudioProductToneControls = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("refresh", refresh)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Audio Product Tone Controls Service", apiMethodParms)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetAudioProductToneControls(refresh)
+
+            # return the result dictionary.
+            return result.ToDictionary()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        
+        finally:
+        
             # trace.
             _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
@@ -2367,6 +2418,62 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
+    def service_set_audio_product_tone_controls(
+        self, 
+        bassLevel:int=0, 
+        trebleLevel:int=0, 
+        ) -> None:
+        """
+        Sets the current audio product tone controls configuration of the device.
+
+        Args:
+            bassLevel (int):
+                Bass level to set, usually in the range of -100 (low) to 100 (high).
+            trebleLevel (int):
+                Treble level to set, usually in the range of -100 (low) to 100 (high).
+
+        Raises:
+            SoundTouchError:
+                If the device is not capable of supporting `audioproducttonecontrols` functions,
+                as determined by a query to the cached `supportedURLs` web-services api.    
+                If the controls argument is None, or not of type `AudioProductToneControls`.
+                
+        Note that some SoundTouch devices do not support this functionality.  For example,
+        the ST-300 will support this, but the ST-10 will not.  
+        """
+        apiMethodName:str = 'service_set_audio_product_tone_controls'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("bassLevel", bassLevel)
+            apiMethodParms.AppendKeyValue("trebleLevel", trebleLevel)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Set Audio Product Tone Controls Service", apiMethodParms)
+
+            # get current configuration.
+            config:AudioProductToneControls = self.data.client.GetAudioProductToneControls()
+        
+            # set audio product tone values.
+            config.Bass.Value = bassLevel
+            config.Treble.Value = trebleLevel
+            self.data.client.SetAudioProductToneControls(config)
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        except Exception as ex:
+            _logsi.LogException(None, ex)
+            raise IntegrationError(str(ex)) from ex
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
     def service_set_balance_level(
         self, 
         level:int=0, 
@@ -2395,7 +2502,6 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Set Balance Level Service", apiMethodParms)
                            
             # set bass level.
-            _logsi.LogVerbose("Setting balance level")
             self.data.client.SetBalanceLevel(level)
 
         # the following exceptions have already been logged, so we just need to
@@ -2437,7 +2543,6 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Set Bass Level Service", apiMethodParms)
                            
             # set bass level.
-            _logsi.LogVerbose("Setting bass level")
             self.data.client.SetBassLevel(level)
 
         # the following exceptions have already been logged, so we just need to

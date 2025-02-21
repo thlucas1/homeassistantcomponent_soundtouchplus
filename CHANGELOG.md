@@ -6,6 +6,12 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.98 ] - 2025/02/21
+
+  * Added service `get_audio_product_tone_controls`. Gets the current audio product tone controls configuration of the device.
+  * Added service `set_audio_product_tone_controls`. Sets the current audio product tone controls configuration of the device.
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.171.
+
 ###### [ 1.0.97 ] - 2025/02/20
 
   * Added service `get_balance`. Gets the current balance configuration of the device.

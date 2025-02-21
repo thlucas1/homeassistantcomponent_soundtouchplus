@@ -74,6 +74,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 # -----------------------------------------------------------------------------------
 SERVICE_AUDIO_TONE_LEVELS = "audio_tone_levels"
 SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS = "clear_source_nowplayingstatus"
+SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS = "get_audio_product_tone_controls"
 SERVICE_GET_BALANCE = "get_balance"
 SERVICE_GET_BASS_CAPABILITIES = "get_bass_capabilities"
 SERVICE_GET_SOURCE_LIST = "get_source_list"
@@ -88,6 +89,7 @@ SERVICE_REBOOT_DEVICE = "reboot_device"
 SERVICE_RECENT_LIST = "recent_list"
 SERVICE_RECENT_LIST_CACHE = "recent_list_cache"
 SERVICE_REMOTE_KEYPRESS = "remote_keypress"
+SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS = "set_audio_product_tone_controls"
 SERVICE_SET_BALANCE_LEVEL = "set_balance_level"
 SERVICE_SET_BASS_LEVEL = "set_bass_level"
 SERVICE_SNAPSHOT_RESTORE = "snapshot_restore"
@@ -108,6 +110,13 @@ SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
         vol.Required("source_title"): cv.string,
+    }
+)
+
+SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("refresh", default=True): cv.boolean,
     }
 )
 
@@ -229,10 +238,18 @@ SERVICE_REMOTE_KEYPRESS_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("bass_level", default=25): vol.All(vol.Range(min=-100,max=100)),
+        vol.Required("treble_level", default=50): vol.All(vol.Range(min=-100,max=100))
+    }
+)
+
 SERVICE_SET_BALANCE_LEVEL_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
-        vol.Required("level", default=-0): vol.All(vol.Range(min=-7,max=7))
+        vol.Required("level", default=0): vol.All(vol.Range(min=-7,max=7))
     }
 )
 
@@ -418,6 +435,12 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
                     await hass.async_add_executor_job(entity.service_remote_keypress, key_id, key_state)
 
+                elif service.service == SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS:
+                    bass_level = service.data.get("bass_level")
+                    treble_level = service.data.get("treble_level")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    await hass.async_add_executor_job(entity.service_set_audio_product_tone_controls, bass_level, treble_level)
+
                 elif service.service == SERVICE_SET_BALANCE_LEVEL:
                     level = service.data.get("level")
                     _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
@@ -598,7 +621,14 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                 response:dict = {}
 
                 # process service request.
-                if service.service == SERVICE_GET_BALANCE:
+                if service.service == SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS:
+
+                    # get audio product tone controls.
+                    refresh = service.data.get("refresh")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    response = await hass.async_add_executor_job(entity.service_get_audio_product_tone_controls, refresh)
+
+                elif service.service == SERVICE_GET_BALANCE:
 
                     # get balance.
                     refresh = service.data.get("refresh")
@@ -737,6 +767,15 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             supports_response=SupportsResponse.NONE,
         )
 
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS, SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS,
+            service_handle_serviceresponse,
+            schema=SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+
         _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_BALANCE, SERVICE_GET_BALANCE_SCHEMA)
         hass.services.async_register(
             DOMAIN,
@@ -860,6 +899,15 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             SERVICE_REMOTE_KEYPRESS,
             service_handle_entity,
             schema=SERVICE_REMOTE_KEYPRESS_SCHEMA,
+            supports_response=SupportsResponse.NONE,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS, SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS,
+            service_handle_entity,
+            schema=SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA,
             supports_response=SupportsResponse.NONE,
         )
 
