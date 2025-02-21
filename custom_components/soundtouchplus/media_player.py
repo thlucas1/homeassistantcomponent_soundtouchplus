@@ -23,7 +23,6 @@ import datetime as dt
 from functools import partial
 import logging
 import re
-import time
 from typing import Any
 import urllib.parse
 from xml.etree import ElementTree
@@ -45,7 +44,7 @@ from homeassistant.components.media_player import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, IntegrationError, ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import (
     CONNECTION_NETWORK_MAC,
@@ -53,7 +52,6 @@ from homeassistant.helpers.device_registry import (
     format_mac,
 )
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.entity import entity_sources
 from homeassistant.helpers.entity_registry import EntityRegistry, RegistryEntry
 from homeassistant.util.dt import utcnow
 
@@ -1556,7 +1554,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         return None
 
 
-    def service_audio_tone_levels(self, bassLevel:int, trebleLevel:int):
+    def service_audio_tone_levels(
+        self, 
+        bassLevel:int, 
+        trebleLevel:int,
+        ) -> None:
         """
         Adjust the Bass and Treble values for SoundTouch devices that support it.
         
@@ -1566,28 +1568,29 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             trebleLevel (int):
                 The treble level to set; if None, then the level is not adjusted.
         """
+        apiMethodName:str = 'service_audio_tone_levels'
+        apiMethodParms:SIMethodParmListContext = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            if _logsi.IsOn(SILevel.Verbose):
-                parms:dict = {}
-                parms['bassLevel'] = bassLevel
-                parms['trebleLevel'] = trebleLevel
-                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_audio_tone_levels", str(parms)), parms)
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("bassLevel", bassLevel)
+            apiMethodParms.AppendKeyValue("trebleLevel", trebleLevel)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Audio Tone Levels Service", apiMethodParms)
 
             # if not supported then log a warning.
-            if SoundTouchNodes.audioproducttonecontrols.Path not in self._client.ConfigurationCache:
+            if SoundTouchNodes.audioproducttonecontrols.Path not in self.data.client.ConfigurationCache:
                 _logsi.LogWarning("'%s': MediaPlayer device does not support AudioProductToneControls; cannot change the tone levels" % self.name)
                 return
 
             # get current tone levels.
-            config:AudioProductToneControls = self._client.GetAudioProductToneControls()
+            config:AudioProductToneControls = self.data.client.GetAudioProductToneControls()
         
             # set new tone control values.
             config.Bass.Value = bassLevel
             config.Treble.Value = bassLevel
-            self._client.SetAudioProductToneControls(config)
+            self.data.client.SetAudioProductToneControls(config)
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
@@ -1597,32 +1600,35 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         finally:
                 
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
-        
-    def service_clear_source_nowplayingstatus(self, 
-                                              sourceTitle:str,
-                                              ) -> None:
+
+
+    def service_clear_source_nowplayingstatus(
+        self, 
+        sourceTitle:str,
+        ) -> None:
         """
         Clears the NowPlayingStatus object for a given source title.
         """
+        apiMethodName:str = 'service_clear_source_nowplayingstatus'
         apiMethodParms:SIMethodParmListContext = None
 
         try:
 
             # trace.
-            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug)
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
             apiMethodParms.AppendKeyValue("sourceTitle", sourceTitle)
-            _logsi.LogMethodParmList(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE % (self.name, 'service_clear_source_nowplayingstatus'), apiMethodParms)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Clear Source NowPlaying Status Service", apiMethodParms)
 
             # get source and account values from source title.
-            sourceList:SourceList = self._client.GetSourceList(refresh=False)
+            sourceList:SourceList = self.data.client.GetSourceList(refresh=False)
             sourceItem:SourceItem = sourceList.GetSourceItemByTitle(sourceTitle)
 
             # clear nowplaying status for source.
             cacheKey = "%s-%s:%s" % (SoundTouchNodes.nowPlaying.Path, sourceItem.Source, sourceItem.SourceAccount)
-            if cacheKey in self._client.ConfigurationCache:
-                del self._client.ConfigurationCache[cacheKey]
+            if cacheKey in self.data.client.ConfigurationCache:
+                del self.data.client.ConfigurationCache[cacheKey]
                 _logsi.LogVerbose("'%s': NowPlayingStatus for source '%s' was removed" % (self.name, cacheKey))
 
             # inform Home Assistant of the status update.
@@ -1637,40 +1643,139 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         finally:
                 
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_get_source_list(self) -> SourceList:
+    def service_get_balance(
+        self,
+        refresh:bool=False,
+        ) -> dict:
         """
-        Retrieves the list of sources defined for a device.
+        Gets the current balance configuration of the device.
+
+        Args:
+            refresh (bool):
+                True to query the device for realtime information and refresh the cache;
+                otherwise, False to just return the cached information.
 
         Returns:
-            A `SourceList` instance that contains defined sources.
+            A `Balance` object dictionary that contains balance configuration of the device.
+
         """
+        apiMethodName:str = 'service_get_balance'
+        apiMethodParms:SIMethodParmListContext = None
+        result:Balance = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "service_get_source_list")
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("refresh", refresh)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Balance Service", apiMethodParms)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetBalance(refresh)
 
-            # get preset list.
-            sourceList:SourceList = self._client.GetSourceList(True)
-            
-            # return to caller.
-            return sourceList
+            # return the result dictionary.
+            return result.ToDictionary()
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
         except SoundTouchError as ex:
-            raise HomeAssistantError(ex.Message)
+            raise ServiceValidationError(ex.Message)
         
         finally:
-                
+        
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_musicservice_station_list(self, source:str, sourceAccount:str, sortType:str) -> NavigateResponse:
+    def service_get_bass_capabilities(
+        self,
+        refresh:bool=False,
+        ) -> dict:
+        """
+        Gets the current bass capability configuration of the device.
+
+        Args:
+            refresh (bool):
+                True to query the device for realtime information and refresh the cache;
+                otherwise, False to just return the cached information.
+
+        Returns:
+            A `BassCapabilities` object dictionary that contains bass capabilities configuration of the device.
+
+        """
+        apiMethodName:str = 'service_get_bass_capabilities'
+        apiMethodParms:SIMethodParmListContext = None
+        result:BassCapabilities = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("refresh", refresh)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Bass Capabilities Service", apiMethodParms)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetBassCapabilities(refresh)
+
+            # return the result dictionary.
+            return result.ToDictionary()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_get_source_list(
+        self,
+        ) -> dict:
+        """
+        Retrieves the list of sources defined for a device.
+
+        Returns:
+            A `SourceList` object dictionary that contains defined sources.
+        """
+        apiMethodName:str = 'service_get_source_list'
+        apiMethodParms:SIMethodParmListContext = None
+        result:SourceList = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Source List Service", apiMethodParms)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetSourceList(True)
+
+            # return the result dictionary.
+            return result.ToDictionary()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_musicservice_station_list(
+        self, 
+        source:str, 
+        sourceAccount:str, 
+        sortType:str
+        ) -> dict:
         """
         Retrieves a list of your stored stations from the specified music service (e.g. PANDORA, etc).
 
@@ -1687,18 +1792,20 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 The value is case-sensitive.
 
         Returns:
-            A `NavigateResponse` instance that contain the results.
+            A `NavigateResponse` object dictionary that contain the results.
         """
+        apiMethodName:str = 'service_musicservice_station_list'
+        apiMethodParms:SIMethodParmListContext = None
+        result:NavigateResponse = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            if _logsi.IsOn(SILevel.Verbose):
-                parms:dict = {}
-                parms['source'] = source
-                parms['sourceAccount'] = sourceAccount
-                parms['sortType'] = sortType
-                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_musicservice_station_list", str(parms)), parms)
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("source", source)
+            apiMethodParms.AppendKeyValue("sourceAccount", sourceAccount)
+            apiMethodParms.AppendKeyValue("sortType", sortType)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get MusicService Station List Service", apiMethodParms)
 
             # is source argument a source title value?
             sourceItem = self._GetSourceItemByTitle(source)
@@ -1706,21 +1813,36 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 source = sourceItem.Source
                 sourceAccount = sourceItem.SourceAccount
 
+            # build criteria object.
             criteria:Navigate = Navigate(source, sourceAccount, sortType=sortType)
-            return self._client.GetMusicServiceStations(criteria)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetMusicServiceStations(criteria)
+
+            # return the result dictionary.
+            return result.ToDictionary()
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
         except SoundTouchError as ex:
-            raise HomeAssistantError(ex.Message)
-                
+            raise ServiceValidationError(ex.Message)
+        
         finally:
-                
+        
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_play_contentitem(self, name:str, source:str, sourceAccount:str, itemType:str, location:str, containerArt:str, isPresetable:bool):
+    def service_play_contentitem(
+        self, 
+        name:str, 
+        source:str, 
+        sourceAccount:str, 
+        itemType:str, 
+        location:str, 
+        containerArt:str, 
+        isPresetable:bool
+        ) -> None:
         """
         Play media content from a content item source (e.g. TUNEIN station, etc) on a SoundTouch device.
         
@@ -1745,20 +1867,21 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             isPresetable (bool):
                 True if this item can be saved as a Preset; otherwise, False.
         """
+        apiMethodName:str = 'service_play_contentitem'
+        apiMethodParms:SIMethodParmListContext = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            if _logsi.IsOn(SILevel.Verbose):
-                parms:dict = {}
-                parms['name'] = name
-                parms['source'] = source
-                parms['sourceAccount'] = sourceAccount
-                parms['itemType'] = itemType
-                parms['location'] = location
-                parms['containerArt'] = containerArt
-                parms['isPresetable'] = isPresetable
-                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_play_contentitem", str(parms)), parms)
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("name", name)
+            apiMethodParms.AppendKeyValue("source", source)
+            apiMethodParms.AppendKeyValue("sourceAccount", sourceAccount)
+            apiMethodParms.AppendKeyValue("itemType", itemType)
+            apiMethodParms.AppendKeyValue("location", location)
+            apiMethodParms.AppendKeyValue("containerArt", containerArt)
+            apiMethodParms.AppendKeyValue("isPresetable", isPresetable)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Play ContentItem Service", apiMethodParms)
 
             # is source argument a source title value?
             sourceItem:SourceItem = self._GetSourceItemByTitle(source)
@@ -1769,11 +1892,11 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             # is this a LOCAL source?
             if source is not None and len(source) > 0 and source == 'LOCAL':
                 _logsi.LogVerbose("LOCAL source detected - calling SelectLocalSource for player '%s'", self.entity_id)
-                self._client.SelectLocalSource()
+                self.data.client.SelectLocalSource()
             
             # set content item to play, and play it.
             contentItem:ContentItem = ContentItem(source, itemType, location, sourceAccount, isPresetable, name, containerArt)
-            self._client.PlayContentItem(contentItem)
+            self.data.client.PlayContentItem(contentItem)
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
@@ -1783,10 +1906,15 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         finally:
                 
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_play_handoff(self, to_player:MediaPlayerEntity, restore_volume:bool, snapshot_only:bool) -> None:
+    def service_play_handoff(
+        self, 
+        to_player:MediaPlayerEntity, 
+        restore_volume:bool, 
+        snapshot_only:bool
+        ) -> None:
         """
         Handoff playing source from one SoundTouch MediaPlayerEntity to another.
         
@@ -1801,31 +1929,32 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 power off; False (default) to handoff the snapshot, restore it, 
                 and power off the FROM player.
         """
+        apiMethodName:str = 'service_play_handoff'
+        apiMethodParms:SIMethodParmListContext = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            if _logsi.IsOn(SILevel.Verbose):
-                parms:dict = {}
-                if to_player is not None:
-                    parms['to_player'] = to_player.name
-                parms['restore_volume'] = restore_volume
-                parms['snapshot_only'] = snapshot_only
-                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_play_handoff", str(parms)), parms)
-        
-            if to_player is None:
-                _logsi.LogWarning("'%s': MediaPlayer service 'service_play_handoff' argument 'to_player' cannot be null")
-                return
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("to_player", to_player.name)
+            apiMethodParms.AppendKeyValue("restore_volume", restore_volume)
+            apiMethodParms.AppendKeyValue("snapshot_only", snapshot_only)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Play Handoff Service", apiMethodParms)
+
+            # # validations.
+            # if to_player is None:
+            #     _logsi.LogWarning("'%s': MediaPlayer service 'service_play_handoff' argument 'to_player' cannot be null")
+            #     return
         
             # take a snapshot of what we are currently playing.
             _logsi.LogVerbose("'%s': MediaPlayer is taking a snapshot", self.name)
-            self._client.StoreSnapshot()
+            self.data.client.StoreSnapshot()
 
             # copy our snapshot settings to the TO player snapshot settings.
             _logsi.LogVerbose("'%s': MediaPlayer is copying snapshot settings TO player '%s'", self.name, to_player.name)
             to_player._client.SnapshotSettings.clear()
-            for key in self._client.SnapshotSettings.keys():
-                to_player._client.SnapshotSettings[key] = self._client.SnapshotSettings[key]
+            for key in self.data.client.SnapshotSettings.keys():
+                to_player._client.SnapshotSettings[key] = self.data.client.SnapshotSettings[key]
 
             # if only taking a snapshot then we are done.
             if snapshot_only:
@@ -1845,15 +1974,24 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
         except SoundTouchError as ex:
-            raise HomeAssistantError(ex.Message)
+            raise ServiceValidationError(ex.Message)
         
         finally:
-                
+        
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_play_tts(self, message:str, artist:str, album:str, track:str, ttsUrl:str, volumeLevel:int, appKey:str):
+    def service_play_tts(
+        self, 
+        message:str, 
+        artist:str, 
+        album:str, 
+        track:str, 
+        ttsUrl:str, 
+        volumeLevel:int, 
+        appKey:str,
+        ) -> None:
         """
         Plays a notification message via Google TTS (Text-To-Speech) processing.
         
@@ -1876,22 +2014,24 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             appKey (str):
                 Bose Developer API application key.
         """
+        apiMethodName:str = 'service_play_tts'
+        apiMethodParms:SIMethodParmListContext = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            if _logsi.IsOn(SILevel.Verbose):
-                parms:dict = {}
-                parms['message'] = message
-                parms['artist'] = artist
-                parms['album'] = album
-                parms['track'] = track
-                parms['ttsUrl'] = ttsUrl
-                parms['volumeLevel'] = volumeLevel
-                parms['appKey'] = appKey
-                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_play_tts", str(parms)), parms)
-        
-            self._client.PlayNotificationTTS(message, ttsUrl, artist, album, track, volumeLevel, appKey)
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("message", message)
+            apiMethodParms.AppendKeyValue("artist", artist)
+            apiMethodParms.AppendKeyValue("album", album)
+            apiMethodParms.AppendKeyValue("track", track)
+            apiMethodParms.AppendKeyValue("ttsUrl", ttsUrl)
+            apiMethodParms.AppendKeyValue("volumeLevel", volumeLevel)
+            apiMethodParms.AppendKeyValue("appKey", appKey)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Play TTS Notification Service", apiMethodParms)
+
+            # play tts notification message.
+            self.data.client.PlayNotificationTTS(message, ttsUrl, artist, album, track, volumeLevel, appKey)
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
@@ -1901,10 +2041,19 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         finally:
                 
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_play_url(self, url:str, artist:str, album:str, track:str, volumeLevel:int, appKey:str, getMetadataFromUrlFile:bool):
+    def service_play_url(
+        self, 
+        url:str, 
+        artist:str, 
+        album:str, 
+        track:str, 
+        volumeLevel:int, 
+        appKey:str, 
+        getMetadataFromUrlFile:bool,
+        ) -> None:
         """
         Play media content from a URL on a SoundTouch device.
         
@@ -1927,22 +2076,24 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 The Text-To-Speech url used to translate the message.  The value should contain a "{saytext}" format parameter, 
                 that will be used to insert the encoded message text.
         """
+        apiMethodName:str = 'service_play_url'
+        apiMethodParms:SIMethodParmListContext = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            if _logsi.IsOn(SILevel.Verbose):
-                parms:dict = {}
-                parms['url'] = url
-                parms['artist'] = artist
-                parms['album'] = album
-                parms['track'] = track
-                parms['volumeLevel'] = volumeLevel
-                parms['appKey'] = appKey
-                parms['getMetadataFromUrlFile'] = getMetadataFromUrlFile
-                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_play_url", str(parms)), parms)
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("url", url)
+            apiMethodParms.AppendKeyValue("artist", artist)
+            apiMethodParms.AppendKeyValue("album", album)
+            apiMethodParms.AppendKeyValue("track", track)
+            apiMethodParms.AppendKeyValue("volumeLevel", volumeLevel)
+            apiMethodParms.AppendKeyValue("appKey", appKey)
+            apiMethodParms.AppendKeyValue("getMetadataFromUrlFile", getMetadataFromUrlFile)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Play URL Service", apiMethodParms)
 
-            self._client.PlayUrl(url, artist, album, track, volumeLevel, appKey, getMetadataFromUrlFile)
+            # play url.
+            self.data.client.PlayUrl(url, artist, album, track, volumeLevel, appKey, getMetadataFromUrlFile)
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
@@ -1952,44 +2103,64 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         finally:
                 
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_preset_list(self) -> PresetList:
+    def service_preset_list(
+        self,
+        include_empty_slots:bool=False,
+        ) -> dict:
         """
         Retrieves the list of presets defined for a device.
 
+        Args:
+            include_empty_slots (bool):
+                True to include ALL preset slots (both empty and set); 
+                otherwise, False (default) to only include preset slots that have been set.
+
         Returns:
-            A `PresetList` instance that contains defined presets.
+            A `PresetList` object dictionary that contains defined presets.
         """
+        apiMethodName:str = 'service_preset_list'
+        apiMethodParms:SIMethodParmListContext = None
+        result:PresetList = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "service_preset_list")
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("include_empty_slots", include_empty_slots)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Preset List Service", apiMethodParms)
 
-            # get preset list.
-            presetList:PresetList = self._client.GetPresetList(True, resolveSourceTitles=True)
-            
+            # validations.
+            if include_empty_slots is None:
+                include_empty_slots = False
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetPresetList(True, resolveSourceTitles=True)
+
             # update state attributes.
-            self.soundtouchplus_presets_lastupdated = presetList.LastUpdatedOn
+            self.soundtouchplus_presets_lastupdated = result.LastUpdatedOn
             self.schedule_update_ha_state(force_refresh=False)
 
-            # return to caller.
-            return presetList
+            # return the result dictionary.
+            return result.ToDictionary(includeEmptyPresets=include_empty_slots)
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
         except SoundTouchError as ex:
-            raise HomeAssistantError(ex.Message)
+            raise ServiceValidationError(ex.Message)
         
         finally:
-                
+        
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_preset_remove(self, presetId:int):
+    def service_preset_remove(
+        self, 
+        presetId:int,
+        ) -> None:
         """
         Removes the specified Preset id from the device's list of presets.
         
@@ -1997,16 +2168,18 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             presetId (int):
                 The preset id to remove; valid values are 1 thru 6.
         """
+        apiMethodName:str = 'service_preset_remove'
+        apiMethodParms:SIMethodParmListContext = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            if _logsi.IsOn(SILevel.Verbose):
-                parms:dict = {}
-                parms['presetId'] = presetId
-                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_preset_remove", str(parms)), parms)
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("presetId", presetId)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Preset Remove Service", apiMethodParms)
 
-            self._client.RemovePreset(presetId)
+            # remove preset.
+            self.data.client.RemovePreset(presetId)
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
@@ -2016,19 +2189,19 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         finally:
                 
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_reboot_device(self, sshPort:int):
+    def service_reboot_device(
+        self, 
+        sshPort:int,
+        ) -> None:
         """
         Reboots the SoundTouch device operating system.
         
         Args:
             sshPort (int):
                 SSH port to connect to; default is 17000.
-                
-        Returns:
-            The server response, in string format.
                 
         This method will open a telnet connection to the SoundTouch SSH server
         running on the device (port 17000).  It will then issue a `sys reboot`
@@ -2040,16 +2213,18 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         device is rebooting. SoundTouch web-services API connectivity should be 
         restored within 30 - 45 seconds if the reboot is successful.
         """
+        apiMethodName:str = 'service_reboot_device'
+        apiMethodParms:SIMethodParmListContext = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            if _logsi.IsOn(SILevel.Verbose):
-                parms:dict = {}
-                parms['sshPort'] = sshPort
-                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_reboot_device", str(parms)), parms)
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("sshPort", sshPort)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Reboot Device Service", apiMethodParms)
 
-            self._client.Device.RebootDevice(sshPort)
+            # reboot device.
+            self.data.client.Device.RebootDevice(sshPort)
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
@@ -2059,78 +2234,94 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         finally:
                 
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_recent_list(self) -> RecentList:
+    def service_recent_list(
+        self,
+        ) -> dict:
         """
         Retrieves the list of recently played items defined for a device.
 
         Returns:
-            A `RecentList` instance that contains defined recently played items.
+            A `RecentList` object dictionary that contains defined recently played items.
         """
+        apiMethodName:str = 'service_recent_list'
+        apiMethodParms:SIMethodParmListContext = None
+        result:RecentList = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "service_recent_list")
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Recent List Service", apiMethodParms)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetRecentList(True, resolveSourceTitles=True)
 
-            # get recents list.
-            recentList:RecentList = self._client.GetRecentList(True, resolveSourceTitles=True)
-            
             # update state attributes.
-            self.soundtouchplus_recents_lastupdated = recentList.LastUpdatedOn
+            self.soundtouchplus_recents_lastupdated = result.LastUpdatedOn
             self.schedule_update_ha_state(force_refresh=False)
 
-            # return to caller.
-            return recentList
+            # return the result dictionary.
+            return result.ToDictionary()
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
         except SoundTouchError as ex:
-            raise HomeAssistantError(ex.Message)
+            raise ServiceValidationError(ex.Message)
         
         finally:
-                
+        
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_recent_list_cache(self) -> RecentList:
+    def service_recent_list_cache(
+        self,
+        ) -> dict:
         """
         Retrieves the list of recently played cache items defined for a device.
 
         Returns:
-            A `RecentList` instance that contains defined recently played cache items.
+            A `RecentList` object dictionary that contains defined recently played cache items.
         """
+        apiMethodName:str = 'service_recent_list_cache'
+        apiMethodParms:SIMethodParmListContext = None
+        result:RecentList = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "service_recent_list_cache")
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Recent List Cache Service", apiMethodParms)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.RecentListCache
 
-            # get recents list.
-            recentList:RecentList = self._client.RecentListCache
-            
             # update state attributes.
-            self.soundtouchplus_recents_cache_lastupdated = recentList.LastUpdatedOn
+            self.soundtouchplus_recents_cache_lastupdated = result.LastUpdatedOn
             self.schedule_update_ha_state(force_refresh=False)
 
-            # return to caller.
-            return recentList
+            # return the result dictionary.
+            return result.ToDictionary()
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
         except SoundTouchError as ex:
-            raise HomeAssistantError(ex.Message)
+            raise ServiceValidationError(ex.Message)
         
         finally:
-                
+        
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_remote_keypress(self, key_id:str, key_state:str):
+    def service_remote_keypress(
+        self, 
+        key_id:str, 
+        key_state:str,
+        ) -> None:
         """
         Send key press and release requests to the player.
         
@@ -2140,27 +2331,30 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 The value is case-sensitive, and should be in UPPER case.
                 Example: "POWER", "MUTE", "PLAY", "PAUSE", etc.
 
-        The key_id argument is a string (instead of the Keys ennum), which will 
+        The key_id argument is a string (instead of the Keys enum), which will 
         allow it to be used for keys defined in the future that are not currently 
         defined.
         """
+        apiMethodName:str = 'service_remote_keypress'
+        apiMethodParms:SIMethodParmListContext = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            if _logsi.IsOn(SILevel.Verbose):
-                parms:dict = {}
-                parms['key_id'] = key_id
-                parms['key_state'] = key_state
-                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_remote_keypress", str(parms)), parms)
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("key_id", key_id)
+            apiMethodParms.AppendKeyValue("key_state", key_state)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Remote Keypress Service", apiMethodParms)
 
+            # check for PRESET_n key id, and set state to `release` if found.
             if key_state is None:
                 key_state = KeyStates.Both.value
                 if key_id is not None and key_id.startswith('PRESET_'):
                     key_state = KeyStates.Release.value
             key_state = key_state.lower()
 
-            self._client.Action(key_id, key_state)
+            # send remote keypress.
+            self.data.client.Action(key_id, key_state)
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
@@ -2170,10 +2364,100 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         finally:
                 
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_snapshot_restore(self, restore_volume:bool) -> None:
+    def service_set_balance_level(
+        self, 
+        level:int=0, 
+        ) -> None:
+        """
+        Sets the device balance level to the given level.  
+        
+        Args:
+            level (int):
+                Balance level to set, usually in the range of -7 (left) to 7 (right).
+
+        This method only works if the device is configured as part of a stereo pair.
+        
+        The argument level range can vary by device; use the `GetBalance` method to
+        determine if the device has the capability to adjust the balance, as well as
+        the allowable range (minimum, maximum, default) levels.
+        """
+        apiMethodName:str = 'service_set_balance_level'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("level", level)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Set Balance Level Service", apiMethodParms)
+                           
+            # set bass level.
+            _logsi.LogVerbose("Setting balance level")
+            self.data.client.SetBalanceLevel(level)
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        except Exception as ex:
+            _logsi.LogException(None, ex)
+            raise IntegrationError(str(ex)) from ex
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_set_bass_level(
+        self, 
+        level:int=-5, 
+        ) -> None:
+        """
+        Sets the device bass level to the given level.
+        
+        Args:
+            level (int):
+                Bass level to set, usually in the range of -9 (no bass) to 0 (full bass).
+
+        The argument level range can vary by device; use the `GetBassCapabilities()` method to
+        retrieve the allowable range for a device.
+        """
+        apiMethodName:str = 'service_set_bass_level'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("level", level)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Set Bass Level Service", apiMethodParms)
+                           
+            # set bass level.
+            _logsi.LogVerbose("Setting bass level")
+            self.data.client.SetBassLevel(level)
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        except Exception as ex:
+            _logsi.LogException(None, ex)
+            raise IntegrationError(str(ex)) from ex
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_snapshot_restore(
+        self, 
+        restore_volume:bool,
+        ) -> None:
         """
         Restore now playing settings from a snapshot that was previously taken by 
         the service_snapshot_store method.
@@ -2182,73 +2466,83 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             restore_volume (bool):
                 True to restore volume setting; otherwise, False to not change volume.
         """
-        try:
-
-            # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            if _logsi.IsOn(SILevel.Verbose):
-                parms:dict = {}
-                parms['restore_volume'] = restore_volume
-                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_snapshot_restore", str(parms)), parms)
-
-            # if not restoring volume then remove it from the snapshot settings.
-            if not restore_volume:
-                if SoundTouchNodes.volume.Path in self._client.SnapshotSettings:
-                    self._client.SnapshotSettings.pop(SoundTouchNodes.volume.Path)
-
-            self._client.RestoreSnapshot()
-
-        # the following exceptions have already been logged, so we just need to
-        # pass them back to HA for display in the log (or service UI).
-        except SoundTouchError as ex:
-            raise HomeAssistantError(ex.Message)
-        
-        finally:
-                
-            # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
-
-
-    def service_snapshot_store(self) -> None:
-        """
-        Store now playing settings to a snapshot, which can be restored later via
-        the service_snapshot_restore method.
-        """
-        try:
-
-            # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            _logsi.LogVerbose(STAppMessages.MSG_MEDIAPLAYER_SERVICE, self.name, "service_snapshot_store")
-            
-            self._client.StoreSnapshot()
-
-        # the following exceptions have already been logged, so we just need to
-        # pass them back to HA for display in the log (or service UI).
-        except SoundTouchError as ex:
-            raise HomeAssistantError(ex.Message)
-        
-        finally:
-                
-            # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
-
-
-    def service_update_source_nowplayingstatus(self, 
-                                               sourceTitle:str,
-                                               album:str, artist:str, artistId:str, artUrl:str, description:str, 
-                                               duration:int, genre:str, playStatus:str, position:int, 
-                                               sessionId:str, stationLocation:str, stationName:str,
-                                               track:str, trackId:str,
-                                               ) -> None:
-        """
-        Updates the NowPlayingStatus object for a given source title.
-        """
+        apiMethodName:str = 'service_snapshot_restore'
         apiMethodParms:SIMethodParmListContext = None
 
         try:
 
             # trace.
-            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug)
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("restore_volume", restore_volume)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Snapshot Restore Service", apiMethodParms)
+
+            # if not restoring volume then remove it from the snapshot settings.
+            if not restore_volume:
+                if SoundTouchNodes.volume.Path in self.data.client.SnapshotSettings:
+                    self.data.client.SnapshotSettings.pop(SoundTouchNodes.volume.Path)
+
+            # restore snapshot settings.
+            self.data.client.RestoreSnapshot()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_snapshot_store(
+        self,
+        ) -> None:
+        """
+        Store now playing settings to a snapshot, which can be restored later via
+        the service_snapshot_restore method.
+        """
+        apiMethodName:str = 'service_snapshot_store'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Snapshot Store Service", apiMethodParms)
+
+            # store snapshot settings.
+            self.data.client.StoreSnapshot()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_update_source_nowplayingstatus(
+        self, 
+        sourceTitle:str,
+        album:str, artist:str, artistId:str, artUrl:str, description:str, 
+        duration:int, genre:str, playStatus:str, position:int, 
+        sessionId:str, stationLocation:str, stationName:str,
+        track:str, trackId:str,
+        ) -> None:
+        """
+        Updates the NowPlayingStatus object for a given source title.
+        """
+        apiMethodName:str = 'service_update_source_nowplayingstatus'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
             apiMethodParms.AppendKeyValue("sourceTitle", sourceTitle)
             apiMethodParms.AppendKeyValue("album", album)
             apiMethodParms.AppendKeyValue("artist", artist)
@@ -2264,18 +2558,18 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             apiMethodParms.AppendKeyValue("stationName", stationName)
             apiMethodParms.AppendKeyValue("track", track)
             apiMethodParms.AppendKeyValue("trackId", trackId)
-            _logsi.LogMethodParmList(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE % (self.name, 'service_update_source_nowplayingstatus'), apiMethodParms)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Update Source NowPlaying Status Service", apiMethodParms)
 
             # validations.
             if duration == 0: duration = None
             if position == 0: position = None
             
             # get source and account values from source title.
-            sourceList:SourceList = self._client.GetSourceList(refresh=False)
+            sourceList:SourceList = self.data.client.GetSourceList(refresh=False)
             sourceItem:SourceItem = sourceList.GetSourceItemByTitle(sourceTitle)
 
             # call service.
-            config:NowPlayingStatus = self._client.UpdateNowPlayingStatusForSource(
+            config:NowPlayingStatus = self.data.client.UpdateNowPlayingStatusForSource(
                                             sourceItem.Source, sourceItem.SourceAccount, 
                                             album, artist, artistId, artUrl, description,
                                             duration, genre, playStatus, position, 
@@ -2297,10 +2591,13 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         finally:
                 
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
-    def service_zone_toggle_member(self, zone_member_player:MediaPlayerEntity) -> None:
+    def service_zone_toggle_member(
+        self, 
+        zone_member_player:MediaPlayerEntity,
+        ) -> None:
         """
         Toggles the given zone member in the master device's zone.  If the member exists in the
         zone then it is removed; if the member does not exist in the zone, then it is added.
@@ -2309,34 +2606,35 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             zone_member_player (MediaPlayerEntity):
                 A SoundTouch MediaPlayerEntity that will be toggled in the master zone.
         """
+        apiMethodName:str = 'service_zone_toggle_member'
+        apiMethodParms:SIMethodParmListContext = None
+
         try:
 
             # trace.
-            _logsi.EnterMethod(SILevel.Debug)
-            if _logsi.IsOn(SILevel.Verbose):
-                parms:dict = {}
-                if zone_member_player is not None:
-                    parms['zone_member_player'] = zone_member_player.name
-                _logsi.LogDictionary(SILevel.Verbose, STAppMessages.MSG_MEDIAPLAYER_SERVICE_WITH_PARMS % (self.name, "service_zone_toggle_member", str(parms)), parms)
-        
-            if zone_member_player is None:
-                _logsi.LogWarning("'%s': MediaPlayer service 'service_zone_toggle_member' argument 'zone_member_player' cannot be null")
-                return
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("zone_member_player", zone_member_player.name)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Zone Toggle Member Service", apiMethodParms)
+
+            # # validations.
+            # if zone_member_player is None:
+            #     _logsi.LogWarning("'%s': MediaPlayer service 'service_zone_toggle_member' argument 'zone_member_player' cannot be null")
+            #     return
 
             # toggle the zone member.
             _logsi.LogVerbose("Master Zone player '%s' is toggling zone member '%s'", self.entity_id, zone_member_player.entity_id)
             zoneMember:ZoneMember = ZoneMember(zone_member_player._client.Device.Host, zone_member_player._client.Device.DeviceId)
-            self._client.ToggleZoneMember(zoneMember)
+            self.data.client.ToggleZoneMember(zoneMember)
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
         except SoundTouchError as ex:
-            raise HomeAssistantError(ex.Message)
+            raise ServiceValidationError(ex.Message)
         
         finally:
-                
+        
             # trace.
-            _logsi.LeaveMethod(SILevel.Debug)
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
     async def async_added_to_hass(self) -> None:

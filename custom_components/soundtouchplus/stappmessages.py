@@ -37,9 +37,14 @@ class STAppMessages:
     ServiceCall Data
     """
 
-    MSG_SERVICE_REQUEST_REGISTER:str = "SoundTouch - Component async_setup is registering component async service request: '%s'"
+    MSG_SERVICE_EXECUTE:str = "Executing '%s' service on media player '%s'"
     """
-    SoundTouch - Component async_setup is registering component async service request: '%s'
+    Executing '%s' service on media player '%s'
+    """
+    
+    MSG_SERVICE_REQUEST_REGISTER:str = "Component async_setup is registering async service: '%s'"
+    """
+    Component async_setup is registering component async service request: '%s'
     """
 
     MSG_SERVICE_REQUEST_UNKNOWN:str = "Service request '%s' was not recognized by the '%s' method"

@@ -6,6 +6,15 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.97 ] - 2025/02/20
+
+  * Added service `get_balance`. Gets the current balance configuration of the device.
+  * Added service `get_bass_capabilities`. Gets the current bass capability configuration of the device.
+  * Added service `set_balance_level`. Sets the device balance level to the given level.
+  * Added service `set_bass_level`. Sets the device bass level to the given level.
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.170.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.70.
+
 ###### [ 1.0.96 ] - 2025/02/18
 
   * Updated underlying `spotifywebapiPython` package requirement to version 1.0.168.

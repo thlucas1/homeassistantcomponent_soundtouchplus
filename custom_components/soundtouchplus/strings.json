@@ -102,6 +102,34 @@
         }
       }
     },
+    "get_balance": {
+      "name": "Get Balance",
+      "description": "Gets the current balance configuration of the device.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        },
+        "refresh": {
+          "name": "Refresh?",
+          "description": "True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information."
+        }
+      }
+    },
+    "get_bass_capabilities": {
+      "name": "Get Bass Capabilities",
+      "description": "Gets the current bass capability configuration of the device.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        },
+        "refresh": {
+          "name": "Refresh?",
+          "description": "True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information."
+        }
+      }
+    },
     "musicservice_station_list": {
       "name": "Get Music Service Station List",
       "description": "Retrieves the list of your stored stations from the specified music service (e.g. PANDORA, etc).",
@@ -337,6 +365,34 @@
         "key_state": {
           "name": "Key State",
           "description": "SoundTouch remote control key state.  Most key identifiers will use 'both' for state; the 'PRESET_n' key identifiers use 'press' to store a preset, and 'release' to select (or play) a preset."
+        }
+      }
+    },
+    "set_balance_level": {
+      "name": "Set Balance Level",
+      "description": "Sets the device balance level to the given level.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        },
+        "level": {
+          "name": "Level",
+          "description": "Balance level to set, usually in the range of -7 (left) to 7 (right)."
+        }
+      }
+    },
+    "set_bass_level": {
+      "name": "Set Bass Level",
+      "description": "Sets the device bass level to the given level.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        },
+        "level": {
+          "name": "Level",
+          "description": "Bass level to set, usually in the range of -9 (no bass) to 0 (full bass)."
         }
       }
     },

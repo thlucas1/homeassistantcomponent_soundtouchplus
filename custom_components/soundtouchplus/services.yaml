@@ -55,6 +55,48 @@ clear_source_nowplayingstatus:
       selector:
         text:
 
+get_balance:
+  name: Get Balance
+  description: Gets the current balance configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    refresh:
+      name: Refresh?
+      description: True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information.
+      example: "false"
+      required: true
+      selector:
+        boolean:
+
+get_bass_capabilities:
+  name: Get Bass Capabilities
+  description: Gets the current bass capability configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    refresh:
+      name: Refresh?
+      description: True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information.
+      example: "false"
+      required: true
+      selector:
+        boolean:
+
 get_source_list:
   name: Get Source List
   description: Retrieves the list of sources defined to the device.
@@ -506,6 +548,54 @@ remote_keypress:
             - both
             - press
             - release
+
+set_balance_level:
+  name: Set Balance Level
+  description: Sets the device balance level to the given level.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    level:
+      name: Level
+      description: Balance level to set, usually in the range of -7 (left) to 7 (right).
+      example: "0"
+      required: true
+      selector:
+        number:
+          min: -7
+          max: 7
+          mode: box
+
+set_bass_level:
+  name: Set Bass Level
+  description: Sets the device bass level to the given level.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    level:
+      name: Level
+      description: Bass level to set, usually in the range of -9 (no bass) to 0 (full bass).
+      example: -5
+      required: true
+      selector:
+        number:
+          min: -9
+          max: 0
+          mode: box
 
 snapshot_restore:
   name: Snapshot Restore
