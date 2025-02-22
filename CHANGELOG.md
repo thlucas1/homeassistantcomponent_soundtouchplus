@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.99 ] - 2025/02/22
+
+  * Updated underlying `spotifywebapiPython` package requirement to version 1.0.174.
+
 ###### [ 1.0.98 ] - 2025/02/21
 
   * Added service `get_audio_product_tone_controls`. Gets the current audio product tone controls configuration of the device.
