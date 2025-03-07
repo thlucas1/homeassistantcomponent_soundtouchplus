@@ -74,10 +74,14 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 # -----------------------------------------------------------------------------------
 SERVICE_AUDIO_TONE_LEVELS = "audio_tone_levels"
 SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS = "clear_source_nowplayingstatus"
+SERVICE_GET_AUDIO_DSP_CONTROLS = "get_audio_dsp_controls"
 SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS = "get_audio_product_tone_controls"
 SERVICE_GET_BALANCE = "get_balance"
 SERVICE_GET_BASS_CAPABILITIES = "get_bass_capabilities"
+SERVICE_GET_BASS_LEVEL = "get_bass_level"
+SERVICE_GET_DEVICE_INFO = "get_device_info"
 SERVICE_GET_SOURCE_LIST = "get_source_list"
+SERVICE_GET_SUPPORTED_URLS = "get_supported_urls"
 SERVICE_MUSICSERVICE_STATION_LIST = "musicservice_station_list"
 SERVICE_PLAY_CONTENTITEM = "play_contentitem"
 SERVICE_PLAY_HANDOFF = "play_handoff"
@@ -89,6 +93,7 @@ SERVICE_REBOOT_DEVICE = "reboot_device"
 SERVICE_RECENT_LIST = "recent_list"
 SERVICE_RECENT_LIST_CACHE = "recent_list_cache"
 SERVICE_REMOTE_KEYPRESS = "remote_keypress"
+SERVICE_SET_AUDIO_DSP_CONTROLS = "set_audio_dsp_controls"
 SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS = "set_audio_product_tone_controls"
 SERVICE_SET_BALANCE_LEVEL = "set_balance_level"
 SERVICE_SET_BASS_LEVEL = "set_bass_level"
@@ -113,6 +118,13 @@ SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_GET_AUDIO_DSP_CONTROLS_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("refresh", default=True): cv.boolean,
+    }
+)
+
 SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
@@ -134,9 +146,29 @@ SERVICE_GET_BASS_CAPABILITIES_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_GET_BASS_LEVEL_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("refresh", default=False): cv.boolean,
+    }
+)
+
+SERVICE_GET_DEVICE_INFO_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+    }
+)
+
 SERVICE_GET_SOURCE_LIST_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
+    }
+)
+
+SERVICE_GET_SUPPORTED_URLS_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("refresh", default=False): cv.boolean,
     }
 )
 
@@ -238,11 +270,19 @@ SERVICE_REMOTE_KEYPRESS_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_SET_AUDIO_DSP_CONTROLS_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("audio_mode"): cv.string,
+        vol.Optional("video_sync_audio_delay", default=0): vol.All(vol.Range(min=0,max=10000))
+    }
+)
+
 SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
-        vol.Required("bass_level", default=25): vol.All(vol.Range(min=-100,max=100)),
-        vol.Required("treble_level", default=50): vol.All(vol.Range(min=-100,max=100))
+        vol.Required("bass_level", default=40): vol.All(vol.Range(min=-100,max=100)),
+        vol.Required("treble_level", default=60): vol.All(vol.Range(min=-100,max=100))
     }
 )
 
@@ -435,6 +475,12 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
                     await hass.async_add_executor_job(entity.service_remote_keypress, key_id, key_state)
 
+                elif service.service == SERVICE_SET_AUDIO_DSP_CONTROLS:
+                    audio_mode = service.data.get("audio_mode")
+                    video_sync_audio_delay = service.data.get("video_sync_audio_delay")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    await hass.async_add_executor_job(entity.service_set_audio_dsp_controls, audio_mode, video_sync_audio_delay)
+
                 elif service.service == SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS:
                     bass_level = service.data.get("bass_level")
                     treble_level = service.data.get("treble_level")
@@ -621,7 +667,14 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                 response:dict = {}
 
                 # process service request.
-                if service.service == SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS:
+                if service.service == SERVICE_GET_AUDIO_DSP_CONTROLS:
+
+                    # get audio dsp controls.
+                    refresh = service.data.get("refresh")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    response = await hass.async_add_executor_job(entity.service_get_audio_dsp_controls, refresh)
+
+                elif service.service == SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS:
 
                     # get audio product tone controls.
                     refresh = service.data.get("refresh")
@@ -642,11 +695,31 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
                     response = await hass.async_add_executor_job(entity.service_get_bass_capabilities, refresh)
 
+                elif service.service == SERVICE_GET_BASS_LEVEL:
+
+                    # get bass level.
+                    refresh = service.data.get("refresh")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    response = await hass.async_add_executor_job(entity.service_get_bass_level, refresh)
+
+                elif service.service == SERVICE_GET_DEVICE_INFO:
+
+                    # get device information.
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    response = await hass.async_add_executor_job(entity.service_get_device_info)
+
                 elif service.service == SERVICE_GET_SOURCE_LIST:
 
                     # get list of sources defined for the device.
                     _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
                     response = await hass.async_add_executor_job(entity.service_get_source_list)
+
+                elif service.service == SERVICE_GET_SUPPORTED_URLS:
+
+                    # get supported urls.
+                    refresh = service.data.get("refresh")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    response = await hass.async_add_executor_job(entity.service_get_supported_urls, refresh)
 
                 elif service.service == SERVICE_MUSICSERVICE_STATION_LIST:
 
@@ -767,6 +840,15 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             supports_response=SupportsResponse.NONE,
         )
 
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_AUDIO_DSP_CONTROLS, SERVICE_GET_AUDIO_DSP_CONTROLS_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_AUDIO_DSP_CONTROLS,
+            service_handle_serviceresponse,
+            schema=SERVICE_GET_AUDIO_DSP_CONTROLS_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+
         _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS, SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA)
         hass.services.async_register(
             DOMAIN,
@@ -794,12 +876,39 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             supports_response=SupportsResponse.ONLY,
         )
 
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_BASS_LEVEL, SERVICE_GET_BASS_LEVEL_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_BASS_LEVEL,
+            service_handle_serviceresponse,
+            schema=SERVICE_GET_BASS_LEVEL_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_DEVICE_INFO, SERVICE_GET_DEVICE_INFO_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_DEVICE_INFO,
+            service_handle_serviceresponse,
+            schema=SERVICE_GET_DEVICE_INFO_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+
         _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_SOURCE_LIST, SERVICE_GET_SOURCE_LIST_SCHEMA)
         hass.services.async_register(
             DOMAIN,
             SERVICE_GET_SOURCE_LIST,
             service_handle_serviceresponse,
             schema=SERVICE_GET_SOURCE_LIST_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_SUPPORTED_URLS, SERVICE_GET_SUPPORTED_URLS_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_SUPPORTED_URLS,
+            service_handle_serviceresponse,
+            schema=SERVICE_GET_SUPPORTED_URLS_SCHEMA,
             supports_response=SupportsResponse.ONLY,
         )
 
@@ -899,6 +1008,15 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             SERVICE_REMOTE_KEYPRESS,
             service_handle_entity,
             schema=SERVICE_REMOTE_KEYPRESS_SCHEMA,
+            supports_response=SupportsResponse.NONE,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_SET_AUDIO_DSP_CONTROLS, SERVICE_SET_AUDIO_DSP_CONTROLS_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_AUDIO_DSP_CONTROLS,
+            service_handle_entity,
+            schema=SERVICE_SET_AUDIO_DSP_CONTROLS_SCHEMA,
             supports_response=SupportsResponse.NONE,
         )
 

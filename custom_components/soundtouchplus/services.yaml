@@ -55,6 +55,27 @@ clear_source_nowplayingstatus:
       selector:
         text:
 
+get_audio_dsp_controls:
+  name: Get Audio DSP Controls
+  description: Gets the current audio dsp controls configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    refresh:
+      name: Refresh?
+      description: True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information.
+      example: "false"
+      required: true
+      selector:
+        boolean:
+
 get_audio_product_tone_controls:
   name: Get Audio Product Tone Controls
   description: Gets the current audio product tone controls configuration of the device.
@@ -118,6 +139,41 @@ get_bass_capabilities:
       selector:
         boolean:
 
+get_bass_level:
+  name: Get Bass Level
+  description: Gets the current bass level configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    refresh:
+      name: Refresh?
+      description: True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information.
+      example: "false"
+      required: true
+      selector:
+        boolean:
+
+get_device_info:
+  name: Get Device Information
+  description: Gets basic details of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+
 get_source_list:
   name: Get Source List
   description: Retrieves the list of sources defined to the device.
@@ -131,6 +187,27 @@ get_source_list:
         entity:
           integration: soundtouchplus
           domain: media_player
+
+get_supported_urls:
+  name: Get Supported URLs
+  description: Gets the supported urls configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    refresh:
+      name: Refresh?
+      description: True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information.
+      example: "false"
+      required: true
+      selector:
+        boolean:
 
 musicservice_station_list:
   name: Get Music Service Station List
@@ -570,6 +647,37 @@ remote_keypress:
             - press
             - release
 
+set_audio_dsp_controls:
+  name: Set Audio DSP Controls
+  description: Sets the current audio dsp controls configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    audio_mode:
+      name: Audio Mode
+      description: Audio mode value (e.g. "AUDIO_MODE_NORMAL", "AUDIO_MODE_DIALOG", etc).
+      example: "AUDIO_MODE_DIALOG"
+      required: false
+      selector:
+        text:
+    video_sync_audio_delay:
+      name: Video Sync Audio Delay
+      description: Video syncronization audio delay value (in milliseconds). Suggested range is 0 - 250ms, in increments of 10.
+      example: "0"
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 10000
+          mode: box
+
 set_audio_product_tone_controls:
   name: Set Audio Product Tone Controls
   description: Sets the current audio product tone controls configuration of the device.
@@ -586,7 +694,7 @@ set_audio_product_tone_controls:
     bass_level:
       name: Bass Level
       description: Bass level to set, usually in the range of -100 (low) to 100 (high).
-      example: "25"
+      example: "40"
       required: true
       selector:
         number:
@@ -596,7 +704,7 @@ set_audio_product_tone_controls:
     treble_level:
       name: Treble Level
       description: Treble level to set, usually in the range of -100 (low) to 100 (high).
-      example: "50"
+      example: "60"
       required: true
       selector:
         number:

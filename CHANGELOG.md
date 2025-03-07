@@ -6,6 +6,19 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.101 ] - 2025/03/07
+
+  * Added service `get_audio_dsp_controls`. Gets the current audio dsp controls configuration of the device.
+  * Added service `get_bass_level`. Gets the current bass level configuration of the device.
+  * Added service `get_device_info`. Gets basic device information.
+  * Added service `get_supported_urls`. Gets the supported urls configuration of the device.
+  * Added service `set_audio_dsp_controls`. Sets the current audio dsp controls configuration of the device.
+  * Updated `smartinspectPython` package reference to `smartinspectpython` for PyPi.org requirements.
+  * Updated `spotifywebapiPython` package reference to `spotifywebapipython` for PyPi.org requirements.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.74.
+  * Updated underlying `smartinspectpython` package requirement to version 3.0.35.
+  * Updated underlying `spotifywebapipython` package requirement to version 1.0.184.
+
 ###### [ 1.0.100 ] - 2025/02/26
 
   * Updated underlying `spotifywebapiPython` package requirement to version 1.0.180.

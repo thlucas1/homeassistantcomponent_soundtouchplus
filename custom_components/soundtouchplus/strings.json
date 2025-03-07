@@ -92,13 +92,17 @@
         }
       }
     },
-    "get_source_list": {
-      "name": "Get Source List",
-      "description": "Retrieves the list of sources defined to the device.",
+    "get_audio_dsp_controls": {
+      "name": "Get Audio DSP Controls",
+      "description": "Gets the current audio dsp controls configuration of the device.",
       "fields": {
         "entity_id": {
           "name": "Entity ID",
           "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        },
+        "refresh": {
+          "name": "Refresh?",
+          "description": "True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information."
         }
       }
     },
@@ -133,6 +137,54 @@
     "get_bass_capabilities": {
       "name": "Get Bass Capabilities",
       "description": "Gets the current bass capability configuration of the device.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        },
+        "refresh": {
+          "name": "Refresh?",
+          "description": "True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information."
+        }
+      }
+    },
+    "get_bass_level": {
+      "name": "Get Bass Level",
+      "description": "Gets the current bass level configuration of the device.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        },
+        "refresh": {
+          "name": "Refresh?",
+          "description": "True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information."
+        }
+      }
+    },
+    "get_device_info": {
+      "name": "Get Device Information",
+      "description": "Gets basic details of the device.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        }
+      }
+    },
+    "get_source_list": {
+      "name": "Get Source List",
+      "description": "Retrieves the list of sources defined to the device.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        }
+      }
+    },
+    "get_supported_urls": {
+      "name": "Get Supported URLs",
+      "description": "Gets the supported urls configuration of the device.",
       "fields": {
         "entity_id": {
           "name": "Entity ID",
@@ -379,6 +431,24 @@
         "key_state": {
           "name": "Key State",
           "description": "SoundTouch remote control key state.  Most key identifiers will use 'both' for state; the 'PRESET_n' key identifiers use 'press' to store a preset, and 'release' to select (or play) a preset."
+        }
+      }
+    },
+    "set_audio_dsp_controls": {
+      "name": "Set Audio DSP Controls",
+      "description": "Sets the current audio dsp controls configuration of the device.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        },
+        "audio_mode": {
+          "name": "Audio Mode",
+          "description": "Audio mode value (e.g. AUDIO_MODE_NORMAL, AUDIO_MODE_DIALOG, etc)."
+        },
+        "video_sync_audio_delay": {
+          "name": "Video Sync Audio Delay",
+          "description": "Video syncronization audio delay value (in milliseconds). Suggested range is 0 - 250ms, in increments of 10."
         }
       }
     },

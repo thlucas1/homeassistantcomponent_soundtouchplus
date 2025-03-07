@@ -236,7 +236,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                                           | MediaPlayerEntityFeature.VOLUME_MUTE \
                                           | MediaPlayerEntityFeature.VOLUME_SET \
                                           | MediaPlayerEntityFeature.VOLUME_STEP \
-        
+
             # we will (by default) set polling to false, as the SoundTouch device should be
             # sending us updates as they happen if it supports websocket notificationss.  
             self._attr_should_poll = False
@@ -1649,6 +1649,54 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
+    def service_get_audio_dsp_controls(
+        self,
+        refresh:bool=False,
+        ) -> dict:
+        """
+        Gets the current audio dsp controls configuration of the device.
+
+        Args:
+            refresh (bool):
+                True to query the device for realtime information and refresh the cache;
+                otherwise, False to just return the cached information.
+
+        Returns:
+            A `AudioDspControls` object dictionary that contains audio dsp controls
+            configuration of the device IF the device supports it (e.g. ST-300, etc); 
+            otherwise, None if the device does not support it.
+
+        Note that some SoundTouch devices do not support this functionality.  For example,
+        the ST-300 will support this, but the ST-10 will not.
+        """
+        apiMethodName:str = 'service_get_audio_dsp_controls'
+        apiMethodParms:SIMethodParmListContext = None
+        result:AudioDspControls = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("refresh", refresh)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Audio DSP Controls Service", apiMethodParms)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetAudioDspControls(refresh)
+
+            # return the result dictionary.
+            return result.ToDictionary()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
     def service_get_audio_product_tone_controls(
         self,
         refresh:bool=False,
@@ -1785,6 +1833,83 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
+    def service_get_bass_level(
+        self,
+        refresh:bool=False,
+        ) -> dict:
+        """
+        Gets the current bass level configuration of the device.
+
+        Args:
+            refresh (bool):
+                True to query the device for realtime information and refresh the cache;
+                otherwise, False to just return the cached information.
+
+        Returns:
+            A `Bass` object dictionary that contains bass level configuration of the device.
+
+        """
+        apiMethodName:str = 'service_get_bass_level'
+        apiMethodParms:SIMethodParmListContext = None
+        result:Bass = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("refresh", refresh)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Bass Level Service", apiMethodParms)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetBass(refresh)
+
+            # return the result dictionary.
+            return result.ToDictionary()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_get_device_info(
+        self,
+        ) -> dict:
+        """
+        Gets basic device information.
+
+        Returns:
+            A `SoundTouchDevice` object dictionary that contains basic device information.
+
+        """
+        apiMethodName:str = 'service_get_device_info'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Device Info Service", apiMethodParms)
+                
+            # return the result dictionary.
+            return self.data.client.Device.ToDictionary()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
     def service_get_source_list(
         self,
         ) -> dict:
@@ -1806,6 +1931,50 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 
             # request information from SoundTouch Web API.
             result = self.data.client.GetSourceList(True)
+
+            # return the result dictionary.
+            return result.ToDictionary()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_get_supported_urls(
+        self,
+        refresh:bool=False,
+        ) -> dict:
+        """
+        Gets the supported urls configuration of the device.
+
+        Args:
+            refresh (bool):
+                True to query the device for realtime information and refresh the cache;
+                otherwise, False to just return the cached information.
+
+        Returns:
+            A `SupportedUrls` object dictionary that contains the results.
+
+        """
+        apiMethodName:str = 'service_get_supported_urls'
+        apiMethodParms:SIMethodParmListContext = None
+        result:SupportedUrls = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("refresh", refresh)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Supported URLs Service", apiMethodParms)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetSupportedUrls(refresh)
 
             # return the result dictionary.
             return result.ToDictionary()
@@ -2414,6 +2583,65 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         
         finally:
                 
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_set_audio_dsp_controls(
+        self, 
+        audio_mode:str=None, 
+        video_sync_audio_delay:int=None, 
+        ) -> None:
+        """
+        Sets the current audio dsp controls configuration of the device.
+
+        Args:
+            audio_mode (str):
+                Audio mode value (e.g. "AUDIO_MODE_NORMAL", "AUDIO_MODE_DIALOG", etc).
+            video_sync_audio_delay (int):
+                Video syncronization audio delay value (in milliseconds).  
+                Suggested range is 0 - 250ms, in increments of 10.  
+
+        Raises:
+            SoundTouchError:
+                If the device is not capable of supporting `audiodspcontrols` functions,
+                as determined by a query to the cached `supportedURLs` web-services api.    
+                If the method fails for any reason.
+                
+        Note that some SoundTouch devices do not support this functionality.  For example,
+        the ST-300 will support this, but the ST-10 will not.  
+        """
+        apiMethodName:str = 'service_set_audio_dsp_controls'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("audio_mode", audio_mode)
+            apiMethodParms.AppendKeyValue("video_sync_audio_delay", video_sync_audio_delay)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Set Audio DSP Controls Service", apiMethodParms)
+
+            # get current configuration.
+            config:AudioDspControls = self.data.client.GetAudioDspControls()
+        
+            # set audio dsp control values.
+            if (audio_mode is not None):
+                config.AudioMode = audio_mode;
+            if (video_sync_audio_delay is not None):
+                config.VideoSyncAudioDelay = video_sync_audio_delay;
+            self.data.client.SetAudioDspControls(config)
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        except Exception as ex:
+            _logsi.LogException(None, ex)
+            raise IntegrationError(str(ex)) from ex
+        
+        finally:
+        
             # trace.
             _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 

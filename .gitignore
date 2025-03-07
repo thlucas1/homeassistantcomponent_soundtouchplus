@@ -22,6 +22,7 @@ config/*
 
 # GIT support files to ignore.
 /Git*.cmd
+/Git*.txt
 
 # Local project files and folders to ignore.
 /.github/workflows/lint.yml
@@ -29,3 +30,5 @@ config/*
 /images
 /developer_notes.txt
 /New_Release_Instructions.txt
+/test/testdata/
+/test/*
