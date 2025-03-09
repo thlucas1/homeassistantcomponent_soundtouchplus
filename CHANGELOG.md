@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.102 ] - 2025/03/08
+
+  * Updated underlying `spotifywebapipython` package requirement to version 1.0.187.
+
 ###### [ 1.0.101 ] - 2025/03/07
 
   * Added service `get_audio_dsp_controls`. Gets the current audio dsp controls configuration of the device.
