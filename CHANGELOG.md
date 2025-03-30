@@ -6,6 +6,12 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.107 ] - 2025/03/29
+
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.76.
+  * Updated underlying `smartinspectpython` package requirement to version 3.0.37.
+  * Updated underlying `spotifywebapipython` package requirement to version 1.0.194.
+
 ###### [ 1.0.106 ] - 2025/03/19
 
   * Updated underlying `spotifywebapipython` package requirement to version 1.0.191.
