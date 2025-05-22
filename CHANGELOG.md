@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.119 ] - 2025/05/22
+
+  * v1.0.118 release was FUBAR in github; updating release number by 1.
+
 ###### [ 1.0.118 ] - 2025/05/22
 
   * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.77.
