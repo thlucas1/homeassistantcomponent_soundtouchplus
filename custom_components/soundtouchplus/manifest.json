@@ -9,7 +9,7 @@
   "issue_tracker": "https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/issues",
   "loggers": [ "bosesoundtouchapi" ],
   "requirements": [
-    "bosesoundtouchapi==1.0.76",
+    "bosesoundtouchapi==1.0.77",
     "oauthlib>=3.2.2",
     "platformdirs>=4.1.0",
     "requests>=2.31.0",
@@ -19,6 +19,6 @@
     "urllib3>=1.21.1,<1.27",
     "zeroconf>=0.132.2"
   ],
-  "version": "1.0.117",
+  "version": "1.0.118",
   "zeroconf": [ "_soundtouch._tcp.local." ]
 }
