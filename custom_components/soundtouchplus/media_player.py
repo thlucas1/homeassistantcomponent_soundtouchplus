@@ -22,9 +22,11 @@ from bosesoundtouchapi.ws import SoundTouchWebSocket
 import datetime as dt
 from functools import partial
 import logging
+from os import path
 import re
 from typing import Any
 import urllib.parse
+from urllib.parse import unquote
 from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
@@ -909,9 +911,27 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 
             # is the media an http or https url?
             elif re.match(r"http[s]?://", media_id):
-                
-                _logsi.LogVerbose("'%s': MediaPlayer play_media detected URL media: Url='%s'", self.name, media_id)
-                self._client.PlayUrl(media_id, artist=announceValue, album=announceValue, getMetaDataFromUrlFile=True, volumeLevel=0)
+
+                # get the track name portion of the url.
+                # example: media_id = "http://192.168.1.248:8123/media/local/01%20The%20First%20Noel.mp3?authSig=ey...nO4"
+                # trackName = "01 The First Noel.mp3"
+                trackName:str = self._GetUrlFilename(media_id)
+
+                # always use the PlayUrl service, as it supports both HTTP and HTTPS url's.
+                _logsi.LogVerbose("'%s': MediaPlayer play_media detected URL Notification media: Url='%s'", self.name, media_id)
+                self._client.PlayUrl(media_id, artist=announceValue, album=announceValue, track=trackName, getMetaDataFromUrlFile=True, volumeLevel=0)
+
+                # commented this code, as most Radio Stations are HTTPS format!!!
+                # for announcements, we will use the `PlayUrl` service; otherwise, use the `PlayUrlDlna` service.
+                # if announce:
+                #     _logsi.LogVerbose("'%s': MediaPlayer play_media detected URL Notification media: Url='%s'", self.name, media_id)
+                #     self._client.PlayUrl(media_id, artist=announceValue, album=announceValue, getMetaDataFromUrlFile=True, volumeLevel=0)
+                # else:
+                #     _logsi.LogVerbose("'%s': MediaPlayer play_media detected URL DLNA media: Url='%s'", self.name, media_id)
+                #     self._client.PlayUrlDlna(media_id, artist="", album="", track=trackName, artUrl="", updateNowPlayingStatus=True)
+
+                # inform Home Assistant of the status update.
+                self.schedule_update_ha_state(force_refresh=False)
             
             # is the media a spotify uri?
             elif re.match(r"spotify:", media_id):
@@ -1484,6 +1504,38 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         _logsi.LogVerbose("'%s': MediaPlayer resolved DeviceId value of '%s' to media_player entity_id '%s' for the '%s' method call" % (self.name, str(deviceId), entity_id, serviceName))
         return entity_id
     
+
+    def _GetUrlFilename(self, url:str):
+        """
+        Returns the filename portion of a media_id url.
+        
+        Args:
+            url (str):
+                media_id url to parse for the file name.
+                
+        Returns:
+            The file name portion of the url if found; otherwise, an empty string.
+        """
+        try:
+
+            # get the filename portion of the media_id url.
+            # example: 
+            #   media_id = "http://192.168.1.248:8123/media/local/01%20The%20First%20Noel.mp3?authSig=ey...nO4"
+            #   fileName = "01 The First Noel.mp3"
+
+            fragment_removed = url.split("#")[0]  # keep to left of first #
+            query_string_removed = fragment_removed.split("?")[0]
+            scheme_removed = query_string_removed.split("://")[-1].split(":")[-1]
+            if scheme_removed.find("/") == -1:
+                return ""
+            filename:str = path.basename(scheme_removed)
+            result = unquote(filename)
+            return result
+
+        except Exception as ex:
+            # ignore exceptions.
+            return ""
+
 
     def _GetSourceItemByTitle(self, title:str) -> SourceItem:
         """
@@ -2275,7 +2327,9 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         getMetadataFromUrlFile:bool,
         ) -> None:
         """
-        Play media content from a URL on a SoundTouch device.
+        Plays media from the given URL as a notification message, interrupting the currently playing 
+        media to play the specified url.  The currently playing will then resume playing once play of 
+        the specified URL is complete.  
         
         Args:
             url (str):
@@ -2310,10 +2364,85 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             apiMethodParms.AppendKeyValue("volumeLevel", volumeLevel)
             apiMethodParms.AppendKeyValue("appKey", appKey)
             apiMethodParms.AppendKeyValue("getMetadataFromUrlFile", getMetadataFromUrlFile)
-            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Play URL Service", apiMethodParms)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Play URL Notification Service", apiMethodParms)
 
             # play url.
             self.data.client.PlayUrl(url, artist, album, track, volumeLevel, appKey, getMetadataFromUrlFile)
+
+            # inform Home Assistant of the status update.
+            self.schedule_update_ha_state(force_refresh=False)           
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_play_url_dlna(
+        self, 
+        url:str, 
+        artist:str, 
+        album:str, 
+        track:str, 
+        artUrl:str, 
+        updateNowPlayingStatus:bool, 
+        delay:int,
+        ) -> None:
+        """
+        Plays media from the given URL via the Bose DLNA API.
+        
+        Args:
+            url (str):
+                The url to play.  
+                Note that HTTPS URL's are not supported by this service due to DLNA restrictions.
+            artist (str):
+                The message text that will appear in the NowPlaying Artist node for source-specific nowPlaying information.  
+                Default is "Unknown Artist"
+            album (str):
+                The message text that will appear in the NowPlaying Album node, for source-specific nowPlaying information.  
+                Default is "Unknown Album"
+            track (str):
+                The message text that will appear in the NowPlaying Track node, for source-specific nowPlaying information.  
+                Default is "Unknown Track"
+            artUrl (str):
+                A url link to a cover art image that represents the URL, for source-specific nowPlaying information.  
+                Default is None.  
+            updateNowPlayingStatus (bool):
+                True (default) to update the source-specific nowPlaying information;
+                False to not update the source-specific nowPlaying information.
+            delay (int):
+                Time delay (in seconds) to wait AFTER sending the play next track request if
+                the currently playing media is a notification source.
+                This delay will give the device time to process the change before another 
+                command is accepted.  
+                Default is 1; value range is 0 - 10.
+        """
+        apiMethodName:str = 'service_play_url'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("url", url)
+            apiMethodParms.AppendKeyValue("artist", artist)
+            apiMethodParms.AppendKeyValue("album", album)
+            apiMethodParms.AppendKeyValue("track", track)
+            apiMethodParms.AppendKeyValue("artUrl", artUrl)
+            apiMethodParms.AppendKeyValue("updateNowPlayingStatus", updateNowPlayingStatus)
+            apiMethodParms.AppendKeyValue("delay", delay)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Play URL DLNA Service", apiMethodParms)
+
+            # play url.
+            self.data.client.PlayUrlDlna(url, artist, album, track, artUrl, updateNowPlayingStatus, delay)
+
+            # inform Home Assistant of the status update.
+            self.schedule_update_ha_state(force_refresh=False)           
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).

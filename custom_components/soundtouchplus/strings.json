@@ -317,8 +317,8 @@
       }
     },
     "play_url": {
-      "name": "Play URL Media",
-      "description": "Play media content from a URL on a SoundTouch device.",
+      "name": "Play URL Notification",
+      "description": "Play media from the given URL as a notification message, interrupting the currently playing media to play the specified url.  The currently playing will then resume playing once play of the specified URL is complete.",
       "fields": {
         "entity_id": {
           "name": "Entity ID",
@@ -351,6 +351,44 @@
         "get_metadata_from_url_file": {
           "name": "Get Metadata From URL?",
           "description": "If true, the artist, album, and song title metadata details will be retrieved from the ID3 header of the url content (if available); otherwise, False to use the artist, album, and song title arguments specified."
+        }
+      }
+    },
+    "play_url_dlna": {
+      "name": "Play URL DLNA",
+      "description": "Play media content from a URL on a SoundTouch device.",
+      "fields": {
+        "entity_id": {
+          "name": "Entity ID",
+          "description": "Entity ID of the SoundTouchPlus device that will process the request."
+        },
+        "url": {
+          "name": "URL",
+          "description": "The url to play; HTTPS URL's are not supported by this service due to DLNA restrictions."
+        },
+        "artist": {
+          "name": "Artist Status Text",
+          "description": "The text that will appear in the NowPlaying Artist node for source-specific nowPlaying information; if omitted, default is \"Unknown Artist\"."
+        },
+        "album": {
+          "name": "Album Status Text",
+          "description": "The text that will appear in the NowPlaying Album node for source-specific nowPlaying information; if omitted, default is \"Unknown Album\"."
+        },
+        "track": {
+          "name": "Track Status Text",
+          "description": "The text that will appear in the NowPlaying Track node for source-specific nowPlaying information; if omitted, default is \"Unknown Track\"."
+        },
+        "art_url": {
+          "name": "Cover Artwork URL",
+          "description": "A url link to a cover art image that represents the URL for source-specific nowPlaying information; if omitted, default is None."
+        },
+        "update_now_playing_status": {
+          "name": "Update NowPlaying Status?",
+          "description": "True (default) to update the source-specific nowPlaying information; False to not update the source-specific nowPlaying information."
+        },
+        "delay": {
+          "name": "Command Delay",
+          "description": "Time delay (in seconds) to wait AFTER sending the play next track request if the currently playing media is a notification source. This delay will give the device time to process the change before another command is accepted. Default is 1; value range is 0 - 10."
         }
       }
     },

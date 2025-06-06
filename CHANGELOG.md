@@ -6,6 +6,12 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.120 ] - 2025/06/06
+
+  * Added service `play_url_dlna`. Play media from the given URL via the Bose DLNA API.  This also allows you to set source-specific metadata (artist, album, track, and cover art url) for the playing UPNP content.  Note that only HTTP URL's are supported (HTTPS is not, due to Bose DLNA limitations).
+  * Updated service `play_url` to update HA state after processing, as state changes were not updating in a timely manner (or at all in some instances) after the service completed.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.79.
+
 ###### [ 1.0.119 ] - 2025/05/22
 
   * v1.0.118 release was FUBAR in github; updating release number by 1.

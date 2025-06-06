@@ -84,6 +84,7 @@ SERVICE_PLAY_CONTENTITEM = "play_contentitem"
 SERVICE_PLAY_HANDOFF = "play_handoff"
 SERVICE_PLAY_TTS = "play_tts"
 SERVICE_PLAY_URL = "play_url"
+SERVICE_PLAY_URL_DLNA = "play_url_dlna"
 SERVICE_PRESET_LIST = "preset_list"
 SERVICE_PRESET_REMOVE = "preset_remove"
 SERVICE_REBOOT_DEVICE = "reboot_device"
@@ -223,6 +224,19 @@ SERVICE_PLAY_URL_SCHEMA = vol.Schema(
         vol.Optional("volume_level", default=0): vol.All(vol.Range(min=0,max=70)),
         vol.Optional("app_key"): cv.string,
         vol.Required("get_metadata_from_url_file", default=False): cv.boolean
+    }
+)
+
+SERVICE_PLAY_URL_DLNA_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("url"): cv.string,
+        vol.Optional("artist"): cv.string,
+        vol.Optional("album"): cv.string,
+        vol.Optional("track"): cv.string,
+        vol.Optional("art_url"): cv.string,
+        vol.Optional("update_now_playing_status", default=True): cv.boolean,
+        vol.Optional("delay", default=1): vol.All(vol.Range(min=0,max=10))
     }
 )
 
@@ -531,6 +545,17 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     get_metadata_from_url_file = service.data.get("get_metadata_from_url_file")
                     _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
                     await hass.async_add_executor_job(entity.service_play_url, url, artist, album, track, volume_level, app_key, get_metadata_from_url_file)
+
+                elif service.service == SERVICE_PLAY_URL_DLNA:
+                    url = service.data.get("url")
+                    artist = service.data.get("artist")
+                    album = service.data.get("album")
+                    track = service.data.get("track")
+                    art_url = service.data.get("art_url")
+                    update_now_playing_status = service.data.get("update_now_playing_status")
+                    delay = service.data.get("delay")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    await hass.async_add_executor_job(entity.service_play_url_dlna, url, artist, album, track, art_url, update_now_playing_status, delay)
 
                 elif service.service == SERVICE_PRESET_REMOVE:
                     preset_id = service.data.get("preset_id")
@@ -951,6 +976,15 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             SERVICE_PLAY_URL,
             service_handle_entity,
             schema=SERVICE_PLAY_URL_SCHEMA,
+            supports_response=SupportsResponse.NONE,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_PLAY_URL_DLNA, SERVICE_PLAY_URL_DLNA_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_PLAY_URL_DLNA,
+            service_handle_entity,
+            schema=SERVICE_PLAY_URL_DLNA_SCHEMA,
             supports_response=SupportsResponse.NONE,
         )
 
