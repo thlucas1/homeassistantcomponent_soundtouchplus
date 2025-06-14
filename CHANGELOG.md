@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.121 ] - 2025/06/14
+
+  * Updated underlying `spotifywebapipython` package requirement to version 1.0.208.
+
 ###### [ 1.0.120 ] - 2025/06/06
 
   * Added service `play_url_dlna`. Play media from the given URL via the Bose DLNA API.  This also allows you to set source-specific metadata (artist, album, track, and cover art url) for the playing UPNP content.  Note that only HTTP URL's are supported (HTTPS is not, due to Bose DLNA limitations).
