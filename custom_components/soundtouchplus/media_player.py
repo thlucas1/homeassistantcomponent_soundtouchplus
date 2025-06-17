@@ -2422,7 +2422,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 command is accepted.  
                 Default is 1; value range is 0 - 10.
         """
-        apiMethodName:str = 'service_play_url'
+        apiMethodName:str = 'service_play_url_dlna'
         apiMethodParms:SIMethodParmListContext = None
 
         try:
