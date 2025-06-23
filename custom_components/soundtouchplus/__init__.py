@@ -10,6 +10,8 @@ from bosesoundtouchapi import *
 from bosesoundtouchapi.uri import *
 from bosesoundtouchapi.models import *
 from bosesoundtouchapi.ws import *
+from bosesoundtouchapi.bstconst import VERSION as bosesoundtouchapi_VERSION
+from spotifywebapipython.const import VERSION as spotifywebapipython_VERSION
 
 from homeassistant.components.media_player import MediaPlayerEntity
 from homeassistant.config_entries import ConfigEntry
@@ -400,6 +402,8 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
     
             # log verion information for supporting packages.
             _logsi.LogValue(SILevel.Verbose, "urllib3 version", urllib3_version)
+            _logsi.LogValue(SILevel.Verbose, "bosesoundtouchapi version", bosesoundtouchapi_VERSION, colorValue=SIColors.Coral)
+            _logsi.LogValue(SILevel.Verbose, "spotifywebapipython version", spotifywebapipython_VERSION, colorValue=SIColors.Coral)
 
             for item in config:
                 itemKey:str = str(item)
