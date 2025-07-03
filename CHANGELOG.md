@@ -6,6 +6,12 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.133 ] - 2025/07/02
+
+  * Updated requirements: from `urllib3>=1.21.1,<1.27` to `urllib3>=2.0`.  Due to Home Assistant Core 2025.7.0 update requirements.
+  * Updated underlying `bosesoundtouchapi` package requirement to version 1.0.81.
+  * Updated underlying `spotifywebapipython` package requirement to version 1.0.222.
+
 ###### [ 1.0.132 ] - 2025/06/28
 
   * Updated underlying `spotifywebapipython` package requirement to version 1.0.221.
