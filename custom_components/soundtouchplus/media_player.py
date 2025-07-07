@@ -84,6 +84,7 @@ if (_logsi == None):
 _logsi.SystemLogger = logging.getLogger(__name__)
 
 # our extra state attribute names.
+ATTR_SOUNDTOUCHPLUS_DEVICE_TYPE = "stp_device_type"
 ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISADVERTISEMENT = "soundtouchplus_nowplaying_isadvertisement"
 ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISFAVORITE = "soundtouchplus_nowplaying_isfavorite"
 ATTR_SOUNDTOUCHPLUS_NOWPLAYING_IMAGE_URL = "stp_nowplaying_image_url"
@@ -288,6 +289,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         """ Return entity specific state attributes. """
         # build list of our extra state attributes to return to HA UI.
         attributes = {}
+        attributes[ATTR_SOUNDTOUCHPLUS_DEVICE_TYPE] = self._client.Device.DeviceType
         attributes[ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISADVERTISEMENT] = False
         attributes[ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISFAVORITE] = False
         attributes[ATTR_SOUNDTOUCHPLUS_NOWPLAYING_IMAGE_URL] = self.media_image_url

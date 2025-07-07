@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.134 ] - 2025/07/07
+
+  * Added extra state variable: `stp_device_type`.  Returns the type (e.g. model number) of the device (e.g. "SoundTouch 10", "SoundTouch 300", "Cinemate", etc).
+
 ###### [ 1.0.133 ] - 2025/07/02
 
   * Updated requirements: from `urllib3>=1.21.1,<1.27` to `urllib3>=2.0`.  Due to Home Assistant Core 2025.7.0 update requirements.
