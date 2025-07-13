@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.135 ] - 2025/07/13
+
+  * Updated underlying `spotifywebapipython` package requirement to version 1.0.223.
+
 ###### [ 1.0.134 ] - 2025/07/07
 
   * Added extra state variable: `stp_device_type`.  Returns the type (e.g. model number) of the device (e.g. "SoundTouch 10", "SoundTouch 300", "Cinemate", etc).
