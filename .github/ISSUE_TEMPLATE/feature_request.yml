@@ -3,10 +3,13 @@ name: "Feature request"
 description: "Suggest an idea for this project"
 labels: 
 - "enhancement"
+
 body:
+  
 - type: markdown
   attributes:
     value: Before you open a new feature request, search through the existing feature requests to see if others have had the same idea.
+
 - type: checkboxes
   attributes:
     label: Checklist
@@ -17,6 +20,7 @@ body:
         required: true
       - label: This issue is not a duplicate feature request of [previous feature requests](https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/issues?q=is%3Aissue+label%3A%22Feature+Request%22+).
         required: true
+
 
 - type: textarea
   attributes:
