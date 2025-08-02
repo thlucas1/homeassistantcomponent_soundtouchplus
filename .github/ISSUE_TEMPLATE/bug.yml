@@ -21,8 +21,6 @@ body:
   attributes:
     label: Checklist
     options:
-      - label: I have enabled SmartInspect debug logging for my installation.
-        required: true
       - label: I have filled out the issue template to the best of my ability.
         required: true
       - label: This issue only contains 1 issue (if you have multiple issues, open one issue for each issue).
