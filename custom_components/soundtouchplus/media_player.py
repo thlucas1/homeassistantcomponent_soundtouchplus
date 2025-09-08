@@ -198,7 +198,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             
             # A unique_id for this entity within this domain.
             # Note: This is NOT used to generate the user visible Entity ID used in automations.
-            self._attr_unique_id = self._client.Device.DeviceId
+            self._attr_unique_id = self._client.Device.DeviceId + "_" + DOMAIN
 
             # we will set "self._attr_has_entity_name = False", which causes the "self._attr_name"
             # to be used as-is.  use "self._attr_has_entity_name = True", to append the "self._attr_name"

@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.150 ] - 2025/09/08
+
+  * Added configuration migration logic to update the config entry `unique_id` value to a truly unique id value (across all HA domains).  The previous versions were using the same `unique_id` value as the HA SoundTouch integration.  This was causing system log warnings to be generated when using both the HA SoundTouch integration and SoundTouchPlus, which would turn into errors with the HA 2026.03 release.
+
 ###### [ 1.0.149 ] - 2025/08/31
 
   * Removed `"homeassistant": ">=2025.7.0",` from `manifest.json`; was causing github HASSFest Validation errors.

@@ -18,7 +18,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError, IntegrationError, ServiceValidationError
-import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers import config_validation as cv, entity_registry as er
 from homeassistant.helpers.typing import ConfigType
 
 from .instancedata_soundtouchplus import InstanceDataSoundTouchPlus
@@ -1408,3 +1408,125 @@ async def options_update_listener(hass:HomeAssistant, entry:ConfigEntry) -> None
         # trace.
         _logsi.LeaveMethod(SILevel.Debug)
         
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """
+    Migrate older version of a config entry to a new version format.
+
+    You can also update the `unique_id` value as well.
+
+    This method is called when the configuration entry.version value does not match
+    the hardcoded `SoundTouchPlusConfigFlow.VERSION = n` value.
+    """
+    try:
+
+        # trace.
+        _logsi.EnterMethod(SILevel.Debug)
+        _logsi.LogObject(SILevel.Verbose, "'%s': Component detected configuration entry migration" % entry.title, entry)
+        _logsi.LogDictionary(SILevel.Verbose, "'%s': Component async_migrate_entry entry.data dictionary" % entry.title, entry.data)
+        _logsi.LogDictionary(SILevel.Verbose, "'%s': Component async_migrate_entry entry.options dictionary" % entry.title, entry.options)
+
+        # check config entry version to know what we need to migrate from.
+        if entry.version == 1:
+
+            # trace.
+            _logsi.LogVerbose("'%s': Migrating config entry from version %s to version 2" % (entry.title, entry.version), colorValue=SIColors.DarkBlue)
+
+            # as of HA 2026.03 the unique_id value needs to be unique across all domains,
+            # otherwise an exception will occur and the integration will not load!
+            # version 1 of the integration uses the same unique_id as the HA SoundTouch
+            # integration (e.g. device MAC address), so we need to update the unique_id value.
+            # in our case, we will just tack the "_DOMAIN" suffix onto the existing unique_id.
+
+            # we need to switch the config entry unique_id from a name (e.g. "Bose-ST10-1") to
+            # the entity device_id value.  to do this, we need to search the entity registry for
+            # a match on the config_entry_id, and pull the device_id from it to use as the config 
+            # entry unique_id value.
+            device_id = None
+            entity_registry = er.async_get(hass)
+            for entity in list(entity_registry.entities.values()):
+                if entity.config_entry_id != entry.entry_id:
+                    continue
+                #if entity.platform != DOMAIN:
+                #    continue
+                if entity.original_name == entry.title:
+                    # save the current unique_id value for entity entry modifications.
+                    device_id = entity.unique_id
+                    _logsi.LogVerbose("'%s': Found device id value of \"%s\" for existing entity original_name \"%s\" (e.g. new_unique_id value)" % (entry.title, device_id, entity.original_name), colorValue=SIColors.DarkBlue)
+                    break
+
+            # if we could not find the device id for this config entry then we are done!
+            if device_id is None:
+                _logsi.LogVerbose("'%s': Could not find device id value for configuration title \"%s\" (e.g. new_unique_id value)" % (entry.title, entry.title), colorValue=SIColors.DarkBlue)
+                # return False so Home Assistant knows the migration failed!
+                return False
+
+            # formulate the new unique_id value.
+            new_unique_id = device_id + "_" + DOMAIN
+            _logsi.LogVerbose("'%s': Migrating config entry unique_id from \"%s\" to \"%s\"" % (entry.title, entry.unique_id, new_unique_id), colorValue=SIColors.DarkBlue)
+
+            # if you also need to adjust data.
+            new_data = {**entry.data}
+            # if "deprecated_key" in new_data:
+            #     new_data.pop("deprecated_key")
+
+            # if you also need to adjust options.
+            new_options = {**entry.options}
+            # if "deprecated_key" in new_options:
+            #     new_options.pop("deprecated_key")
+
+            # update configuration entry to newer version structure, and
+            # increment the version indicator by one.
+            hass.config_entries.async_update_entry(
+                entry,
+                unique_id=new_unique_id,
+                data=new_data,
+                options=new_options,
+                version=2,  # update version to next version number
+            )
+
+            # now that the configuration entry has been updated, let's loop through
+            # the entity registry and update the unique id of any existing entities
+            # that are children of this configuration entry.
+
+            # get the entity registry.
+            entity_registry = er.async_get(hass)
+
+            # process all entities.
+            for entity in list(entity_registry.entities.values()):
+
+                # is this entity a child of the configuration entry?  if not, then don't bother.
+                if entity.config_entry_id != entry.entry_id:
+                    continue
+
+                # is this entity referencing the config entry old unique_id value?
+                if entity.unique_id == device_id:
+
+                    # is there an entity that already contains our new unique_id?
+                    if entity_registry.async_get_entity_id(entity.domain, entity.platform, new_unique_id):
+                        # duplicate found; remove the old entity.
+                        _logsi.LogVerbose("'%s': Removing existing entity_id \"%s\" so that a new entity can be created for the unique_id (avoid duplicate entities)" % (entry.title, entity.entity_id), colorValue=SIColors.DarkBlue)
+                        entity_registry.async_remove(entity.entity_id)
+                    else:
+                        # update the entity with the new unique_id.
+                        _logsi.LogVerbose("'%s': Updating entity_id \"%s\" unique_id value from \"%s\" to \"%s\"" % (entry.title, entity.entity_id, entity.unique_id, new_unique_id), colorValue=SIColors.DarkBlue)
+                        entity_registry.async_update_entity(entity.entity_id, new_unique_id=new_unique_id)
+
+        # trace.
+        _logsi.LogObject(SILevel.Verbose, "'%s': Component configuration entry migration complete" % entry.title, entry)
+        _logsi.LogDictionary(SILevel.Verbose, "'%s': Component async_migrate_entry entry.data dictionary (migrated)" % entry.title, entry.data)
+        _logsi.LogDictionary(SILevel.Verbose, "'%s': Component async_migrate_entry entry.options dictionary (migrated)" % entry.title, entry.options)
+
+        # return True so Home Assistant knows the migration succeeded.
+        return True
+
+    except Exception as ex:
+
+        # log exception, but not to system logger as HA will take care of it.
+        _logsi.LogException("'%s': Component async_migrate_entry Exception" % (entry.title), ex, logToSystemLogger=False)
+        raise
+
+    finally:
+
+        # trace.
+        _logsi.LeaveMethod(SILevel.Debug)

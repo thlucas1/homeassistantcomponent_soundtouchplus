@@ -112,7 +112,9 @@ class SoundTouchPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     folder, extend homeassistant.config_entries.ConfigFlow and pass a domain key as 
     part of inheriting ConfigFlow.    
     """
-    VERSION = 1
+    
+    # integration configuration entry major version number.
+    VERSION = 2
 
     def __init__(self):
         """
@@ -177,18 +179,18 @@ class SoundTouchPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._name = deviceInfo[CONF_DEVICE_NAME]
                 self._device_id = deviceInfo[CONF_DEVICE_ID]
 
+                # set configuration entry unique id (e.g. device id).
+                # this value should match the value assigned in media_player `_attr_unique_id` attribute.
+                await self.async_set_unique_id(self._device_id + "_" + DOMAIN)
+                _logsi.LogVerbose("ConfigFlow assigned unique_id of '%s' for SoundTouch device name '%s' (via user config)" % (self.unique_id, self._name))
+
                 # one final check to see if a configuration entry already exists for the device.
                 # If it IS already configured, then we will send an "already_configured" message 
                 # to the user and halt the flow to prevent a duplicate configuration entry.
-                _logsi.LogVerbose("ConfigFlow is verifying USER ENTRY device details have not already been configured: IP=%s, port=%s, name=%s, id=%s" % (self._host, self._port, self._name, self._device_id))
-                await self.async_set_unique_id(self._name)
+                _logsi.LogVerbose("ConfigFlow is verifying USER ENTRY device details have not already been configured: unique_id=%s, ip=%s, port=%s, name=%s" % (self._device_id, self._host, self._port, self._name))
                 self._abort_if_unique_id_configured(
                     updates={
-                        CONF_NAME: self._name,
-                        CONF_HOST: self._host,
-                        CONF_PORT: self._port,
-                        CONF_PORT_WEBSOCKET: self._port_websocket,
-                        CONF_PING_WEBSOCKET_INTERVAL: self._ping_websocket_interval,
+                        CONF_DEVICE_ID: self._device_id,
                     }
                 )
 
@@ -270,16 +272,18 @@ class SoundTouchPlusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._name = deviceInfo[CONF_DEVICE_NAME]
         self._device_id = deviceInfo[CONF_DEVICE_ID]
 
-        # one final check to see if a configuration entry already exists for the device.
+        # set configuration entry unique id (e.g. device id).
+        # this value should match the value assigned in media_player `_attr_unique_id` attribute.
+        await self.async_set_unique_id(self._device_id + "_" + DOMAIN)
+        _logsi.LogVerbose("ConfigFlow assigned unique_id of '%s' for SoundTouch device name '%s' (via zeroconf config)" % (self.unique_id, self._name))
+
+        # one final check to see if a configuration entry already exists for the device id.
         # if it IS already configured, then we will send an "already_configured" message 
         # to the user and halt the flow to prevent a duplicate configuration entry.
-        _logsi.LogVerbose("ConfigFlow is verifying ZeroConf discovered device details have not already been configured: IP=%s, port=%s, name=%s, id=%s" % (self._host, self._port, self._name, self._device_id))
-        await self.async_set_unique_id(self._name)
+        _logsi.LogVerbose("ConfigFlow is verifying ZeroConf discovered device details have not already been configured: unique_id=%s, ip=%s, port=%s, name=%s" % (self._device_id, self._host, self._port, self._name))
         self._abort_if_unique_id_configured(
             updates={
-                CONF_NAME: self._name,
-                CONF_HOST: self._host,
-                CONF_PORT: self._port,
+                CONF_DEVICE_ID: self._device_id,
             }
         )
 
