@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.157 ] - 2025/10/11
+
+  * Updated `README` with [Bose SoundTouch end-of-life announcement](https://www.bose.com/soundtouch-end-of-life) warning.
+
 ###### [ 1.0.156 ] - 2025/09/30
 
   * Updated `spotifywebapipython` package requirement to `spotifywebapipython>=1.0.249`.
