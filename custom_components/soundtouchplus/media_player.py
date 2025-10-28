@@ -193,7 +193,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # initialize base class attributes (MediaPlayerEntity).
             self._attr_icon = "mdi:speaker"
-            self._attr_media_image_remotely_accessible = False
+            self._attr_media_image_remotely_accessible = True
             self._attr_state = None
             
             # A unique_id for this entity within this domain.
@@ -1117,6 +1117,31 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             
             # trace.
             _logsi.LeaveMethod(SILevel.Verbose)
+
+
+    # async def async_get_media_image(self) -> tuple[bytes | None, str | None]:
+    #     """Fetch media image data from SoundTouch device safely."""
+    #     url = self._attr_entity_picture  # or self.entity_picture if defined
+    #     if not url:
+    #         return None, None
+
+    #     session: aiohttp.ClientSession = self.hass.helpers.aiohttp_client.async_get_clientsession(self.hass)
+
+    #     try:
+    #         async with session.get(url, timeout=5) as resp:
+    #             if resp.status != 200:
+    #                 _LOGGER.warning("SoundTouch image fetch failed (%s): %s", resp.status, url)
+    #                 return None, None
+    #             content_type = resp.headers.get("Content-Type", "image/jpeg")
+    #             return await resp.read(), content_type
+
+    #     except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+    #         _LOGGER.warning("SoundTouch image fetch error: %s", err)
+    #         return None, None
+
+    #     except Exception as err:  # safety catch
+    #         _LOGGER.exception("Unexpected SoundTouch image error: %s", err)
+    #         return None, None
 
 
     def _GetNowPlayingStatusConfiguration(self) -> NowPlayingStatus:
