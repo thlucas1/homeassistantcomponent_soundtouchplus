@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.162 ] - 2025/10/29
+
+  * Restored the `media_player._attr_media_image_remotely_accessible` setting to False to disallow remotely accessible images.  This was changed while trying to resolve CORS errors using vibrant getPalette in the SoundTouchPlus Card component.
+
 ###### [ 1.0.161 ] - 2025/10/28
 
   * Updated `spotifywebapipython` package requirement to `spotifywebapipython>=1.0.254`.
