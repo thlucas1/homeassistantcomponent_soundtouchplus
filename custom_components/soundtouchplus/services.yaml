@@ -1,3 +1,66 @@
+add_wireless_profile:
+  name: Add Wireless Profile
+  description: Adds a new wireless profile to a SoundTouch device network configuration.
+  fields:
+    ip_address:
+      name: IP Address
+      description: IP address of the SoundTouch device that will process the request; for factory reset devices use 192.0.2.1.
+      example: "192.0.2.1"
+      required: true
+      selector:
+        text:
+    ip_port:
+      name: Port Number
+      description: IP port number on the SoundTouch device that will process web-services requests; default is 8090.
+      example: 8090
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 65535
+    ssid_name:
+      name: Network SSID Name
+      description: Wifi network service set identifier (SSID).
+      example: "My_SSID_Name"
+      required: true
+      selector:
+        text:
+    ssid_password:
+      name: Network SSID Password
+      description: Wifi network password.
+      example: "My_SSID_Password"
+      required: true
+      selector:
+        text:
+    ssid_security_type:
+      name: Network Security Type
+      description: Wifi network security type. Default is "wpa_or_wpa2".
+      example: "wpa_or_wpa2"
+      required: true
+      selector:
+        select:
+          mode: dropdown
+          sort: true
+          options:
+            - none
+            - wep
+            - wpatkip
+            - wpaaes
+            - wpa2tkip
+            - wpa2aes
+            - wpa_or_wpa2
+    timeout_secs:
+      name: Timeout Seconds
+      description: Time to wait (in seconds) for the request to be processed before raising an exception for taking too long. Default is 30 seconds.
+      example: 30
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 1
+          mode: box
+
 audio_tone_levels:
   name: Adjust Audio Tone Levels
   description: Adjust the Bass and Treble values for SoundTouch devices that support it.
@@ -76,9 +139,51 @@ get_audio_dsp_controls:
       selector:
         boolean:
 
+get_audio_product_level_controls:
+  name: Get Audio Product Level Controls
+  description: Gets the current audio product level controls configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    refresh:
+      name: Refresh?
+      description: True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information.
+      example: "false"
+      required: true
+      selector:
+        boolean:
+
 get_audio_product_tone_controls:
   name: Get Audio Product Tone Controls
   description: Gets the current audio product tone controls configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    refresh:
+      name: Refresh?
+      description: True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information.
+      example: "false"
+      required: true
+      selector:
+        boolean:
+
+get_audio_speaker_attribute_and_setting:
+  name: Get Audio Speaker Attribute and Setting
+  description: Gets the current audio speaker attribute and setting configuration of the device.
   fields:
     entity_id:
       name: Entity ID
@@ -173,6 +278,48 @@ get_device_info:
         entity:
           integration: soundtouchplus
           domain: media_player
+
+get_product_cec_hdmi_control:
+  name: Get Product CEC HDMI Control
+  description: Gets the product CEC HDMI control configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    refresh:
+      name: Refresh?
+      description: True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information.
+      example: "false"
+      required: true
+      selector:
+        boolean:
+
+get_product_hdmi_assignment_controls:
+  name: Get Product HDMI Assignment Controls
+  description: Gets the product HDMI assignment controls configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    refresh:
+      name: Refresh?
+      description: True to query the device for realtime information and refresh the cache; otherwise, False to just return the cached information.
+      example: "false"
+      required: true
+      selector:
+        boolean:
 
 get_source_list:
   name: Get Source List
@@ -744,6 +891,40 @@ set_audio_dsp_controls:
           max: 10000
           mode: box
 
+set_audio_product_level_controls:
+  name: Set Audio Product Level Controls
+  description: Sets the current audio product level controls configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    front_center_speaker_level:
+      name: Front Center Speaker Level
+      description: Front center speaker level to set, usually in the range of -100 (low) to 100 (high).
+      example: "40"
+      required: true
+      selector:
+        number:
+          min: -100
+          max: 100
+          mode: box
+    rear_surround_speakers_level:
+      name: Rear Surround Speaker Level
+      description: Rear surround speaker level to set, usually in the range of -100 (low) to 100 (high).
+      example: "60"
+      required: true
+      selector:
+        number:
+          min: -100
+          max: 100
+          mode: box
+
 set_audio_product_tone_controls:
   name: Set Audio Product Tone Controls
   description: Sets the current audio product tone controls configuration of the device.
@@ -825,6 +1006,132 @@ set_bass_level:
           min: -9
           max: 0
           mode: box
+
+set_language:
+  name: Set Device Language
+  description: Sets the device language code.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    language:
+      name: Language
+      description: Language name to assign to the device.
+      example: "ENGLISH"
+      required: true
+      selector:
+        select:
+          mode: dropdown
+          sort: true
+          options:
+            - NOT_SET
+            - CZECH
+            - DANISH
+            - DUTCH
+            - ENGLISH
+            - FINNISH
+            - FRENCH
+            - GERMAN
+            - GREEK
+            - HUNGARIAN
+            - ITALIAN
+            - JAPANESE
+            - KOREAN
+            - NORWEGIAN
+            - POLISH
+            - PORTUGUESE
+            - ROMANIAN
+            - RUSSIAN
+            - SIMPLIFIED_CHINESE
+            - SLOVENIAN
+            - SPANISH
+            - SWEDISH
+            - THAI
+            - TRADITIONAL_CHINESE
+            - TURKISH
+
+set_name:
+  name: Set Device Name
+  description: Sets the device name.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    name:
+      name: Name
+      description: Name to assign to the device.
+      example: "Office Speaker"
+      required: true
+      selector:
+        text:
+
+set_product_cec_hdmi_control:
+  name: Set Product CEC HDMI Control
+  description: Sets the product CEC HDMI control configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    cec_mode:
+      name: CEC Mode
+      description: CEC Mode to assign to the device.
+      example: "CEC_MODE_ON"
+      required: true
+      selector:
+        select:
+          mode: dropdown
+          sort: true
+          options:
+            - CEC_MODE_OFF
+            - CEC_MODE_ON
+            - CEC_MODE_ALTERNATE
+            - CEC_MODE_FINE
+
+set_product_hdmi_assignment_controls:
+  name: Set Product HDMI Assignment Controls
+  description: Sets the product HDMI assignment controls configuration of the device.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    hdmi_input_selection_01:
+      name: HDMI Input Selection 01
+      description: HDMI input selection 1 value.
+      example: "HDMI_IN_BUTTON_NONE"
+      required: true
+      selector:
+        select:
+          mode: dropdown
+          sort: true
+          options:
+            - HDMI_IN_BUTTON_NONE
+            - HDMI_IN_BUTTON_SOURCE_01
+            - HDMI_IN_BUTTON_SOURCE_02
+            - HDMI_IN_BUTTON_SOURCE_03
 
 snapshot_restore:
   name: Snapshot Restore

@@ -54,7 +54,7 @@ class STAppMessages:
 
     MSG_SERVICE_REQUEST_EXCEPTION:str = "An unhandled exception occurred in Service request method '%s'; exception: %s"
     """
-    Service request '%s' was not recognized by the '%s' method
+    An unhandled exception occurred in Service request method '%s'; exception: %s
     """
 
     MSG_MEDIAPLAYER_SERVICE:str = "'%s': MediaPlayer is executing service '%s'"

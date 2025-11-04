@@ -71,14 +71,19 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 # -----------------------------------------------------------------------------------
 # Custom Service Schemas.
 # -----------------------------------------------------------------------------------
+SERVICE_ADD_WIRELESS_PROFILE = "add_wireless_profile"
 SERVICE_AUDIO_TONE_LEVELS = "audio_tone_levels"
 SERVICE_CLEAR_SOURCE_NOWPLAYINGSTATUS = "clear_source_nowplayingstatus"
 SERVICE_GET_AUDIO_DSP_CONTROLS = "get_audio_dsp_controls"
+SERVICE_GET_AUDIO_PRODUCT_LEVEL_CONTROLS = "get_audio_product_level_controls"
 SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS = "get_audio_product_tone_controls"
+SERVICE_GET_AUDIO_SPEAKER_ATTRIBUTE_AND_SETTING = "get_audio_speaker_attribute_and_setting"
 SERVICE_GET_BALANCE = "get_balance"
 SERVICE_GET_BASS_CAPABILITIES = "get_bass_capabilities"
 SERVICE_GET_BASS_LEVEL = "get_bass_level"
 SERVICE_GET_DEVICE_INFO = "get_device_info"
+SERVICE_GET_PRODUCT_CEC_HDMI_CONTROL = "get_product_cec_hdmi_control"
+SERVICE_GET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS = "get_product_hdmi_assignment_controls"
 SERVICE_GET_SOURCE_LIST = "get_source_list"
 SERVICE_GET_SUPPORTED_URLS = "get_supported_urls"
 SERVICE_MUSICSERVICE_STATION_LIST = "musicservice_station_list"
@@ -94,14 +99,30 @@ SERVICE_RECENT_LIST = "recent_list"
 SERVICE_RECENT_LIST_CACHE = "recent_list_cache"
 SERVICE_REMOTE_KEYPRESS = "remote_keypress"
 SERVICE_SET_AUDIO_DSP_CONTROLS = "set_audio_dsp_controls"
+SERVICE_SET_AUDIO_PRODUCT_LEVEL_CONTROLS = "set_audio_product_level_controls"
 SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS = "set_audio_product_tone_controls"
 SERVICE_SET_BALANCE_LEVEL = "set_balance_level"
 SERVICE_SET_BASS_LEVEL = "set_bass_level"
+SERVICE_SET_LANGUAGE = "set_language"
+SERVICE_SET_NAME = "set_name"
+SERVICE_SET_PRODUCT_CEC_HDMI_CONTROL = "set_product_cec_hdmi_control"
+SERVICE_SET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS = "set_product_hdmi_assignment_controls"
 SERVICE_SNAPSHOT_RESTORE = "snapshot_restore"
 SERVICE_SNAPSHOT_STORE = "snapshot_store"
 SERVICE_UPDATE_SOURCE_NOWPLAYINGSTATUS = "update_source_nowplayingstatus"
 SERVICE_ZONE_TOGGLE_MEMBER = "zone_toggle_member"
 
+
+SERVICE_ADD_WIRELESS_PROFILE_SCHEMA = vol.Schema(
+    {
+        vol.Required("ip_address"): cv.string,
+        vol.Optional("ip_port", default=8090): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1, max=65535))),
+        vol.Required("ssid_name"): cv.string,
+        vol.Required("ssid_password"): cv.string,
+        vol.Required("ssid_security_type"): cv.string,
+        vol.Optional("timeout_secs", default=None): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=1, max=30))),
+    }
+)
 
 SERVICE_AUDIO_TONE_LEVELS_SCHEMA = vol.Schema(
     {
@@ -125,7 +146,21 @@ SERVICE_GET_AUDIO_DSP_CONTROLS_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_GET_AUDIO_PRODUCT_LEVEL_CONTROLS_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("refresh", default=True): cv.boolean,
+    }
+)
+
 SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("refresh", default=True): cv.boolean,
+    }
+)
+
+SERVICE_GET_AUDIO_SPEAKER_ATTRIBUTE_AND_SETTING_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
         vol.Optional("refresh", default=True): cv.boolean,
@@ -156,6 +191,20 @@ SERVICE_GET_BASS_LEVEL_SCHEMA = vol.Schema(
 SERVICE_GET_DEVICE_INFO_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
+    }
+)
+
+SERVICE_GET_PRODUCT_CEC_HDMI_CONTROL_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("refresh", default=False): cv.boolean,
+    }
+)
+
+SERVICE_GET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Optional("refresh", default=False): cv.boolean,
     }
 )
 
@@ -291,6 +340,14 @@ SERVICE_SET_AUDIO_DSP_CONTROLS_SCHEMA = vol.Schema(
     }
 )
 
+SERVICE_SET_AUDIO_PRODUCT_LEVEL_CONTROLS_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("front_center_speaker_level", default=0): vol.All(vol.Range(min=-100,max=100)),
+        vol.Required("rear_surround_speakers_level", default=0): vol.All(vol.Range(min=-100,max=100))
+    }
+)
+
 SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
@@ -310,6 +367,34 @@ SERVICE_SET_BASS_LEVEL_SCHEMA = vol.Schema(
     {
         vol.Required("entity_id"): cv.entity_id,
         vol.Required("level", default=-5): vol.All(vol.Range(min=-9,max=0))
+    }
+)
+
+SERVICE_SET_LANGUAGE_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("language"): cv.string
+    }
+)
+
+SERVICE_SET_NAME_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("name"): cv.string
+    }
+)
+
+SERVICE_SET_PRODUCT_CEC_HDMI_CONTROL_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("cec_mode"): cv.string,
+    }
+)
+
+SERVICE_SET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("hdmi_input_selection_01"): cv.string,
     }
 )
 
@@ -496,6 +581,12 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
                     await hass.async_add_executor_job(entity.service_set_audio_dsp_controls, audio_mode, video_sync_audio_delay)
 
+                elif service.service == SERVICE_SET_AUDIO_PRODUCT_LEVEL_CONTROLS:
+                    front_center_speaker_level = service.data.get("front_center_speaker_level")
+                    rear_surround_speakers_level = service.data.get("rear_surround_speakers_level")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    await hass.async_add_executor_job(entity.service_set_audio_product_level_controls, front_center_speaker_level, rear_surround_speakers_level)
+
                 elif service.service == SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS:
                     bass_level = service.data.get("bass_level")
                     treble_level = service.data.get("treble_level")
@@ -511,6 +602,26 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     level = service.data.get("level")
                     _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
                     await hass.async_add_executor_job(entity.service_set_bass_level, level)
+
+                elif service.service == SERVICE_SET_LANGUAGE:
+                    language = service.data.get("language")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    await hass.async_add_executor_job(entity.service_set_language, language)
+
+                elif service.service == SERVICE_SET_NAME:
+                    name = service.data.get("name")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    await hass.async_add_executor_job(entity.service_set_name, name)
+
+                elif service.service == SERVICE_SET_PRODUCT_CEC_HDMI_CONTROL:
+                    cec_mode = service.data.get("cec_mode")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    await hass.async_add_executor_job(entity.service_set_product_cec_hdmi_control, cec_mode)
+
+                elif service.service == SERVICE_SET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS:
+                    hdmi_input_selection_01 = service.data.get("hdmi_input_selection_01")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    await hass.async_add_executor_job(entity.service_set_product_hdmi_assignment_controls, hdmi_input_selection_01)
 
                 elif service.service == SERVICE_REBOOT_DEVICE:
                     port = service.data.get("port")
@@ -647,6 +758,39 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     # process zone toggle member service.
                     await hass.async_add_executor_job(from_player.service_zone_toggle_member, to_player)
 
+                elif service.service == SERVICE_ADD_WIRELESS_PROFILE:
+
+                    # this service has no entitys to resolve, since it could be a device
+                    # that is in a factory-reset state; manual ip address is required!
+
+                    # # get service parameters.
+                    # ip_address = service.data.get("ip_address")
+                    # ip_port = service.data.get("ip_port", 8090)
+                    # ssid_name = service.data.get("ssid_name")
+                    # ssid_password = service.data.get("ssid_password")
+                    # ssid_security_type = service.data.get("ssid_security_type")
+                    # timeout_secs = service.data.get("timeout_secs", 30)
+
+                    # # create SoundTouch device instance.
+                    # device:SoundTouchDevice = SoundTouchDevice(ip_address, port=ip_port)
+            
+                    # # create SoundTouch client instance from device.
+                    # client:SoundTouchClient = SoundTouchClient(device)
+
+                    # # build a wireless profile to add.
+                    # profile:WirelessProfile = WirelessProfile(
+                    #     ssid=ssid_name,
+                    #     password=ssid_password,
+                    #     securityType=ssid_security_type,
+                    #     timeoutSecs=timeout_secs
+                    # )
+
+                    # # add a wireless profile to the device.
+                    # client.AddWirelessProfile(profile)
+
+                    # add a wireless profile to the device.
+                    await hass.async_add_executor_job(service_add_wireless_profile, service)
+
                 else:
                     
                     raise IntegrationError("Unrecognized service identifier \"%s\" in method \"service_handle_entityfromto\"." % service.service)
@@ -667,6 +811,62 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                 
                 # trace.
                 _logsi.LeaveMethod(SILevel.Debug)
+
+
+        def service_add_wireless_profile(
+            service:ServiceCall, 
+            ) -> None:
+            """
+            Adds a new wireless profile to a SoundTouch device network configuration.
+        
+            Args:
+                service (ServiceCall):
+                    Service call parameters..
+            """
+            apiMethodName:str = 'service_add_wireless_profile'
+
+            try:
+
+                # trace.
+                _logsi.EnterMethod(SILevel.Debug, apiMethodName)
+
+                # get service parameters.
+                ip_address = service.data.get("ip_address")
+                ip_port = service.data.get("ip_port", 8090)
+                ssid_name = service.data.get("ssid_name")
+                ssid_password = service.data.get("ssid_password")
+                ssid_security_type = service.data.get("ssid_security_type")
+                timeout_secs = service.data.get("timeout_secs", 30)
+
+                # create SoundTouch device instance.
+                device:SoundTouchDevice = SoundTouchDevice(ip_address, port=ip_port)
+            
+                # create SoundTouch client instance from device.
+                client:SoundTouchClient = SoundTouchClient(device)
+
+                # build a wireless profile to add.
+                profile:WirelessProfile = WirelessProfile(
+                    ssid=ssid_name,
+                    password=ssid_password,
+                    securityType=ssid_security_type,
+                    timeoutSecs=timeout_secs
+                )
+
+                # add a wireless profile to the device.
+                client.AddWirelessProfile(profile)
+
+            # the following exceptions have already been logged, so we just need to
+            # pass them back to HA for display in the log (or service UI).
+            except SoundTouchError as ex:
+                raise ServiceValidationError(ex.Message)
+            except Exception as ex:
+                _logsi.LogException(None, ex)
+                raise IntegrationError(str(ex)) from ex
+        
+            finally:
+        
+                # trace.
+                _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
         async def service_handle_serviceresponse(service: ServiceCall) -> ServiceResponse:
@@ -700,12 +900,26 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
                     response = await hass.async_add_executor_job(entity.service_get_audio_dsp_controls, refresh)
 
+                elif service.service == SERVICE_GET_AUDIO_PRODUCT_LEVEL_CONTROLS:
+
+                    # get audio product level controls.
+                    refresh = service.data.get("refresh")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    response = await hass.async_add_executor_job(entity.service_get_audio_product_level_controls, refresh)
+
                 elif service.service == SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS:
 
                     # get audio product tone controls.
                     refresh = service.data.get("refresh")
                     _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
                     response = await hass.async_add_executor_job(entity.service_get_audio_product_tone_controls, refresh)
+
+                elif service.service == SERVICE_GET_AUDIO_SPEAKER_ATTRIBUTE_AND_SETTING:
+
+                    # get audio speaker attribute and setting.
+                    refresh = service.data.get("refresh")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    response = await hass.async_add_executor_job(entity.service_get_audio_speaker_attribute_and_setting, refresh)
 
                 elif service.service == SERVICE_GET_BALANCE:
 
@@ -733,6 +947,20 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     # get device information.
                     _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
                     response = await hass.async_add_executor_job(entity.service_get_device_info)
+
+                elif service.service == SERVICE_GET_PRODUCT_CEC_HDMI_CONTROL:
+
+                    # get product cec hdmi control.
+                    refresh = service.data.get("refresh")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    response = await hass.async_add_executor_job(entity.service_get_product_cec_hdmi_control, refresh)
+
+                elif service.service == SERVICE_GET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS:
+
+                    # get product hdmi assignment controls.
+                    refresh = service.data.get("refresh")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    response = await hass.async_add_executor_job(entity.service_get_product_hdmi_assignment_controls, refresh)
 
                 elif service.service == SERVICE_GET_SOURCE_LIST:
 
@@ -848,6 +1076,15 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
 
 
         # register all services this component provides, and their corresponding schemas.
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_ADD_WIRELESS_PROFILE, SERVICE_ADD_WIRELESS_PROFILE_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_ADD_WIRELESS_PROFILE,
+            service_handle_entityfromto,
+            schema=SERVICE_ADD_WIRELESS_PROFILE_SCHEMA,
+            supports_response=SupportsResponse.NONE,
+        )
+
         _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_AUDIO_TONE_LEVELS, SERVICE_AUDIO_TONE_LEVELS_SCHEMA)
         hass.services.async_register(
             DOMAIN,
@@ -875,12 +1112,30 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             supports_response=SupportsResponse.ONLY,
         )
 
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_AUDIO_PRODUCT_LEVEL_CONTROLS, SERVICE_GET_AUDIO_PRODUCT_LEVEL_CONTROLS_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_AUDIO_PRODUCT_LEVEL_CONTROLS,
+            service_handle_serviceresponse,
+            schema=SERVICE_GET_AUDIO_PRODUCT_LEVEL_CONTROLS_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+
         _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS, SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA)
         hass.services.async_register(
             DOMAIN,
             SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS,
             service_handle_serviceresponse,
             schema=SERVICE_GET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_AUDIO_SPEAKER_ATTRIBUTE_AND_SETTING, SERVICE_GET_AUDIO_SPEAKER_ATTRIBUTE_AND_SETTING_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_AUDIO_SPEAKER_ATTRIBUTE_AND_SETTING,
+            service_handle_serviceresponse,
+            schema=SERVICE_GET_AUDIO_SPEAKER_ATTRIBUTE_AND_SETTING_SCHEMA,
             supports_response=SupportsResponse.ONLY,
         )
 
@@ -917,6 +1172,24 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             SERVICE_GET_DEVICE_INFO,
             service_handle_serviceresponse,
             schema=SERVICE_GET_DEVICE_INFO_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_PRODUCT_CEC_HDMI_CONTROL, SERVICE_GET_PRODUCT_CEC_HDMI_CONTROL_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_PRODUCT_CEC_HDMI_CONTROL,
+            service_handle_serviceresponse,
+            schema=SERVICE_GET_PRODUCT_CEC_HDMI_CONTROL_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_GET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS, SERVICE_GET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS,
+            service_handle_serviceresponse,
+            schema=SERVICE_GET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS_SCHEMA,
             supports_response=SupportsResponse.ONLY,
         )
 
@@ -1055,6 +1328,15 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             supports_response=SupportsResponse.NONE,
         )
 
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_SET_AUDIO_PRODUCT_LEVEL_CONTROLS, SERVICE_SET_AUDIO_PRODUCT_LEVEL_CONTROLS_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_AUDIO_PRODUCT_LEVEL_CONTROLS,
+            service_handle_entity,
+            schema=SERVICE_SET_AUDIO_PRODUCT_LEVEL_CONTROLS_SCHEMA,
+            supports_response=SupportsResponse.NONE,
+        )
+
         _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS, SERVICE_SET_AUDIO_PRODUCT_TONE_CONTROLS_SCHEMA)
         hass.services.async_register(
             DOMAIN,
@@ -1079,6 +1361,42 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             SERVICE_SET_BASS_LEVEL,
             service_handle_entity,
             schema=SERVICE_SET_BASS_LEVEL_SCHEMA,
+            supports_response=SupportsResponse.NONE,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_SET_LANGUAGE, SERVICE_SET_LANGUAGE_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_LANGUAGE,
+            service_handle_entity,
+            schema=SERVICE_SET_LANGUAGE_SCHEMA,
+            supports_response=SupportsResponse.NONE,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_SET_NAME, SERVICE_SET_NAME_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_NAME,
+            service_handle_entity,
+            schema=SERVICE_SET_NAME_SCHEMA,
+            supports_response=SupportsResponse.NONE,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_SET_PRODUCT_CEC_HDMI_CONTROL, SERVICE_SET_PRODUCT_CEC_HDMI_CONTROL_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_PRODUCT_CEC_HDMI_CONTROL,
+            service_handle_entity,
+            schema=SERVICE_SET_PRODUCT_CEC_HDMI_CONTROL_SCHEMA,
+            supports_response=SupportsResponse.NONE,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_SET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS, SERVICE_SET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_SET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS,
+            service_handle_entity,
+            schema=SERVICE_SET_PRODUCT_HDMI_ASSIGNMENT_CONTROLS_SCHEMA,
             supports_response=SupportsResponse.NONE,
         )
 

@@ -6,6 +6,21 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.163 ] - 2025/11/04
+
+  * Added new services to support the ability to change device settings from HA without using the SoundTouch App; this is in support of the upcoming [Bose SoundTouch end-of-life date](https://www.bose.com/soundtouch-end-of-life).
+  * Added service `add_wireless_profile`; Adds a new wireless profile to a SoundTouch device network configuration.
+  * Added service `set_language`; Sets the device language code.
+  * Added service `set_name`; Sets the device name.
+  * Added service `get_audio_product_level_controls`; Gets the audio level controls configuration of the device.
+  * Added service `set_audio_product_level_controls`; Sets the audio level controls configuration of the device.
+  * Added service `get_audio_speaker_attribute_and_setting`; Gets the audio speaker attribute and setting configuration of the device.
+  * Added service `get_product_cec_hdmi_control`; Gets the cec hdmi control configuration of the device.
+  * Added service `set_product_cec_hdmi_control`; Sets the cec hdmi control configuration of the device.
+  * Added service `get_product_hdmi_assignment_controls`; Gets the hdmi assignment controls configuration of the device.
+  * Added service `set_product_hdmi_assignment_controls`; Sets the hdmi assignment controls configuration of the device.
+  * Updated `bosesoundtouchapi` package requirement to `bosesoundtouchapi>=1.0.86`.
+
 ###### [ 1.0.162 ] - 2025/10/29
 
   * Restored the `media_player._attr_media_image_remotely_accessible` setting to False to disallow remotely accessible images.  This was changed while trying to resolve CORS errors using vibrant getPalette in the SoundTouchPlus Card component.

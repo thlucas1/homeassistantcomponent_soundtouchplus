@@ -1751,6 +1751,54 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
+    def service_get_audio_product_level_controls(
+        self,
+        refresh:bool=False,
+        ) -> dict:
+        """
+        Gets the current audio product level controls configuration of the device.
+
+        Args:
+            refresh (bool):
+                True to query the device for realtime information and refresh the cache;
+                otherwise, False to just return the cached information.
+
+        Returns:
+            A `AudioProductLevelControls` object dictionary that contains audio product level control
+            configuration of the device IF the device supports it (e.g. ST-300, etc); 
+            otherwise, None if the device does not support it.
+
+        Note that some SoundTouch devices do not support this functionality.  For example,
+        the ST-300 will support this, but the ST-10 will not.
+        """
+        apiMethodName:str = 'service_get_audio_product_level_controls'
+        apiMethodParms:SIMethodParmListContext = None
+        result:AudioProductLevelControls = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("refresh", refresh)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Audio Product Level Controls Service", apiMethodParms)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetAudioProductLevelControls(refresh)
+
+            # return the result dictionary.
+            return result.ToDictionary()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
     def service_get_audio_product_tone_controls(
         self,
         refresh:bool=False,
@@ -1784,6 +1832,55 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 
             # request information from SoundTouch Web API.
             result = self.data.client.GetAudioProductToneControls(refresh)
+
+            # return the result dictionary.
+            return result.ToDictionary()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_get_audio_speaker_attribute_and_setting(
+        self,
+        refresh:bool=False,
+        ) -> dict:
+        """
+        Gets the current audio speaker attribute and setting configuration of the device.
+
+        Args:
+            refresh (bool):
+                True to query the device for realtime information and refresh the cache;
+                otherwise, False to just return the cached information.
+
+        Returns:
+            A `AudioSpeakerAttributeAndSetting` object dictionary that contains audio 
+            speaker attribute and setting configuration of the device IF the device 
+            supports it (e.g. ST-300, etc); 
+            otherwise, None if the device does not support it.
+
+        Note that some SoundTouch devices do not support this functionality.  For example,
+        the ST-300 will support this, but the ST-10 will not.
+        """
+        apiMethodName:str = 'service_get_audio_speaker_attribute_and_setting'
+        apiMethodParms:SIMethodParmListContext = None
+        result:AudioSpeakerAttributeAndSetting = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("refresh", refresh)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Audio Speaker Attribute and Setting Service", apiMethodParms)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetAudioSpeakerAttributeAndSetting(refresh)
 
             # return the result dictionary.
             return result.ToDictionary()
@@ -1952,6 +2049,96 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 
             # return the result dictionary.
             return self.data.client.Device.ToDictionary()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_get_product_cec_hdmi_control(
+        self,
+        refresh:bool=False,
+        ) -> dict:
+        """
+        Gets the product CEC HDMI control configuration of the device.
+
+        Args:
+            refresh (bool):
+                True to query the device for realtime information and refresh the cache;
+                otherwise, False to just return the cached information.
+
+        Returns:
+            A `ProductCecHdmiControl` object dictionary that contains product CEC HDMI control 
+            configuration of the device.
+
+        """
+        apiMethodName:str = 'service_get_product_cec_hdmi_control'
+        apiMethodParms:SIMethodParmListContext = None
+        result:ProductCecHdmiControl = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("refresh", refresh)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Product CEC HDMI Control Service", apiMethodParms)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetProductCecHdmiControl(refresh)
+
+            # return the result dictionary.
+            return result.ToDictionary()
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_get_product_hdmi_assignment_controls(
+        self,
+        refresh:bool=False,
+        ) -> dict:
+        """
+        Gets the product HDMI assignment controls configuration of the device.
+
+        Args:
+            refresh (bool):
+                True to query the device for realtime information and refresh the cache;
+                otherwise, False to just return the cached information.
+
+        Returns:
+            A `ProductHdmiAssignmentControls` object dictionary that contains product HDMI 
+            assignment controls configuration of the device.
+
+        """
+        apiMethodName:str = 'service_get_product_hdmi_assignment_controls'
+        apiMethodParms:SIMethodParmListContext = None
+        result:ProductHdmiAssignmentControls = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("refresh", refresh)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Get Product HDMI Assignment Controls Service", apiMethodParms)
+                
+            # request information from SoundTouch Web API.
+            result = self.data.client.GetProductHdmiAssignmentControls(refresh)
+
+            # return the result dictionary.
+            return result.ToDictionary()
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
@@ -2777,6 +2964,61 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
 
 
+    def service_set_audio_product_level_controls(
+        self, 
+        front_center_speaker_level:int=0, 
+        rear_surround_speakers_level:int=0, 
+        ) -> None:
+        """
+        Sets the current audio product level controls configuration of the device.
+
+        Args:
+            front_center_speaker_level (int):
+                Front center speaker level to set, usually in the range of -100 (low) to 100 (high).
+            rear_surround_speakers_level (int):
+                Rear surround speaker level to set, usually in the range of -100 (low) to 100 (high).
+
+        Raises:
+            SoundTouchError:
+                If the device is not capable of supporting `audioproductlevelcontrols` functions,
+                as determined by a query to the cached `supportedURLs` web-services api.    
+                
+        Note that some SoundTouch devices do not support this functionality.  For example,
+        the ST-300 will support this, but the ST-10 will not.  
+        """
+        apiMethodName:str = 'service_set_audio_product_level_controls'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("front_center_speaker_level", front_center_speaker_level)
+            apiMethodParms.AppendKeyValue("rear_surround_speakers_level", rear_surround_speakers_level)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Set Audio Product Level Controls Service", apiMethodParms)
+
+            # get current configuration.
+            config:AudioProductLevelControls = self.data.client.GetAudioProductLevelControls()
+        
+            # set audio product level values.
+            config.FrontCenterSpeakerLevel.Value = front_center_speaker_level
+            config.RearSurroundSpeakersLevel.Value = rear_surround_speakers_level
+            self.data.client.SetAudioProductLevelControls(config)
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        except Exception as ex:
+            _logsi.LogException(None, ex)
+            raise IntegrationError(str(ex)) from ex
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
     def service_set_audio_product_tone_controls(
         self, 
         bassLevel:int=0, 
@@ -2903,6 +3145,183 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                            
             # set bass level.
             self.data.client.SetBassLevel(level)
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        except Exception as ex:
+            _logsi.LogException(None, ex)
+            raise IntegrationError(str(ex)) from ex
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_set_language(
+        self, 
+        language:LanguageCodes|str=LanguageCodes.ENGLISH, 
+        ) -> None:
+        """
+        Sets a new language indicator.
+
+        Args:
+            language (LanguageCodes|str):
+                Language code to set; see the `LanguageCodes` enum for valid codes.
+        """
+        apiMethodName:str = 'service_set_language'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("language", language)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Set Language Service", apiMethodParms)
+
+            # set language.
+            self.data.client.SetLanguage(language)
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        except Exception as ex:
+            _logsi.LogException(None, ex)
+            raise IntegrationError(str(ex)) from ex
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_set_name(
+        self, 
+        name:str="Bose SoundTouch", 
+        ) -> None:
+        """
+        Sets a new device name.
+
+        Args:
+            name (str):
+                Name to assign to the device.
+        """
+        apiMethodName:str = 'service_set_name'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("name", name)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Set Name Service", apiMethodParms)
+                           
+            # set device name.
+            self.data.client.SetName(name)
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        except Exception as ex:
+            _logsi.LogException(None, ex)
+            raise IntegrationError(str(ex)) from ex
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_set_product_cec_hdmi_control(
+        self, 
+        cec_mode:str, 
+        ) -> None:
+        """
+        Sets the product cec hdmi control configuration of the device.
+
+        Args:
+            cec_mode (str):
+                Product cec hdmi mode to set; see `ProductCecHdmiModes` for more details.
+
+        Raises:
+            SoundTouchError:
+                If the device is not capable of supporting `productcechdmicontrol` functions,
+                as determined by a query to the cached `supportedURLs` web-services api.    
+                
+        Note that some SoundTouch devices do not support this functionality.  For example,
+        the ST-300 will support this, but the ST-10 will not.  This method will first query
+        the device supportedUris to determine if it supports the function; if so, then the
+        request is made to the device; if not, then a `SoundTouchError` is raised.
+        """
+        apiMethodName:str = 'service_set_product_cec_hdmi_control'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("cec_mode", cec_mode)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Set Product CEC HDMI Control Service", apiMethodParms)
+
+            # set product cec hdmi control values.
+            config:ProductCecHdmiControl = ProductCecHdmiControl()
+            config.CecMode = cec_mode
+            self.data.client.SetProductCecHdmiControl(config)
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise ServiceValidationError(ex.Message)
+        except Exception as ex:
+            _logsi.LogException(None, ex)
+            raise IntegrationError(str(ex)) from ex
+        
+        finally:
+        
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_set_product_hdmi_assignment_controls(
+        self, 
+        hdmi_input_selection_01:str, 
+        ) -> None:
+        """
+        Sets the product hdmi assignment controls configuration of the device.
+
+        Args:
+            hdmi_input_selection_01 (str|HdmiInputSelectionTypes):
+                Product hdmi input selection 01 value to set; see `HdmiInputSelectionTypes`
+                for more details.
+
+        Raises:
+            SoundTouchError:
+                If the device is not capable of supporting `producthdmiassignmentcontrols` functions,
+                as determined by a query to the cached `supportedURLs` web-services api.    
+                
+        Note that some SoundTouch devices do not support this functionality.  For example,
+        the ST-300 will support this, but the ST-10 will not.  This method will first query
+        the device supportedUris to determine if it supports the function; if so, then the
+        request is made to the device; if not, then a `SoundTouchError` is raised.
+        """
+        apiMethodName:str = 'service_set_product_hdmi_assignment_controls'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("hdmi_input_selection_01", hdmi_input_selection_01)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Set Product HDMI Assignment Controls Service", apiMethodParms)
+
+            # set product cec hdmi control values.
+            config:ProductHdmiAssignmentControls = ProductHdmiAssignmentControls()
+            config.HdmiInputSelection01 = hdmi_input_selection_01
+            self.data.client.SetProductHdmiAssignmentControls(config)
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
