@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.164 ] - 2025/11/11
+
+  * Updated `spotifywebapipython` package requirement to `spotifywebapipython>=1.0.255`.
+
 ###### [ 1.0.163 ] - 2025/11/04
 
   * Added new services to support the ability to change device settings from HA without using the SoundTouch App; this is in support of the upcoming [Bose SoundTouch end-of-life date](https://www.bose.com/soundtouch-end-of-life).
