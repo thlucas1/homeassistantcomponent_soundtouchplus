@@ -6,6 +6,11 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.167 ] - 2026/01/07
+
+  * Updated `spotifywebapipython` package requirement to `spotifywebapipython>=1.0.259`.
+  * Updated Bose EOL announcement info for SoundTouch Cloud Services.
+
 ###### [ 1.0.166 ] - 2026/01/04
 
   * Updated `spotifywebapipython` package requirement to `spotifywebapipython>=1.0.258`.

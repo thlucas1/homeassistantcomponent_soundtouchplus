@@ -15,7 +15,7 @@ Platform | Description
 
 ## Bose End-of-Life Announcement for SoundTouch Products
 
-In light of the recent [End-of-Life Announcement for SoundTouch Products by Bose](https://www.bose.com/soundtouch-end-of-life), it should be noted that some functionality in this integration will cease to function after the specified cut-off date of February 18, 2026.  Per the press release, the features that will be discontinued relate to their integrated music services (e.g. Spotify, TuneIn, Pandora, Deezer, Sirius XM, etc), as well as their multi-room playback functionality.  Other than that, we just don't know what will be affected.  
+In light of the recent [End-of-Life Announcement for SoundTouch Products by Bose](https://www.bose.com/soundtouch-end-of-life), it should be noted that some functionality in this integration will cease to function after the specified cut-off date of May 6, 2026 (formerly February 18, 2026).  Per the press release, the features that will be discontinued relate to their integrated music services (e.g. Spotify, TuneIn, Pandora, Deezer, Sirius XM, etc), as well as their presets functionality.  Other than that, we just don't know what will be affected.  
 
 I believe most of the other SoundTouch supported services happen on the local network with direct communication to the device (e.g. DLNA streaming, device control / volume / input switching, etc).  But that is just a guess.  The easy way to tell what will be affected is to unplug your router from the external internet, try the various Bose functions, and see what breaks.  Simple as that.
 
