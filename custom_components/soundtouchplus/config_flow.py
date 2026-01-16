@@ -560,7 +560,7 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
                         del aliases_dict[source_key]
 
                 # handle adding new alias
-                new_source:str = user_input.get("add_source")
+                new_source:str = user_input.get("add_source", "").strip()
                 new_alias_name:str = user_input.get("add_alias_name", "").strip()
                 if new_source:
                     if not new_alias_name:
@@ -577,7 +577,15 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
                 self._Options[CONF_OPTION_SOURCE_ALIASES] = alias_string
 
                 if not errors:
-                    return await self._update_options(self._Options)
+                    # check what action user wants to take
+                    next_action:str = user_input.get("next_action", "continue_editing")
+                    if next_action == "save_and_close":
+                        # save and return to main options
+                        return await self._update_options(self._Options)
+                    else:
+                        # continue editing - reload the form with updated aliases
+                        # by calling async_step_aliases again without user_input
+                        return await self.async_step_aliases()
 
             # load available sources from the device.
             source_list_all:dict = await self.hass.async_add_executor_job(self._GetSourceTitleList, self._host, self._port)
@@ -610,12 +618,28 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
                                          )] = cv.multi_select(remove_options)
 
             # show form to add new alias
+            # build options list with empty string as first option to allow skipping source selection
+            source_options = [""] + list(source_list_all.keys())
             schema_dict[vol.Optional("add_source",
                                      default=""
-                                     )] = vol.In(source_list_all)
+                                     )] = selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=source_options,
+                    multiple=False,
+                    custom_value=False
+                ),
+            )
             schema_dict[vol.Optional("add_alias_name",
                                      default=""
                                      )] = cv.string
+
+            # add action selection field
+            schema_dict[vol.Optional("next_action",
+                                     default="continue_editing"
+                                     )] = vol.In({
+                "continue_editing": "Continue Editing",
+                "save_and_close": "Save and Close"
+            })
 
             schema = vol.Schema(schema_dict)
 
