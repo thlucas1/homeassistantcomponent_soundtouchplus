@@ -69,6 +69,7 @@ from .browse_media import (
 )
 from .const import (
     CONF_OPTION_RECENTS_CACHE_MAX_ITEMS,
+    CONF_OPTION_SOURCE_ALIASES,
     CONF_OPTION_SOURCE_LIST, 
     DOMAIN, 
     DOMAIN_SPOTIFYPLUS
@@ -190,6 +191,8 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             self.soundtouchplus_recents_cache_lastupdated:int = 0
             self.recents_cache_max_items:int = 20
             self.websocket_error_count:int = 0
+            self._sourceAliases:dict[str, str] = {}
+            self._sourceAliasesReverse:dict[str, str] = {}
 
             # initialize base class attributes (MediaPlayerEntity).
             self._attr_icon = "mdi:speaker"
@@ -1057,12 +1060,18 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 sourceAccount = sourceItem.SourceAccount
             
             else:
+                # check if source is an alias.
+                sourceItem = self._GetSourceItemByAlias(source)
+                if sourceItem is not None:
+                    source = sourceItem.Source
+                    sourceAccount = sourceItem.SourceAccount
 
-                # does source contain the source and account name (delimited by ":")?
-                dlmidx:int = source.find(":")
-                if dlmidx > -1:
-                    sourceAccount:str = source[dlmidx + 1:]
-                    source:str = source[0:dlmidx]
+                else:
+                    # does source contain the source and account name (delimited by ":")?
+                    dlmidx:int = source.find(":")
+                    if dlmidx > -1:
+                        sourceAccount:str = source[dlmidx + 1:]
+                        source:str = source[0:dlmidx]
 
             # is the LOCAL source specified? if so, then use the SelectLocalSource() method to select the 
             # source, as this is the only way to select the LOCAL source for some SoundTouch devices.
@@ -1561,6 +1570,48 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         else:
             _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer source title '%s' was resolved to %s" % (self.name, title, str(sourceItem)), sourceItem, excludeNonPublic=True)
         return sourceItem
+
+
+    def _GetSourceItemByAlias(self, alias:str) -> SourceItem:
+        """
+        Gets a source item from the cache based on the specified alias.
+
+        Args:
+            alias (str):
+                The alias to resolve. Can be in format 'Alias (OriginalTitle)' or just 'Alias'.
+
+        Returns:
+            The SourceItem if found; otherwise, None.
+        """
+        # Extract just the alias part if it's in 'Alias (OriginalTitle)' format
+        alias_display = alias
+        if " (" in alias:
+            alias_display = alias.split(" (")[0]
+
+        # Look for the original source key in the reverse aliases map
+        if alias_display in self._sourceAliasesReverse:
+            source_key = self._sourceAliasesReverse[alias_display]
+
+            # we need to find the SourceItem that matches this source key.
+            # the key could be a Source, SourceAccount, or Title.
+            # we need to search the full source list.
+            if SoundTouchNodes.sources.Path in self._client.ConfigurationCache:
+                sourceList:SourceList = self._client.ConfigurationCache[
+                    SoundTouchNodes.sources.Path
+                ]
+                for item in sourceList.SourceItems:
+                    # check if key matches source.
+                    if item.Source == source_key:
+                        return item
+                    # check if key matches source account.
+                    if item.SourceAccount == source_key:
+                        return item
+                    # check if key matches title (friendly name).
+                    title = sourceList.GetTitleBySource(item.Source, item.SourceAccount)
+                    if title == source_key:
+                        return item
+
+        return None
 
 
     def _UpdateNowPlayingData(self, config:NowPlayingStatus) -> None:
@@ -3546,9 +3597,47 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogVerbose("'%s': MediaPlayer is loading list of ALL sources that the device supports" % self.name)
             config:SourceList = await self.hass.async_add_executor_job(self._client.GetSourceList, True)
 
+            # load source aliases option.
+            self._sourceAliases.clear()
+            self._sourceAliasesReverse.clear()
+            aliases:str = self.data.options.get(CONF_OPTION_SOURCE_ALIASES, None)
+            if aliases is not None:
+                for alias in aliases.split(";"):
+                    parts = alias.split("=")
+                    if len(parts) == 2:
+                        self._sourceAliases[parts[0].strip()] = parts[1].strip()
+                        self._sourceAliasesReverse[parts[1].strip()] = parts[0].strip()
+
+            _logsi.LogDictionary(SILevel.Verbose, "'%s': MediaPlayer source aliases" % self.name, self._sourceAliases, prettyPrint=True)
+
             if self._attr_source_list is None or len(self._attr_source_list) == 0:
                 _logsi.LogVerbose("'%s': MediaPlayer source_list is not defined in configuration options; defaulting to ALL sources" % self.name)
                 self._attr_source_list = config.ToSourceTitleArray()
+                
+                # apply aliases to source titles
+                if self._sourceAliases:
+                    updated_list = []
+                    for title in self._attr_source_list:
+                        # title is the SourceTitle (e.g., "Product (HDMI_1)")
+                        if title in self._sourceAliases:
+                            # if this title has an alias, use the alias instead
+                            alias = self._sourceAliases[title]
+                            updated_list.append(f"{alias} ({title})")
+                        else:
+                            # no alias for this title, keep original
+                            updated_list.append(title)
+                    self._attr_source_list = updated_list
+            else:
+                # source_list was configured in options, still need to apply aliases
+                if self._sourceAliases:
+                    updated_list = []
+                    for title in self._attr_source_list:
+                        if title in self._sourceAliases:
+                            alias = self._sourceAliases[title]
+                            updated_list.append(f"{alias} ({title})")
+                        else:
+                            updated_list.append(title)
+                    self._attr_source_list = updated_list
             
             _logsi.LogVerbose("'%s': MediaPlayer source_list = %s" % (self.name, str(self._attr_source_list)))
             _logsi.LogVerbose("'%s': MediaPlayer current source = %s" % (self.name, str(self.source)))
