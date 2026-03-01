@@ -44,9 +44,11 @@ from .const import (
     CONF_DEVICE_NAME,
     CONF_DEVICE_ID,
     CONF_OPTION_SOURCE_LIST,
+    CONF_OPTION_SOURCE_ALIASES,
     CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID,
     CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE,
     CONF_OPTION_RECENTS_CACHE_MAX_ITEMS,
+    CONF_OPTION_CONFIGURE_ALIASES,
     CONF_PING_WEBSOCKET_INTERVAL,
     CONF_PORT_WEBSOCKET,
     DEFAULT_PING_WEBSOCKET_INTERVAL,
@@ -453,8 +455,11 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
                 self._Options[CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID] = user_input.get(CONF_OPTION_SPOTIFY_MEDIAPLAYER_ENTITY_ID, None)
                 self._Options[CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE] = user_input.get(CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE, None)
                 self._Options[CONF_OPTION_RECENTS_CACHE_MAX_ITEMS] = user_input.get(CONF_OPTION_RECENTS_CACHE_MAX_ITEMS, 0)
-                
+
                 # store the updated config entry options.
+                if user_input.get(CONF_OPTION_CONFIGURE_ALIASES) is True:
+                    return await self.async_step_aliases()
+
                 return await self._update_options(self._Options)
 
             # load available sources from the device.
@@ -499,6 +504,9 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
                     vol.Optional(CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE, 
                                  default=self._Options.get(CONF_OPTION_TTS_FORCE_GOOGLE_TRANSLATE, False)
                                  ): cv.boolean,
+                    vol.Optional(CONF_OPTION_CONFIGURE_ALIASES,
+                                 default=False,
+                                 ): cv.boolean,
                 }
             )
             
@@ -516,6 +524,139 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
             _logsi.LogException(None, ex, logToSystemLogger=False)
             raise
         
+        finally:
+
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug)
+
+    
+    async def async_step_aliases(self, user_input:dict[str,Any]=None) -> FlowResult:
+        """
+        Configure source aliases.
+        """
+        try:
+
+            # trace.
+            _logsi.EnterMethod(SILevel.Debug)
+            _logsi.LogDictionary(SILevel.Verbose, "'%s': OptionsFlow async_step_aliases user_input" % self._name, user_input)
+
+            errors:dict = {}
+
+            if user_input is not None:
+
+                # get current alias string
+                current_aliases_str:str = self._Options.get(CONF_OPTION_SOURCE_ALIASES, "")
+                aliases_dict:dict[str,str] = {}
+                if current_aliases_str:
+                    for pair in current_aliases_str.split(";"):
+                        if "=" in pair:
+                            source_key, alias_name = pair.split("=", 1)
+                            aliases_dict[source_key.strip()] = alias_name.strip()
+
+                # handle removal of selected aliases
+                aliases_to_remove:list[str] = user_input.get("remove_aliases", [])
+                for source_key in aliases_to_remove:
+                    if source_key in aliases_dict:
+                        del aliases_dict[source_key]
+
+                # handle adding new alias
+                new_source:str = user_input.get("add_source", "").strip()
+                new_alias_name:str = user_input.get("add_alias_name", "").strip()
+                if new_source:
+                    if not new_alias_name:
+                        errors["base"] = "alias_name_required"
+                    else:
+                        aliases_dict[new_source] = new_alias_name
+
+                # convert dict back to semicolon-delimited string
+                if aliases_dict:
+                    alias_string = ";".join([f"{k}={v}" for k, v in aliases_dict.items()])
+                else:
+                    alias_string = ""
+
+                self._Options[CONF_OPTION_SOURCE_ALIASES] = alias_string
+
+                if not errors:
+                    # check what action user wants to take
+                    next_action:str = user_input.get("next_action", "continue_editing")
+                    if next_action == "save_and_close":
+                        # save and return to main options
+                        return await self._update_options(self._Options)
+                    else:
+                        # continue editing - reload the form with updated aliases
+                        # by calling async_step_aliases again without user_input
+                        return await self.async_step_aliases()
+
+            # load available sources from the device.
+            source_list_all:dict = await self.hass.async_add_executor_job(self._GetSourceTitleList, self._host, self._port)
+            if source_list_all is None:
+                errors["base"] = "getsourcelist_empty"
+                return
+
+            # parse current aliases
+            current_aliases_str:str = self._Options.get(CONF_OPTION_SOURCE_ALIASES, "")
+            aliases_dict:dict[str,str] = {}
+            if current_aliases_str:
+                for pair in current_aliases_str.split(";"):
+                    if "=" in pair:
+                        source_key, alias_name = pair.split("=", 1)
+                        aliases_dict[source_key.strip()] = alias_name.strip()
+
+            # build removal options from current aliases
+            remove_options:dict[str,str] = {}
+            for source_key, alias_name in aliases_dict.items():
+                display_name = f"{alias_name} ({source_key})"
+                remove_options[source_key] = display_name
+
+            # build schema
+            schema_dict:dict = {}
+            
+            # show current aliases for removal if any exist
+            if remove_options:
+                schema_dict[vol.Optional("remove_aliases", 
+                                         default=[]
+                                         )] = cv.multi_select(remove_options)
+
+            # show form to add new alias
+            # build options list with empty string as first option to allow skipping source selection
+            source_options = [""] + list(source_list_all.keys())
+            schema_dict[vol.Optional("add_source",
+                                     default=""
+                                     )] = selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=source_options,
+                    multiple=False,
+                    custom_value=False
+                ),
+            )
+            schema_dict[vol.Optional("add_alias_name",
+                                     default=""
+                                     )] = cv.string
+
+            # add action selection field
+            schema_dict[vol.Optional("next_action",
+                                     default="continue_editing"
+                                     )] = vol.In({
+                "continue_editing": "Continue Editing",
+                "save_and_close": "Save and Close"
+            })
+
+            schema = vol.Schema(schema_dict)
+
+            _logsi.LogVerbose("'%s': OptionsFlow is showing the aliases configuration form" % self._name)
+            return self.async_show_form(
+                step_id="aliases",
+                data_schema=schema,
+                description_placeholders={CONF_NAME: self._name},
+                errors=errors or {}
+            )
+
+        except Exception as ex:
+
+            # trace.
+            _logsi.LogException(None, ex, logToSystemLogger=False)
+            raise
+
         finally:
 
             # trace.
@@ -547,6 +688,7 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
     def _GetSourceTitleList(self, host:str, port:int) -> dict:
         """
         Retrieves SourceList object from the SoundTouch device.
+        Returns a dictionary mapping source identifiers to display titles.
         """
         try:
 
@@ -563,7 +705,8 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
             # sort the results (in place) by SourceTitle, ascending order.
             sourceList.SourceItems.sort(key=lambda x: (x.SourceTitle or "").lower(), reverse=False)
            
-            # build string array of all sources for the device.
+            # build dictionary of source identifiers to display titles.
+            # use SourceTitle as the key for simplicity since it's unique.
             result:dict = {}
             item:SourceItem
             for item in sourceList:
@@ -578,3 +721,4 @@ class SoundTouchPlusOptionsFlow(OptionsFlow):
             
             _logsi.LogError("'%s': OptionsFlow could not retrieve source list for device: %s" % (self._name, str(ex)))
             return None
+
