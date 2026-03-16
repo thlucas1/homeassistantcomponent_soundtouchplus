@@ -46,6 +46,7 @@
     <Folder Include="config\" />
     <Folder Include="custom_components\" />
     <Folder Include="custom_components\soundtouchplus\" />
+    <Folder Include="custom_components\soundtouchplus\brand\" />
     <Folder Include="custom_components\soundtouchplus\translations\" />
     <Folder Include="images\" />
     <Folder Include="scripts\" />
@@ -66,6 +67,12 @@
     <Content Include="CHANGELOG.md" />
     <Content Include="config\configuration.yaml" />
     <Content Include="config\smartinspect.cfg" />
+    <Content Include="custom_components\soundtouchplus\brand\dark_logo%402x.png" />
+    <Content Include="custom_components\soundtouchplus\brand\dark_logo.png" />
+    <Content Include="custom_components\soundtouchplus\brand\icon%402x.png" />
+    <Content Include="custom_components\soundtouchplus\brand\icon.png" />
+    <Content Include="custom_components\soundtouchplus\brand\logo%402x.png" />
+    <Content Include="custom_components\soundtouchplus\brand\logo.png" />
     <Content Include="custom_components\soundtouchplus\manifest.json" />
     <Content Include="custom_components\soundtouchplus\services.yaml" />
     <Content Include="custom_components\soundtouchplus\strings.json" />

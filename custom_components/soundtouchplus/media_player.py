@@ -375,8 +375,6 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
     def media_position_updated_at(self) -> dt.datetime | None:
         """ 
         When was the position of the current playing media valid.
-        
-        Returns value from homeassistant.util.dt.utcnow().
         """
         return self._attr_media_position_updated_at
 
@@ -508,7 +506,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 self._client.MediaSeekToTime(int(position), delay=0)
                 self._attr_media_position = config.Position
                 self._attr_media_duration = config.Duration
-                self._attr_media_position_updated_at = utcnow()
+                self._attr_media_position_updated_at = utcnow().replace(microsecond=0)
                 _logsi.LogVerbose("media_seek - position float=%s, int=%s, date_updated=%s" % (str(position), int(position), str(self._attr_media_position_updated_at)))
             else:
                 _logsi.LogVerbose("media_seek - currently playing media does not support seek function")
@@ -1570,7 +1568,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
         # update seek-related attributes.
         self._attr_media_position = config.Position
         self._attr_media_duration = config.Duration
-        self._attr_media_position_updated_at = utcnow()
+        self._attr_media_position_updated_at = utcnow().replace(microsecond=0)
         
         # update shuffle related attributes.
         self._attr_shuffle = None

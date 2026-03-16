@@ -6,6 +6,12 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.172 ] - 2026/03/16
+
+  * Added newer brand icons in support of HA 2026.03.0 release that supports custom component branding.
+  * Updated `_attr_media_position_updated_at` value to drop microseconds value; this avoids the progress "drift" when estimating the current progress position in front-end ui's.
+  * Updated `spotifywebapipython` package requirement to `spotifywebapipython>=1.0.266`.
+
 ###### [ 1.0.171 ] - 2026/03/02
 
   * Updated `spotifywebapipython` package requirement to `spotifywebapipython>=1.0.264`.
