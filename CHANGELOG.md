@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.173 ] - 2026/04/21
+
+  * Updated `spotifywebapipython` package requirement to `spotifywebapipython>=1.0.270`.
+
 ###### [ 1.0.172 ] - 2026/03/16
 
   * Added newer brand icons in support of HA 2026.03.0 release that supports custom component branding.
