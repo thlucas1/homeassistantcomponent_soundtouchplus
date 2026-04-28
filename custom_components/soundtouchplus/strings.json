@@ -43,9 +43,20 @@
           "source_list": "Source list selections; check to show, uncheck to hide",
           "spotify_mediaplayer_entity_id": "SpotifyPlus integration media player entity id used to query Spotify API for data",
           "recents_cache_max_items":  "Maximum # of items to keep in the recently played list cache, or zero to disable",
-          "tts_force_google_translate": "Force TTS announcements to use Google Translate"
+          "source_aliases": "Source aliases in 'Source=Alias;Source2=Alias2' format (e.g. 'AUX=TV;HDMI_1=Apple TV')",
+          "tts_force_google_translate": "Force TTS announcements to use Google Translate",
+          "configure_aliases": "Configure Source Aliases"
         },
-        "submit": "Save"
+        "submit": "Next"
+      },
+      "aliases": {
+        "title": "Manage Source Aliases",
+        "data": {
+          "remove_aliases": "Select Aliases to Remove",
+          "new_alias_source": "Source (Select to Add/Edit)",
+          "new_alias_name": "Alias Name"
+        },
+        "submit": "Update List"
       }
     },
     "error": {
