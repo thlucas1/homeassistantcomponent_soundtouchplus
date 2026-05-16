@@ -88,6 +88,9 @@ ATTR_SOUNDTOUCHPLUS_DEVICE_TYPE = "stp_device_type"
 ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISADVERTISEMENT = "soundtouchplus_nowplaying_isadvertisement"
 ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISFAVORITE = "soundtouchplus_nowplaying_isfavorite"
 ATTR_SOUNDTOUCHPLUS_NOWPLAYING_IMAGE_URL = "stp_nowplaying_image_url"
+ATTR_SOUNDTOUCHPLUS_NOWSELECTION_ID = "stp_nowselection_id"
+ATTR_SOUNDTOUCHPLUS_NOWSELECTION_DATEUTC = "stp_nowselection_dateutc"
+ATTR_SOUNDTOUCHPLUS_NOWSELECTION_SOURCE = "stp_nowselection_source"
 ATTR_SOUNDTOUCHPLUS_POLLING_ENABLED = "soundtouchplus_polling_enabled"
 ATTR_SOUNDTOUCHPLUS_PRESETS_LASTUPDATED = "soundtouchplus_presets_lastupdated"
 ATTR_SOUNDTOUCHPLUS_RECENTS_LASTUPDATED = "soundtouchplus_recents_lastupdated"
@@ -322,6 +325,12 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             config:NowPlayingStatus = self._client.ConfigurationCache[SoundTouchNodes.nowPlaying.Path]
             attributes[ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISADVERTISEMENT] = config.IsAdvertisement
             attributes[ATTR_SOUNDTOUCHPLUS_NOWPLAYING_ISFAVORITE] = config.IsFavorite
+            
+        if SoundTouchNodes.nowSelection.Path in self._client.ConfigurationCache:
+            config:NowSelectionUpdated = self._client.ConfigurationCache[SoundTouchNodes.nowSelection.Path]
+            attributes[ATTR_SOUNDTOUCHPLUS_NOWSELECTION_ID] = config.PresetId
+            attributes[ATTR_SOUNDTOUCHPLUS_NOWSELECTION_SOURCE] = config.Source
+            attributes[ATTR_SOUNDTOUCHPLUS_NOWSELECTION_DATEUTC] = int(config.EventDateUtc)
             
         return attributes
 
@@ -1292,6 +1301,31 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 
 
     @callback
+    def _OnSoundTouchUpdateEvent_nowSelectionUpdated(self, client:SoundTouchClient, args:Element) -> None:
+        """
+        Process a nowSelectionUpdated event notification from the SoundTouch device.
+        """
+        if (args != None):
+
+            if (_logsi.IsOn(SILevel.Verbose)):
+                ElementTree.indent(args)  # for pretty printing
+                argsEncoded = ElementTree.tostring(args, encoding="unicode")
+                _logsi.LogXml(SILevel.Verbose, "'%s': MediaPlayer client device event notification - %s" % (self.name, args.tag), argsEncoded)
+
+            # create configuration model from update event argument and update the cache.
+            if len(args) > 0:
+                config:NowSelectionUpdated = NowSelectionUpdated(root=args)
+                client.ConfigurationCache[SoundTouchNodes.nowSelection.Path] = config
+                _logsi.LogVerbose("'%s': MediaPlayer NowSelectionUpdated updated: %s" % (self.name, config.ToString()))
+                               
+            # inform Home Assistant of the status update.
+            self.schedule_update_ha_state(force_refresh=False)
+            
+        # reset websocket error count, as we know websockets are active again.
+        self.websocket_error_count = 0
+                
+
+    @callback
     def _OnSoundTouchUpdateEvent_presetsUpdated(self, client:SoundTouchClient, args:Element) -> None:
         """
         Process a presetsUpdated event notification from the SoundTouch device.
@@ -1680,14 +1714,18 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             sourceList:SourceList = self.data.client.GetSourceList(refresh=False)
             sourceItem:SourceItem = sourceList.GetSourceItemByTitle(sourceTitle)
 
-            # clear nowplaying status for source.
-            cacheKey = "%s-%s:%s" % (SoundTouchNodes.nowPlaying.Path, sourceItem.Source, sourceItem.SourceAccount)
-            if cacheKey in self.data.client.ConfigurationCache:
-                del self.data.client.ConfigurationCache[cacheKey]
-                _logsi.LogVerbose("'%s': NowPlayingStatus for source '%s' was removed" % (self.name, cacheKey))
+            # do we have a source-specific nowplaying status?  if not, then don't bother.
+            if (sourceItem is not None):
 
-            # inform Home Assistant of the status update.
-            self.schedule_update_ha_state(force_refresh=False)
+                # clear nowplaying status for source.
+                cacheKey = "%s-%s:%s" % (SoundTouchNodes.nowPlaying.Path, sourceItem.Source, sourceItem.SourceAccount)
+                if cacheKey in self.data.client.ConfigurationCache:
+                    del self.data.client.ConfigurationCache[cacheKey]
+                    _logsi.LogVerbose("'%s': NowPlayingStatus for source '%s' was removed" % (self.name, cacheKey))
+
+                # inform Home Assistant of the status update.
+                self.schedule_update_ha_state(force_refresh=False)
+
             return
 
         # the following exceptions have already been logged, so we just need to
@@ -3591,6 +3629,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             self._socket.AddListener(SoundTouchNotifyCategorys.audiodspcontrols, self._OnSoundTouchUpdateEvent_audiodspcontrols)
             self._socket.AddListener(SoundTouchNotifyCategorys.audioproducttonecontrols, self._OnSoundTouchUpdateEvent_audioproducttonecontrols)
             self._socket.AddListener(SoundTouchNotifyCategorys.nowPlayingUpdated, self._OnSoundTouchUpdateEvent_nowPlayingUpdated)
+            self._socket.AddListener(SoundTouchNotifyCategorys.nowSelectionUpdated, self._OnSoundTouchUpdateEvent_nowSelectionUpdated)
             self._socket.AddListener(SoundTouchNotifyCategorys.presetsUpdated, self._OnSoundTouchUpdateEvent_presetsUpdated)
             self._socket.AddListener(SoundTouchNotifyCategorys.recentsUpdated, self._OnSoundTouchUpdateEvent_recentsUpdated)
             self._socket.AddListener(SoundTouchNotifyCategorys.sourcesUpdated, self._OnSoundTouchUpdateEvent_sourcesUpdated)

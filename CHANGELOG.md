@@ -6,6 +6,13 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.174 ] - 2026/05/15
+
+  * Added extra state variable: `stp_nowselection_id`.  Returns the Preset Id of the preset button that was selected.  This value will be zero if a non-preset entry was selected (e.g. BLUETOOTH, AUXIN, etc).
+  * Added extra state variable: `stp_nowselection_source`.  Returns the source value of the selection update event.
+  * Added extra state variable: `stp_nowselection_dateutc`.  Returns the date and time (in epoch format) of when the selection update event took place.
+  * Updated `bosesoundtouchapi` package requirement to `bosesoundtouchapi>=1.0.87`.
+
 ###### [ 1.0.173 ] - 2026/04/21
 
   * Updated `spotifywebapipython` package requirement to `spotifywebapipython>=1.0.270`.
