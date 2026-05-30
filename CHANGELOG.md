@@ -6,9 +6,14 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.175 ] - 2026/05/29
+
+  * Added service `store_preset`; Stores the given Preset information to the device list of presets.  Note this only stores the prefix information on the specified device (does not sync to other devices).
+  * Added `play_url_dlna` content item type detection, which will automatically redirect a station location to play using the `play_url_dlna` service.
+
 ###### [ 1.0.174 ] - 2026/05/15
 
-  * Added extra state variable: `stp_nowselection_id`.  Returns the Preset Id of the preset button that was selected.  This value will be zero if a non-preset entry was selected (e.g. BLUETOOTH, AUXIN, etc).
+  * Added extra state variable: `stp_nowselection_id`.  Returns the Preset Id of the preset (or other input) selection button that was selected.  This value will be zero if a non-preset button was selected (e.g. BLUETOOTH, AUXIN, etc).
   * Added extra state variable: `stp_nowselection_source`.  Returns the source value of the selection update event.
   * Added extra state variable: `stp_nowselection_dateutc`.  Returns the date and time (in epoch format) of when the selection update event took place.
   * Updated `bosesoundtouchapi` package requirement to `bosesoundtouchapi>=1.0.87`.

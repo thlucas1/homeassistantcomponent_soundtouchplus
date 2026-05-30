@@ -22,6 +22,6 @@
     "urllib3>=2.0",
     "zeroconf>=0.132.2"
   ],
-  "version": "1.0.174",
+  "version": "1.0.175",
   "zeroconf": [ "_soundtouch._tcp.local." ]
 }

@@ -742,6 +742,71 @@ preset_remove:
           min: 1
           max: 6
 
+preset_store:
+  name: Store Preset
+  description: Stores the given Preset information to the device's list of presets.
+  fields:
+    entity_id:
+      name: Entity ID
+      description: Entity ID of the SoundTouchPlus device that will process the request.
+      example: "media_player.soundtouch_livingroom"
+      required: true
+      selector:
+        entity:
+          integration: soundtouchplus
+          domain: media_player
+    preset_id:
+      name: Preset ID
+      description: Preset ID to store (1-6).
+      example: "2"
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 6
+    name:
+      name: Content Item Name
+      description: Name of the content item.
+      example: "K-LOVE 90's Radio"
+      required: false
+      selector:
+        text:
+    source:
+      name: Source
+      description: Source to select to play the content; the value is case-sensitive, and should normally be UPPER case.
+      example: "LOCAL_INTERNET_RADIO"
+      required: true
+      selector:
+        text:
+    source_account:
+      name: Source Account
+      description: Source account this content item is played with.  Default is none.
+      example: ""
+      required: false
+      selector:
+        text:
+    item_type:
+      name: Item Type
+      description: Type of content item to play; the value is case-sensitive, and should normally be lower case.
+      example: "stationurl"
+      required: false
+      selector:
+        text:
+    location:
+      name: Content Location
+      description: A direct link to the media content that will be played. Add the `bosetype=play_url_dlna` querystring argument to force the location to play via the play_url_dlna service.
+      example: "http://maestro.emfcdn.com/stream_for/k-love-90s/airable/aac?bosetype=play_url_dlna"
+      required: false
+      selector:
+        text:
+    container_art:
+      name: Container Art
+      description: A direct link to the container art (if present).
+      example: "https://cdn-profiles.tunein.com/s309605/images/logod.png?t=637986891960000000"
+      required: false
+      selector:
+        text:
+
 reboot_device:
   name: Reboot Device
   description: Reboots the SoundTouch device operating system; all connectivity will be lost for about 30-45 seconds while the speaker reboots.

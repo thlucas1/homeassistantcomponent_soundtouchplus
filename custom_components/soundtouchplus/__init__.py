@@ -94,6 +94,7 @@ SERVICE_PLAY_URL = "play_url"
 SERVICE_PLAY_URL_DLNA = "play_url_dlna"
 SERVICE_PRESET_LIST = "preset_list"
 SERVICE_PRESET_REMOVE = "preset_remove"
+SERVICE_PRESET_STORE = "preset_store"
 SERVICE_REBOOT_DEVICE = "reboot_device"
 SERVICE_RECENT_LIST = "recent_list"
 SERVICE_RECENT_LIST_CACHE = "recent_list_cache"
@@ -303,6 +304,19 @@ SERVICE_PRESET_REMOVE_SCHEMA = vol.Schema(
         vol.Required("entity_id"): cv.entity_id,
         vol.Required("preset_id", default=1): vol.All(vol.Range(min=1,max=6)),
     }
+)
+
+SERVICE_PRESET_STORE_SCHEMA = vol.Schema(
+    {
+        vol.Required("entity_id"): cv.entity_id,
+        vol.Required("preset_id", default=1): vol.All(vol.Range(min=1,max=6)),
+        vol.Optional("name"): cv.string,
+        vol.Required("source"): cv.string,
+        vol.Optional("source_account"): cv.string,
+        vol.Optional("item_type"): cv.string,
+        vol.Optional("location"): cv.string,
+        vol.Optional("container_art"): cv.string,
+    }   
 )
 
 SERVICE_REBOOT_DEVICE_SCHEMA = vol.Schema(
@@ -676,6 +690,17 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
                     preset_id = service.data.get("preset_id")
                     _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
                     await hass.async_add_executor_job(entity.service_preset_remove, preset_id)
+
+                elif service.service == SERVICE_PRESET_STORE:
+                    preset_id = service.data.get("preset_id")
+                    name = service.data.get("name")
+                    source = service.data.get("source")
+                    source_account = service.data.get("source_account")
+                    item_type = service.data.get("item_type")
+                    location = service.data.get("location")
+                    container_art = service.data.get("container_art")
+                    _logsi.LogVerbose(STAppMessages.MSG_SERVICE_EXECUTE % (service.service, entity.name))
+                    await hass.async_add_executor_job(entity.service_preset_store, preset_id, name, source, source_account, item_type, location, container_art)
 
                 else:
                     
@@ -1280,6 +1305,15 @@ async def async_setup(hass:HomeAssistant, config:ConfigType) -> bool:
             SERVICE_PRESET_REMOVE,
             service_handle_entity,
             schema=SERVICE_PRESET_REMOVE_SCHEMA,
+            supports_response=SupportsResponse.NONE,
+        )
+
+        _logsi.LogObject(SILevel.Verbose, STAppMessages.MSG_SERVICE_REQUEST_REGISTER % SERVICE_PRESET_STORE, SERVICE_PRESET_STORE_SCHEMA)
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_PRESET_STORE,
+            service_handle_entity,
+            schema=SERVICE_PRESET_STORE_SCHEMA,
             supports_response=SupportsResponse.NONE,
         )
 

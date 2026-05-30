@@ -24,6 +24,7 @@ from functools import partial
 import logging
 from os import path
 import re
+import time
 from typing import Any
 import urllib.parse
 from urllib.parse import unquote
@@ -105,6 +106,9 @@ ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL = "soundtouchplus_tone_treble_level"
 ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL_RANGE = "soundtouchplus_tone_treble_level_range"
 ATTR_SOUNDTOUCHPLUS_WEBSOCKETS_ENABLED = "soundtouchplus_websockets_enabled"
 ATTRVALUE_NOT_CAPABLE = "not capable"
+
+BOSETYPE_PLAY_URL_DLNA = "bosetype=play_url_dlna"
+BOSETYPE_RESOLVED = "bosetype=resolved"
 
 
 async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry, async_add_entities:AddEntitiesCallback) -> None:
@@ -1317,7 +1321,17 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 config:NowSelectionUpdated = NowSelectionUpdated(root=args)
                 client.ConfigurationCache[SoundTouchNodes.nowSelection.Path] = config
                 _logsi.LogVerbose("'%s': MediaPlayer NowSelectionUpdated updated: %s" % (self.name, config.ToString()))
-                               
+
+                # is this a "play_url_dlna" redirect?  if so, then redirect it.
+                # this allows prefix content to be played using the local DLNA server, as it would
+                # not normally be playable using the "LOCAL_INTERNET_RADIO" source.
+                if (config) and (config.Preset) and ((config.Source or "").upper() == "LOCAL_INTERNET_RADIO"):
+                    locationUrl:str = config.Preset.Location or ""
+                    if (locationUrl.lower().find(BOSETYPE_PLAY_URL_DLNA) > -1):
+                        locationUrl = locationUrl.replace(BOSETYPE_PLAY_URL_DLNA, BOSETYPE_RESOLVED)
+                        _logsi.LogVerbose("'%s': MediaPlayer NowSelectionUpdated redirecting to PLAY_URL_DLNA service for LOCAL_INTERNET_RADIO location: %s" % (self.name, locationUrl))
+                        client.PlayUrlDlna(locationUrl, album=config.Preset.Name, artUrl=config.Preset.ContainerArt, updateNowPlayingStatus=True)
+
             # inform Home Assistant of the status update.
             self.schedule_update_ha_state(force_refresh=False)
             
@@ -2386,10 +2400,25 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 source = sourceItem.Source
                 sourceAccount = sourceItem.SourceAccount
 
-            # is this a LOCAL source?
-            if source is not None and len(source) > 0 and source == 'LOCAL':
-                _logsi.LogVerbose("LOCAL source detected - calling SelectLocalSource for player '%s'", self.entity_id)
-                self.data.client.SelectLocalSource()
+            # check for source specific content.
+            if source is not None and len(source) > 0:
+               
+                # is this a LOCAL source?
+                if (source == "LOCAL"):
+                    _logsi.LogVerbose("LOCAL source detected - calling SelectLocalSource for player '%s'", self.entity_id)
+                    self.data.client.SelectLocalSource()
+                    return
+
+                # is this a "play_url_dlna" redirect?  if so, then redirect it.
+                # this allows prefix content to be played using the local DLNA server, as it would
+                # not normally be playable using the "LOCAL_INTERNET_RADIO" source.
+                if (source == "LOCAL_INTERNET_RADIO"):
+                    locationUrl:str = location or ""
+                    if (locationUrl.lower().find(BOSETYPE_PLAY_URL_DLNA) > -1):
+                        locationUrl = locationUrl.replace(BOSETYPE_PLAY_URL_DLNA, BOSETYPE_RESOLVED)
+                        _logsi.LogVerbose("'%s': MediaPlayer service_play_contentitem redirecting to PLAY_URL_DLNA service for LOCAL_INTERNET_RADIO location: %s" % (self.name, locationUrl))
+                        self.data.client.PlayUrlDlna(locationUrl, album=name, artUrl=containerArt, updateNowPlayingStatus=True)
+                        return
             
             # set content item to play, and play it.
             contentItem:ContentItem = ContentItem(source, itemType, location, sourceAccount, isPresetable, name, containerArt)
@@ -2754,6 +2783,94 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
             # remove preset.
             self.data.client.RemovePreset(presetId)
+
+        # the following exceptions have already been logged, so we just need to
+        # pass them back to HA for display in the log (or service UI).
+        except SoundTouchError as ex:
+            raise HomeAssistantError(ex.Message)
+        
+        finally:
+                
+            # trace.
+            _logsi.LeaveMethod(SILevel.Debug, apiMethodName)
+
+
+    def service_preset_store(
+        self, 
+        presetId:int, 
+        name:str=None, 
+        source:str=None, 
+        sourceAccount:str=None, 
+        itemType:str=None, 
+        location:str=None, 
+        containerArt:str=None, 
+        ) -> None:
+        """
+        Stores the given Preset information to the device's list of presets.
+        
+        Args:
+            presetId (int):
+                The preset id to store; valid values are 1 thru 6.
+            name (str):
+                Name of the content item (e.g. "K-LOVE 90's Radio").
+            source (str):
+                Source to select to play the content (e.g. "LOCAL_INTERNET_RADIO").  
+                This can also be a source title value (e.g. "Jellyfin Media Server").  
+                The value is case-sensitive.
+            sourceAccount (str):
+                Source account this content item is played with.  
+                Ignored if the source argument contains a source title value.  
+                Default is none.
+            itemType (str):
+                Type of content item to play (e.g. "stationurl").  
+                The value is case-sensitive, and should normally be lower case.
+            location (str):
+                A direct link to the media content that will be played (e.g. "/v1/playback/station/s33828").
+            containerArt (str):
+                A direct link to the container art, if present (e.g. "http://cdn-profiles.tunein.com/s33828/images/logog.png?t=637986894890000000").
+        """
+        apiMethodName:str = 'service_preset_store'
+        apiMethodParms:SIMethodParmListContext = None
+
+        try:
+
+            # trace.
+            apiMethodParms = _logsi.EnterMethodParmList(SILevel.Debug, apiMethodName)
+            apiMethodParms.AppendKeyValue("presetId", presetId)
+            apiMethodParms.AppendKeyValue("name", name)
+            apiMethodParms.AppendKeyValue("source", source)
+            apiMethodParms.AppendKeyValue("sourceAccount", sourceAccount)
+            apiMethodParms.AppendKeyValue("itemType", itemType)
+            apiMethodParms.AppendKeyValue("location", location)
+            apiMethodParms.AppendKeyValue("containerArt", containerArt)
+            _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Preset Store Service", apiMethodParms)
+
+            # is source argument a source title value?
+            sourceItem:SourceItem = self._GetSourceItemByTitle(source)
+            if sourceItem is not None:
+                source = sourceItem.Source
+                sourceAccount = sourceItem.SourceAccount
+
+            # validations.
+            if (name is None):
+                name = "Preset %s" % str(presetId)
+
+            # create a new preset object.
+            new_preset:Preset = Preset(
+                presetId,
+                time.time(),
+                None,
+                source,
+                itemType,
+                location,
+                sourceAccount,
+                True,   # is_presetable must always has to be true, otherwise call will fail
+                name,
+                containerArt
+                )
+
+            # store preset.
+            self.data.client.StorePreset(new_preset)
 
         # the following exceptions have already been logged, so we just need to
         # pass them back to HA for display in the log (or service UI).
