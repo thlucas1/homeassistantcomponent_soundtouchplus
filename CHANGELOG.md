@@ -6,9 +6,13 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.176 ] - 2026/06/06
+
+  * Modified the websocket support logic to no longer check the device capabilities `wsiapiproxy` settings in order to enable websocket notification support.  Some Bose models support websockets even though `wsapiproxy=false` is reported in the capabilities (e.g. Bose Wave SoundTouch).  The user must disable websocket support via the integration configuration [WebSocket Port setting](https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/wiki/Device-Configuration-Options#websocket-port) if their device does not support websocket notifications.
+
 ###### [ 1.0.175 ] - 2026/05/29
 
-  * Added service `store_preset`; Stores the given Preset information to the device list of presets.  Note this only stores the prefix information on the specified device (does not sync to other devices).
+  * Added service `preset_store`; Stores the given Preset information to the device list of presets.  Note this only stores the prefix information on the specified device (does not sync to other devices).
   * Added `play_url_dlna` content item type detection, which will automatically redirect a station location to play using the `play_url_dlna` service.
 
 ###### [ 1.0.174 ] - 2026/05/15

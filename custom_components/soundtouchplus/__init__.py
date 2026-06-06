@@ -1535,20 +1535,23 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
 
             _logsi.LogVerbose("'%s': Component async_setup_entry is verifying SoundTouch WebSocket connectivity" % entry.title)
 
-            # get device capabilities - must have IsWebSocketApiProxyCapable=True 
-            # in order to support notifications.
+            # get device capabilities to check for websocket notification support.
             capabilities:Capabilities = await hass.async_add_executor_job(client.GetCapabilities)
+
+            # note that some Bose models support websockets even though the `wsapiproxy` reports false
+            # in the capabilities (e.g. Bose Wave SoundTouch).  For this reason, we no longer check
+            # for `capabilities.IsWebSocketApiProxyCapable == True` to enable websocket support.
+            # the user must disable websocket support via the integration configuration WebSocket Port 
+            # setting if their device does not support websocket notifications.
             if (port_websocket == 0):
 
                 # SoundTouch device websocket notifications were disabled by user - device will be polled.
                 _logsi.LogMessage("'%s': Component async_setup_entry - device websocket notifications were disabled by the user; polling will be enabled" % entry.title)
             
-            elif (capabilities.IsWebSocketApiProxyCapable == True):
-
-                _logsi.LogVerbose("'%s': Component async_setup_entry has verified device is capable of websocket notifications" % entry.title)
+            else:
 
                 # create a websocket to receive notifications from the device.
-                _logsi.LogVerbose("'%s': Component async_setup_entry is creating SoundTouchWebSocket instance: port=%s, pingInterval=%s" % (entry.title, str(port_websocket), str(ping_websocket_interval)))
+                _logsi.LogVerbose("'%s': Component async_setup_entry is creating SoundTouchWebSocket instance for websocket notifications: port=%s, pingInterval=%s, IsWebSocketApiProxyCapable=%s" % (entry.title, str(port_websocket), str(ping_websocket_interval), str(capabilities.IsWebSocketApiProxyCapable)))
                 socket = await hass.async_add_executor_job(SoundTouchWebSocket, client, port_websocket, ping_websocket_interval)
                 
                 # enable recently played items cache.
@@ -1565,15 +1568,10 @@ async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry) -> bool:
                 # we cannot start listening for notifications just yet, as the entity has not been
                 # added to HA UI yet.  this will happen in the `media_player.async_added_to_hass` method.
 
-            else:
-
-                # SoundTouch device does not support websocket notifications!
-                _logsi.LogWarning("'%s': Component async_setup_entry - device does not support websocket notifications; polling will be enabled" % entry.title)
-
         except Exception as ex:
         
             # log failure.
-            _logsi.LogError("'%s': Component async_setup_entry - SoundTouchWebSocket instance could not be created; polling will be enabled: %s" % (entry.title, str(ex)))
+            _logsi.LogWarning("'%s': Component async_setup_entry - device does not support websocket notifications; polling will be enabled.  Exception details: %s" % (entry.title, str(ex)))
             socket = None
 
         # create media player entity instance data.

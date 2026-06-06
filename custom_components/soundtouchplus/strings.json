@@ -28,6 +28,7 @@
     },
     "abort": {
       "already_configured": "Device is already configured.  Modify the existing device, or verify the entered IP Address is correct.",
+      "already_in_progress": "Configuration flow is already in progress for this device (probably detected by Zeroconf); Cancel (or ignore) the existing flow if you want to re-configure a device that previously existed.",
       "cannot_connect": "Failed to connect",
       "unknown": "Unexpected error",
       "no_deviceid": "SoundTouch device instance does not have a unique DeviceId. This is most likely due to old SoundTouch firmware. You can configure the integration manually or upgrade your firmware to a more recent version."
