@@ -32,6 +32,7 @@ from xml.etree import ElementTree
 from xml.etree.ElementTree import Element
 
 from homeassistant.components import media_source
+from homeassistant.components.radio_browser.media_source import RadioMediaSource, async_get_media_source
 from homeassistant.components.media_player import (
     ATTR_INPUT_SOURCE,
     ATTR_MEDIA_ANNOUNCE,
@@ -107,8 +108,15 @@ ATTR_SOUNDTOUCHPLUS_TONE_TREBLE_LEVEL_RANGE = "soundtouchplus_tone_treble_level_
 ATTR_SOUNDTOUCHPLUS_WEBSOCKETS_ENABLED = "soundtouchplus_websockets_enabled"
 ATTRVALUE_NOT_CAPABLE = "not capable"
 
+# constants used for HA media radio browser support.
+SOUNDTOUCHPLUS_RADIO_STATION_CODEC = "stp_radio_station_codec"
+SOUNDTOUCHPLUS_RADIO_STATION_IMAGE_URL = "stp_radio_station_image_url"
+SOUNDTOUCHPLUS_RADIO_STATION_NAME = "stp_radio_station_name"
+SOUNDTOUCHPLUS_RADIO_STATION_ORIGIN = "stp_radio_station_origin"
+
 BOSETYPE_PLAY_URL_DLNA = "bosetype=play_url_dlna"
 BOSETYPE_RESOLVED = "bosetype=resolved"
+MEDIA_SOURCE_RADIO_BROWSER = "media-source://radio_browser/"
 
 
 async def async_setup_entry(hass:HomeAssistant, entry:ConfigEntry, async_add_entities:AddEntitiesCallback) -> None:
@@ -853,12 +861,41 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                     self.hass, media_id, self.entity_id
                 )
                 _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer resolved media_id to a PlayItem object: '%s'" % (self.name, play_item.url), play_item)
+
+                # is this a radio-browser media source?
+                # if so, then add the input source so we can identify it in the play_media method.
+                if (media_id.startswith(MEDIA_SOURCE_RADIO_BROWSER)):
+
+                    station_uuid:str = media_id.replace(MEDIA_SOURCE_RADIO_BROWSER, "")
+                    _logsi.LogVerbose("'%s': MediaPlayer is resolving radio station info: UUID='%s'" % (self.name, station_uuid))
+
+                    # get radio station information.
+                    # note that `async_resolve_media` does not resolve the station name or favicon!
+                    radio_media_source:RadioMediaSource = await async_get_media_source(self.hass)
+                    station = await radio_media_source.radios.station(uuid=station_uuid)
+                    _logsi.LogObject(SILevel.Verbose, "'%s': MediaPlayer resolved radio station object: UUID='%s'" % (self.name, station_uuid), station)
+
+                    # append radio station info to extra details.
+                    extra_options:dict = kwargs.get(ATTR_MEDIA_EXTRA, None)
+                    if extra_options is not None:
+                        _logsi.LogVerbose("'%s': MediaPlayer is adding radio browser station info to play media extra keyword arguments" % (self.name))
+                        extra_options[ATTR_INPUT_SOURCE] = MEDIA_SOURCE_RADIO_BROWSER
+                        extra_options[SOUNDTOUCHPLUS_RADIO_STATION_NAME] = station.name or station_uuid
+                        extra_options[SOUNDTOUCHPLUS_RADIO_STATION_IMAGE_URL] = station.favicon
+                        extra_options[SOUNDTOUCHPLUS_RADIO_STATION_ORIGIN] = "%s (%s)" % (station.country_code, station.state)
+                        extra_options[SOUNDTOUCHPLUS_RADIO_STATION_CODEC] = "%s (%s)" % (station.codec, station.bitrate)
+
+                    # dispose of objects.
+                    radio_media_source = None
+                    station = None
+
+                # play the media.
                 media_id = async_process_play_media_url(self.hass, play_item.url)
 
             _logsi.LogVerbose("'%s': MediaPlayer is calling play_media to play content: %s" % (self.name, "media_type='%s', media_id='%s', kwargs='%s'" % (str(media_type), media_id, str(kwargs))))
             await self.hass.async_add_executor_job(
                 partial(self.play_media, media_type, media_id, **kwargs)
-        )
+            )
 
         except Exception as ex:
             
@@ -930,18 +967,34 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                 # trackName = "01 The First Noel.mp3"
                 trackName:str = self._GetUrlFilename(media_id)
 
-                # always use the PlayUrl service, as it supports both HTTP and HTTPS url's.
-                _logsi.LogVerbose("'%s': MediaPlayer play_media detected URL Notification media: Url='%s'", self.name, media_id)
-                self._client.PlayUrl(media_id, artist=announceValue, album=announceValue, track=trackName, getMetaDataFromUrlFile=True, volumeLevel=0)
+                # is this is a radio browser source?
+                if (source == MEDIA_SOURCE_RADIO_BROWSER):
 
-                # commented this code, as most Radio Stations are HTTPS format!!!
-                # for announcements, we will use the `PlayUrl` service; otherwise, use the `PlayUrlDlna` service.
-                # if announce:
-                #     _logsi.LogVerbose("'%s': MediaPlayer play_media detected URL Notification media: Url='%s'", self.name, media_id)
-                #     self._client.PlayUrl(media_id, artist=announceValue, album=announceValue, getMetaDataFromUrlFile=True, volumeLevel=0)
-                # else:
-                #     _logsi.LogVerbose("'%s': MediaPlayer play_media detected URL DLNA media: Url='%s'", self.name, media_id)
-                #     self._client.PlayUrlDlna(media_id, artist="", album="", track=trackName, artUrl="", updateNowPlayingStatus=True)
+                    _logsi.LogVerbose("'%s': MediaPlayer play_media detected radio browser media: Url='%s'", self.name, media_id)
+
+                    # get our custom radio station attributes.
+                    station_name = extra_options.get(SOUNDTOUCHPLUS_RADIO_STATION_NAME, None)
+                    station_image_url = extra_options.get(SOUNDTOUCHPLUS_RADIO_STATION_IMAGE_URL, None)
+                    station_codec = extra_options.get(SOUNDTOUCHPLUS_RADIO_STATION_CODEC, None)
+                    station_origin = extra_options.get(SOUNDTOUCHPLUS_RADIO_STATION_ORIGIN, None)
+
+                    # convert https to http, as SoundTouch DLNA only supports http url's.
+                    if (media_id.startswith("https://")):
+                        media_id = media_id.replace("https://", "http://")
+                        _logsi.LogVerbose("'%s': MediaPlayer play_media converted radio browser https to http media: Url='%s'", self.name, media_id)
+
+                    # check for .m3mu8 extension, as SoundTouch DLNA does not support that format.
+                    if (media_id.find(".m3u8") > -1):
+                        raise HomeAssistantError("'%s': Bose SoundTouch no longer supports .M3MU8 streaming url's: %s" % (self.name, media_id))
+
+                    # play via SoundTouch DLNA endpoint.
+                    self._client.PlayUrlDlna(media_id, artist=station_origin or "Radio Browser", album=station_codec or "", track=station_name or trackName, artUrl=station_image_url, updateNowPlayingStatus=True)
+
+                else:
+
+                    # otherwise use the PlayUrl service, as it supports both HTTP and HTTPS url's.
+                    _logsi.LogVerbose("'%s': MediaPlayer play_media detected URL Notification media: Url='%s'", self.name, media_id)
+                    self._client.PlayUrl(media_id, artist=announceValue, album=announceValue, track=trackName, getMetaDataFromUrlFile=True, volumeLevel=0)
 
                 # inform Home Assistant of the status update.
                 self.schedule_update_ha_state(force_refresh=False)
@@ -1330,7 +1383,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
                     if (locationUrl.lower().find(BOSETYPE_PLAY_URL_DLNA) > -1):
                         locationUrl = locationUrl.replace(BOSETYPE_PLAY_URL_DLNA, BOSETYPE_RESOLVED)
                         _logsi.LogVerbose("'%s': MediaPlayer NowSelectionUpdated redirecting to PLAY_URL_DLNA service for LOCAL_INTERNET_RADIO location: %s" % (self.name, locationUrl))
-                        client.PlayUrlDlna(locationUrl, album=config.Preset.Name, artUrl=config.Preset.ContainerArt, updateNowPlayingStatus=True)
+                        client.PlayUrlDlna(locationUrl, album=config.Preset.Name or "", artist="", track="", artUrl=config.Preset.ContainerArt, updateNowPlayingStatus=True)
 
             # inform Home Assistant of the status update.
             self.schedule_update_ha_state(force_refresh=False)
@@ -2620,6 +2673,15 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             apiMethodParms.AppendKeyValue("getMetadataFromUrlFile", getMetadataFromUrlFile)
             _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Play URL Notification Service", apiMethodParms)
 
+            # if artist, album, or track not supplied then default to empty string.
+            # this will prevent the "Unknown x" default titles.
+            if (artist is None):
+                artist = ""
+            if (album is None):
+                album = ""
+            if (track is None):
+                track = ""
+
             # play url.
             self.data.client.PlayUrl(url, artist, album, track, volumeLevel, appKey, getMetadataFromUrlFile)
 
@@ -2691,6 +2753,15 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             apiMethodParms.AppendKeyValue("updateNowPlayingStatus", updateNowPlayingStatus)
             apiMethodParms.AppendKeyValue("delay", delay)
             _logsi.LogMethodParmList(SILevel.Verbose, "SoundTouch Play URL DLNA Service", apiMethodParms)
+
+            # if artist, album, or track not supplied then default to empty string.
+            # this will prevent the "Unknown x" default titles.
+            if (artist is None):
+                artist = ""
+            if (album is None):
+                album = ""
+            if (track is None):
+                track = ""
 
             # play url.
             self.data.client.PlayUrlDlna(url, artist, album, track, artUrl, updateNowPlayingStatus, delay)

@@ -6,6 +6,11 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.177 ] - 2026/06/22
+
+  * Added support for HA Media Radio Browser station play.  All urls will be converted from `https` to `http`, as SoundTouch DLNA only supports `http` url's; if a station does not support an `http` url, then that station will not play due to Bose DLNA limitation.  Also, any station that uses a `.m3mu8` extension will not play either, as SoundTouch DLNA does not support that format.
+  * Updated `spotifywebapipython` package requirement to `spotifywebapipython>=1.0.271`.
+
 ###### [ 1.0.176 ] - 2026/06/06
 
   * Modified the websocket support logic to no longer check the device capabilities `wsiapiproxy` settings in order to enable websocket notification support.  Some Bose models support websockets even though `wsapiproxy=false` is reported in the capabilities (e.g. Bose Wave SoundTouch).  The user must disable websocket support via the integration configuration [WebSocket Port setting](https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/wiki/Device-Configuration-Options#websocket-port) if their device does not support websocket notifications.
