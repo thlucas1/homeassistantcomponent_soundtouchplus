@@ -985,7 +985,7 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
 
                     # check for .m3mu8 extension, as SoundTouch DLNA does not support that format.
                     if (media_id.find(".m3u8") > -1):
-                        raise HomeAssistantError("'%s': Bose SoundTouch no longer supports .M3MU8 streaming url's: %s" % (self.name, media_id))
+                        raise HomeAssistantError("'%s': Bose SoundTouch no longer supports radio browser .M3MU8 streaming url's: \"%s\" (%s)" % (self.name, media_id, station_name))
 
                     # play via SoundTouch DLNA endpoint.
                     self._client.PlayUrlDlna(media_id, artist=station_origin or "Radio Browser", album=station_codec or "", track=station_name or trackName, artUrl=station_image_url, updateNowPlayingStatus=True)

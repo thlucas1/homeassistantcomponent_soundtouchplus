@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.178 ] - 2026/07/01
+
+  * Added `"radio_browser"` to manifest dependencies list.
+
 ###### [ 1.0.177 ] - 2026/06/22
 
   * Added support for HA Media Radio Browser station play.  All urls will be converted from `https` to `http`, as SoundTouch DLNA only supports `http` url's; if a station does not support an `http` url, then that station will not play due to Bose DLNA limitation.  Also, any station that uses a `.m3mu8` extension will not play either, as SoundTouch DLNA does not support that format.

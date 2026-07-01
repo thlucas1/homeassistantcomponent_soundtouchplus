@@ -4,6 +4,7 @@
   "codeowners": [ "@thlucas" ],
   "config_flow": true,
   "dependencies": [
+    "radio_browser",
     "zeroconf"
   ],
   "documentation": "https://github.com/thlucas1/homeassistantcomponent_soundtouchplus/wiki",
@@ -22,6 +23,6 @@
     "urllib3>=2.0",
     "zeroconf>=0.132.2"
   ],
-  "version": "1.0.177",
+  "version": "1.0.178",
   "zeroconf": [ "_soundtouch._tcp.local." ]
 }
