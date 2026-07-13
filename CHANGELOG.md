@@ -6,6 +6,10 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.179 ] - 2026/07/13
+
+  * Updated `spotifywebapipython` package requirement to `spotifywebapipython>=1.0.272`.
+
 ###### [ 1.0.178 ] - 2026/07/01
 
   * Added `"radio_browser"` to manifest dependencies list.
