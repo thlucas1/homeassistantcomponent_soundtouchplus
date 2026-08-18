@@ -1250,8 +1250,9 @@ class SoundTouchMediaPlayer(MediaPlayerEntity):
             _logsi.LogVerbose("'%s': MediaPlayer is stopping websocket notification events thread; this will force a restart of the thread on the next device poll update" % self.name, colorValue=SIColors.Coral)
             self._socket.StopNotification()
             
-            # inform Home Assistant of the status update.
-            self.schedule_update_ha_state(force_refresh=False)
+            # inform Home Assistant of the status update; we will force the refresh so that
+            # HA calls it's `update()` method at leaste once so the websocket can be restarted.
+            self.schedule_update_ha_state(force_refresh=True)
             
 
     @callback
