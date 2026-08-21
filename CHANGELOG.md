@@ -6,9 +6,13 @@ Change are listed in reverse chronological order (newest to oldest).
 
 <span class="changelog">
 
+###### [ 1.0.191 ] - 2026/08/21
+
+  * Updated `spotifywebapipython` package requirement to `spotifywebapipython>=1.0.290`.
+
 ###### [ 1.0.190 ] - 2026/08/18
 
-  * Updated `media_player._OnSoundTouchWebSocketErrorEvent` method code to change the `schedule_update_ha_state` argument `force_refresh=False` to `force_refresh=True`.  This will force the HA `update()` method to be called at least once, which will detect that the websocket error can be recovered.  Prior to this fix, the HA `update()` method was never called, and the device state never changed.
+  * Updated `media_player._OnSoundTouchWebSocketErrorEvent` method code to change the `schedule_update_ha_state` argument `force_refresh=False` to `force_refresh=True`.  This will force the HA `update()` method to be called at least once, which will detect that the websocket error can be recovered.  Prior to this fix, the HA `update()` method was never called, and the device never detected websocket events (until reload / restart).
 
 ###### [ 1.0.189 ] - 2026/08/10
 
